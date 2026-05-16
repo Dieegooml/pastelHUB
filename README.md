@@ -641,19 +641,6 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 
 ---
 
-## Qué más podrías agregar
-
-| Funcionalidad | Descripción |
-|---|---|
-| 🤖 **Chatbot** | Ya incluido — Dialogflow CX con integración a Firestore para consultas de pedidos en tiempo real |
-| 🛡️ **Moderador** | Ya incluido — rol con acceso a panel de reportes y moderación de reseñas |
-| 📊 **Dashboard analytics** | Ventas por período, productos más vendidos, tasa de conversión por pastelería |
-| 🎁 **Cupones y descuentos** | Colección `coupons` con código, porcentaje, límite de uso y expiración |
-| 🔍 **Búsqueda avanzada** | Integración con Algolia o Typesense para búsqueda de productos por nombre, categoría o ubicación |
-| 📍 **Geolocalización** | Mostrar pastelerías cercanas al cliente usando GeoFirestore |
-| 🌐 **Internacionalización** | Soporte multi-idioma (react-i18next) |
-| 📱 **PWA** | React como Progressive Web App con soporte offline básico (Vite PWA plugin) |
-| 🔄 **Suscripciones** | Pedidos recurrentes (ej. torta cada mes) con Firebase Scheduled Functions |
 
 ---
 
