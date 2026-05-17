@@ -6,7 +6,8 @@ const { verifyToken, requireAdmin } = require('../middlewares/auth');
 const col = db.collection('orders');
 
 const VALID_STATUSES = ['pending', 'confirmed', 'preparing', 'on_the_way', 'delivered', 'cancelled'];
-const VALID_DELIVERY_TYPES = ['delivery', 'pickup'];
+const VALID_PAYMENT_METHODS  = ['card', 'cash', 'yape', 'plin'];
+const VALID_PAYMENT_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
 
 // GET todas las órdenes
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
@@ -23,7 +24,7 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
 router.get('/shop/:shopId', verifyToken, requireAdmin, async (req, res) => {
   try {
     const snap = await col
-      .where('shopId', '==', req.params.shopId)
+      .where('shop.shop_id', '==', req.params.shopId)
       .orderBy('createdAt', 'desc')
       .get();
     const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -34,10 +35,10 @@ router.get('/shop/:shopId', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // GET órdenes por cliente
-router.get('/customer/:customerId', verifyToken, requireAdmin, async (req, res) => {
+router.get('/customer/:userId', verifyToken, requireAdmin, async (req, res) => {
   try {
     const snap = await col
-      .where('customerId', '==', req.params.customerId)
+      .where('customer.user_id', '==', req.params.userId)
       .orderBy('createdAt', 'desc')
       .get();
     const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -64,17 +65,12 @@ router.get('/status/:status', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// GET una orden con sus items
+// GET una orden
 router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
-
-    // Traer items de la subcolección
-    const itemsSnap = await col.doc(req.params.id).collection('items').get();
-    const items = itemsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    res.json({ id: doc.id, ...doc.data(), items });
+    res.json({ id: doc.id, ...doc.data() });
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener la orden' });
   }
@@ -84,63 +80,73 @@ router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
 router.post('/', verifyToken, requireAdmin, async (req, res) => {
   try {
     const {
-      customerId, shopId, addressId,
-      deliveryType, scheduledAt, notes,
-      subtotal, deliveryFee, items,
+      customer, shop, items,
+      totals, payment,
     } = req.body;
 
-    if (!customerId || !shopId || !deliveryType || !items?.length) {
-      return res.status(400).json({ error: 'customerId, shopId, deliveryType e items son requeridos' });
+    if (!customer?.user_id || !shop?.shop_id || !items?.length || !payment?.method) {
+      return res.status(400).json({
+        error: 'customer.user_id, shop.shop_id, items y payment.method son requeridos',
+      });
     }
 
-    if (!VALID_DELIVERY_TYPES.includes(deliveryType)) {
-      return res.status(400).json({ error: `deliveryType inválido. Válidos: ${VALID_DELIVERY_TYPES.join(', ')}` });
+    if (!VALID_PAYMENT_METHODS.includes(payment.method)) {
+      return res.status(400).json({ error: `Método de pago inválido. Válidos: ${VALID_PAYMENT_METHODS.join(', ')}` });
+    }
+
+    // Verificar que el usuario existe
+    const userDoc = await db.collection('users').doc(customer.user_id).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'El cliente no existe' });
     }
 
     // Verificar que la pastelería existe
-    const shopDoc = await db.collection('pastryShops').doc(shopId).get();
+    const shopDoc = await db.collection('pastryShops').doc(shop.shop_id).get();
     if (!shopDoc.exists) {
       return res.status(404).json({ error: 'La pastelería no existe' });
     }
 
-    const parsedSubtotal  = parseFloat(subtotal)    || 0;
-    const parsedFee       = parseFloat(deliveryFee) || 0;
-    const total           = parsedSubtotal + parsedFee;
+    const subtotal    = parseFloat(totals?.subtotal)    || 0;
+    const deliveryFee = parseFloat(totals?.delivery_fee) || 0;
 
-    const orderData = {
-      customerId,
-      shopId,
-      addressId:    addressId   || '',
-      status:       'pending',
-      deliveryType,
-      scheduledAt:  scheduledAt || '',
-      subtotal:     parsedSubtotal,
-      deliveryFee:  parsedFee,
-      total,
-      notes:        notes       || '',
-      createdAt:    new Date().toISOString(),
-      updatedAt:    new Date().toISOString(),
+    const data = {
+      customer: {
+        user_id: customer.user_id,
+        name:    userDoc.data().full_name || '',
+      },
+      shop: {
+        shop_id: shop.shop_id,
+        name:    shopDoc.data().name || '',
+      },
+      status:         'pending',
+      status_history: ['pending'],
+      items: items.map(item => ({
+        product_id:       item.product_id       || '',
+        name:             item.name             || '',
+        quantity:         parseInt(item.quantity),
+        price_at_purchase: parseFloat(item.price_at_purchase),
+      })),
+      totals: {
+        subtotal,
+        delivery_fee: deliveryFee,
+        total:        subtotal + deliveryFee,
+      },
+      payment: {
+        method:          payment.method,
+        status:          'pending',
+        transaction_ref: payment.transaction_ref || '',
+      },
+      review: {
+        rating:     0,
+        comment:    '',
+        reply_text: '',
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
-    // Crear orden e items en batch
-    const orderRef = col.doc();
-    const batch = db.batch();
-    batch.set(orderRef, orderData);
-
-    items.forEach(item => {
-      const itemRef = orderRef.collection('items').doc();
-      const itemSubtotal = parseFloat(item.unitPrice) * parseInt(item.quantity);
-      batch.set(itemRef, {
-        productId:          item.productId          || '',
-        quantity:           parseInt(item.quantity),
-        unitPrice:          parseFloat(item.unitPrice),
-        subtotal:           itemSubtotal,
-        customizationNotes: item.customizationNotes || '',
-      });
-    });
-
-    await batch.commit();
-    res.status(201).json({ id: orderRef.id, ...orderData });
+    const ref = await col.add(data);
+    res.status(201).json({ id: ref.id, ...data });
   } catch (e) {
     res.status(500).json({ error: 'Error al crear la orden' });
   }
@@ -157,102 +163,132 @@ router.patch('/:id/status', verifyToken, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
     }
 
-    await col.doc(req.params.id).update({ status, updatedAt: new Date().toISOString() });
-    res.json({ id: req.params.id, status });
+    // Agregar el nuevo estado al historial
+    const status_history = doc.data().status_history || [];
+    status_history.push(status);
+
+    await col.doc(req.params.id).update({
+      status,
+      status_history,
+      updatedAt: new Date().toISOString(),
+    });
+
+    res.json({ id: req.params.id, status, status_history });
   } catch (e) {
-    res.status(500).json({ error: 'Error al actualizar estado de la orden' });
+    res.status(500).json({ error: 'Error al actualizar estado' });
   }
 });
 
-// PUT actualizar orden (solo campos editables, no items)
-router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
+// PATCH actualizar estado del pago
+router.patch('/:id/payment-status', verifyToken, requireAdmin, async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
 
-    // No permitir cambiar campos críticos por PUT
-    const { customerId, shopId, items, createdAt, ...rest } = req.body;
+    const { status, transaction_ref } = req.body;
+    if (!VALID_PAYMENT_STATUSES.includes(status)) {
+      return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_PAYMENT_STATUSES.join(', ')}` });
+    }
 
-    const updates = { ...rest, updatedAt: new Date().toISOString() };
-    await col.doc(req.params.id).update(updates);
-    res.json({ id: req.params.id, ...updates });
+    const payment = doc.data().payment || {};
+    const updatedPayment = {
+      ...payment,
+      status,
+      ...(transaction_ref !== undefined && { transaction_ref }),
+    };
+
+    await col.doc(req.params.id).update({
+      payment:   updatedPayment,
+      updatedAt: new Date().toISOString(),
+    });
+
+    res.json({ id: req.params.id, payment: updatedPayment });
   } catch (e) {
-    res.status(500).json({ error: 'Error al actualizar la orden' });
+    res.status(500).json({ error: 'Error al actualizar estado del pago' });
   }
 });
 
-// DELETE orden (y sus items)
+// PATCH agregar reseña a la orden
+router.patch('/:id/review', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const doc = await col.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
+
+    if (doc.data().status !== 'delivered') {
+      return res.status(400).json({ error: 'Solo se pueden reseñar órdenes entregadas' });
+    }
+
+    const { rating, comment } = req.body;
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'rating debe ser un número entre 1 y 5' });
+    }
+
+    // Verificar que no tenga ya una reseña
+    const currentReview = doc.data().review || {};
+    if (currentReview.rating > 0) {
+      return res.status(400).json({ error: 'Esta orden ya tiene una reseña' });
+    }
+
+    const review = {
+      rating:     parseInt(rating),
+      comment:    comment    || '',
+      reply_text: '',
+    };
+
+    await col.doc(req.params.id).update({
+      review,
+      updatedAt: new Date().toISOString(),
+    });
+
+    res.json({ id: req.params.id, review });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al agregar reseña' });
+  }
+});
+
+// PATCH responder reseña
+router.patch('/:id/review/reply', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const doc = await col.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
+
+    const { reply_text } = req.body;
+    if (!reply_text) {
+      return res.status(400).json({ error: 'reply_text es requerido' });
+    }
+
+    const review = doc.data().review || {};
+    if (!review.rating) {
+      return res.status(400).json({ error: 'Esta orden no tiene reseña aún' });
+    }
+
+    const updatedReview = { ...review, reply_text };
+    await col.doc(req.params.id).update({
+      review:    updatedReview,
+      updatedAt: new Date().toISOString(),
+    });
+
+    res.json({ id: req.params.id, review: updatedReview });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al responder reseña' });
+  }
+});
+
+// DELETE orden
 router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
 
-    // Eliminar items y orden en batch
-    const itemsSnap = await col.doc(req.params.id).collection('items').get();
-    const batch = db.batch();
-    itemsSnap.docs.forEach(item => batch.delete(item.ref));
-    batch.delete(col.doc(req.params.id));
-    await batch.commit();
+    const { status } = doc.data();
+    if (['preparing', 'on_the_way', 'delivered'].includes(status)) {
+      return res.status(400).json({ error: `No se puede eliminar una orden en estado ${status}` });
+    }
 
-    res.json({ message: 'Orden e items eliminados correctamente' });
+    await col.doc(req.params.id).delete();
+    res.json({ message: 'Orden eliminada correctamente' });
   } catch (e) {
     res.status(500).json({ error: 'Error al eliminar la orden' });
-  }
-});
-
-// ── ITEMS (subcolección) ──────────────────────────────────────────────
-
-// GET items de una orden
-router.get('/:id/items', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const snap = await col.doc(req.params.id).collection('items').get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener items' });
-  }
-});
-
-// POST agregar item a una orden pendiente
-router.post('/:id/items', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const doc = await col.doc(req.params.id).get();
-    if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
-    if (doc.data().status !== 'pending') {
-      return res.status(400).json({ error: 'Solo se pueden agregar items a órdenes pendientes' });
-    }
-
-    const { productId, quantity, unitPrice, customizationNotes } = req.body;
-    if (!productId || !quantity || !unitPrice) {
-      return res.status(400).json({ error: 'productId, quantity y unitPrice son requeridos' });
-    }
-
-    const itemData = {
-      productId,
-      quantity:           parseInt(quantity),
-      unitPrice:          parseFloat(unitPrice),
-      subtotal:           parseFloat(unitPrice) * parseInt(quantity),
-      customizationNotes: customizationNotes || '',
-    };
-
-    const ref = await col.doc(req.params.id).collection('items').add(itemData);
-    res.status(201).json({ id: ref.id, ...itemData });
-  } catch (e) {
-    res.status(500).json({ error: 'Error al agregar item' });
-  }
-});
-
-// DELETE item de una orden
-router.delete('/:id/items/:itemId', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const itemRef = col.doc(req.params.id).collection('items').doc(req.params.itemId);
-    const itemDoc = await itemRef.get();
-    if (!itemDoc.exists) return res.status(404).json({ error: 'Item no encontrado' });
-
-    await itemRef.delete();
-    res.json({ message: 'Item eliminado correctamente' });
-  } catch (e) {
-    res.status(500).json({ error: 'Error al eliminar el item' });
   }
 });
 

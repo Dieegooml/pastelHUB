@@ -20,7 +20,7 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
 router.get('/shop/:shopId', verifyToken, requireAdmin, async (req, res) => {
   try {
     const snap = await col
-      .where('shopId', '==', req.params.shopId)
+      .where('shop_id', '==', req.params.shopId)
       .orderBy('createdAt', 'desc')
       .get();
     const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -45,30 +45,31 @@ router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
 router.post('/', verifyToken, requireAdmin, async (req, res) => {
   try {
     const {
-      shopId, categoryId, productName,
+      shop_id, category_id, name,
       description, price, stock,
-      imageUrl, isAvailable,
+      image_url, is_available,
     } = req.body;
 
-    if (!shopId || !productName || price === undefined) {
-      return res.status(400).json({ error: 'shopId, productName y price son requeridos' });
+    if (!shop_id || !name || price === undefined) {
+      return res.status(400).json({ error: 'shop_id, name y price son requeridos' });
     }
 
     // Verificar que la pastelería existe
-    const shopDoc = await db.collection('pastryShops').doc(shopId).get();
+    const shopDoc = await db.collection('shops').doc(shop_id).get();
     if (!shopDoc.exists) {
       return res.status(404).json({ error: 'La pastelería no existe' });
     }
 
     const data = {
-      shopId,
-      categoryId:   categoryId  || '',
-      productName,
-      description:  description || '',
+      shop_id,
+      category_id:  category_id  || '',
+      name,
+      description:  description  || '',
       price:        parseFloat(price),
       stock:        parseInt(stock) || 0,
-      imageUrl:     imageUrl    || '',
-      isAvailable:  isAvailable !== undefined ? isAvailable : true,
+      image_url:    image_url    || '',
+      is_available: is_available !== undefined ? is_available : true,
+      variants:     [],
       createdAt:    new Date().toISOString(),
       updatedAt:    new Date().toISOString(),
     };
@@ -86,33 +87,16 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
-    const updates = { ...req.body, updatedAt: new Date().toISOString() };
-    if (updates.price !== undefined) updates.price = parseFloat(updates.price);
-    if (updates.stock !== undefined) updates.stock = parseInt(updates.stock);
+    // No permitir cambiar shop_id ni variants por este endpoint
+    const { shop_id, variants, createdAt, ...rest } = req.body;
+    if (rest.price !== undefined) rest.price = parseFloat(rest.price);
+    if (rest.stock !== undefined) rest.stock = parseInt(rest.stock);
 
+    const updates = { ...rest, updatedAt: new Date().toISOString() };
     await col.doc(req.params.id).update(updates);
     res.json({ id: req.params.id, ...updates });
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar el producto' });
-  }
-});
-
-// DELETE producto
-router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const doc = await col.doc(req.params.id).get();
-    if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
-
-    // Eliminar también sus variantes
-    const variantsSnap = await col.doc(req.params.id).collection('variants').get();
-    const batch = db.batch();
-    variantsSnap.docs.forEach(v => batch.delete(v.ref));
-    batch.delete(col.doc(req.params.id));
-    await batch.commit();
-
-    res.json({ message: 'Producto y sus variantes eliminados correctamente' });
-  } catch (e) {
-    res.status(500).json({ error: 'Error al eliminar el producto' });
   }
 });
 
@@ -122,83 +106,130 @@ router.patch('/:id/availability', verifyToken, requireAdmin, async (req, res) =>
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
-    const { isAvailable } = req.body;
-    if (typeof isAvailable !== 'boolean') {
-      return res.status(400).json({ error: 'isAvailable debe ser true o false' });
+    const { is_available } = req.body;
+    if (typeof is_available !== 'boolean') {
+      return res.status(400).json({ error: 'is_available debe ser true o false' });
     }
 
-    await col.doc(req.params.id).update({ isAvailable, updatedAt: new Date().toISOString() });
-    res.json({ id: req.params.id, isAvailable });
+    await col.doc(req.params.id).update({
+      is_available,
+      updatedAt: new Date().toISOString(),
+    });
+    res.json({ id: req.params.id, is_available });
   } catch (e) {
     res.status(500).json({ error: 'Error al cambiar disponibilidad' });
   }
 });
 
-// ── VARIANTES (subcolección) ──────────────────────────────────────────
+// DELETE producto
+router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const doc = await col.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
+
+    await col.doc(req.params.id).delete();
+    res.json({ message: 'Producto eliminado correctamente' });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al eliminar el producto' });
+  }
+});
+
+// ── VARIANTS (array embebido) ─────────────────────────────────────────
 
 // GET variantes de un producto
 router.get('/:id/variants', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const snap = await col.doc(req.params.id).collection('variants').get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
+    const doc = await col.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
+    res.json(doc.data().variants || []);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener variantes' });
   }
 });
 
-// POST crear variante
+// POST agregar variante
 router.post('/:id/variants', verifyToken, requireAdmin, async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
-    const { variantType, variantValue, extraPrice } = req.body;
-    if (!variantType || !variantValue) {
-      return res.status(400).json({ error: 'variantType y variantValue son requeridos' });
+    const { type, value, extra_price } = req.body;
+    if (!type || !value) {
+      return res.status(400).json({ error: 'type y value son requeridos' });
     }
 
-    const data = {
-      variantType,
-      variantValue,
-      extraPrice: parseFloat(extraPrice) || 0,
+    const variants   = doc.data().variants || [];
+    const variant_id = `var_${Date.now()}`;
+    const newVariant = {
+      variant_id,
+      type,
+      value,
+      extra_price: parseFloat(extra_price) || 0,
     };
 
-    const ref = await col.doc(req.params.id).collection('variants').add(data);
-    res.status(201).json({ id: ref.id, ...data });
+    variants.push(newVariant);
+
+    await col.doc(req.params.id).update({
+      variants,
+      updatedAt: new Date().toISOString(),
+    });
+
+    res.status(201).json(newVariant);
   } catch (e) {
-    res.status(500).json({ error: 'Error al crear la variante' });
+    res.status(500).json({ error: 'Error al agregar variante' });
   }
 });
 
 // PUT actualizar variante
 router.put('/:id/variants/:variantId', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const variantRef = col.doc(req.params.id).collection('variants').doc(req.params.variantId);
-    const variantDoc = await variantRef.get();
-    if (!variantDoc.exists) return res.status(404).json({ error: 'Variante no encontrada' });
+    const doc = await col.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
-    const updates = { ...req.body };
-    if (updates.extraPrice !== undefined) updates.extraPrice = parseFloat(updates.extraPrice);
+    const variants = doc.data().variants || [];
+    const index    = variants.findIndex(v => v.variant_id === req.params.variantId);
+    if (index === -1) return res.status(404).json({ error: 'Variante no encontrada' });
 
-    await variantRef.update(updates);
-    res.json({ id: req.params.variantId, ...updates });
+    const { type, value, extra_price } = req.body;
+    variants[index] = {
+      ...variants[index],
+      ...(type        !== undefined && { type }),
+      ...(value       !== undefined && { value }),
+      ...(extra_price !== undefined && { extra_price: parseFloat(extra_price) }),
+    };
+
+    await col.doc(req.params.id).update({
+      variants,
+      updatedAt: new Date().toISOString(),
+    });
+
+    res.json(variants[index]);
   } catch (e) {
-    res.status(500).json({ error: 'Error al actualizar la variante' });
+    res.status(500).json({ error: 'Error al actualizar variante' });
   }
 });
 
 // DELETE variante
 router.delete('/:id/variants/:variantId', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const variantRef = col.doc(req.params.id).collection('variants').doc(req.params.variantId);
-    const variantDoc = await variantRef.get();
-    if (!variantDoc.exists) return res.status(404).json({ error: 'Variante no encontrada' });
+    const doc = await col.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
-    await variantRef.delete();
+    const variants = doc.data().variants || [];
+    const updated  = variants.filter(v => v.variant_id !== req.params.variantId);
+
+    if (updated.length === variants.length) {
+      return res.status(404).json({ error: 'Variante no encontrada' });
+    }
+
+    await col.doc(req.params.id).update({
+      variants:  updated,
+      updatedAt: new Date().toISOString(),
+    });
+
     res.json({ message: 'Variante eliminada correctamente' });
   } catch (e) {
-    res.status(500).json({ error: 'Error al eliminar la variante' });
+    res.status(500).json({ error: 'Error al eliminar variante' });
   }
 });
 
