@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Users from "./pages/admin/Users";
 import Shops from "./pages/admin/Shops";
+import NotFound from "./pages/NotFound";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/admin/shops" element={
             <ProtectedRoute role="admin"><Shops /></ProtectedRoute>
           } />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
