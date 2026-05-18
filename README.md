@@ -118,6 +118,12 @@ El esquema está diseñado como **colecciones Firestore** con modelo multi-tenan
 | `chatSessions` | Historial de conversaciones del chatbot |
 | `reports` | Reportes de contenido inapropiado gestionados por moderadores |
 
+### Diagrama de base de datos
+
+![Diagrama de base de datos](assets/diagramaPastelHUB.png)
+
+> Diagrama editable disponible en [draw.io](https://app.diagrams.net) — importar `assets/diagramaPastelHUB.png` para editar.
+
 ### Estructura de documentos
 
 ```
