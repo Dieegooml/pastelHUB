@@ -1,15 +1,13 @@
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { api } from './apiService';
-import { auth, googleProvider } from '../config/firebase';
+import { auth } from '../config/firebase';
 
 export const authService = {
   loginEmail: async (email, password) => {
-    return auth.signInWithEmailAndPassword(email, password);
-  },
-  loginGoogle: async () => {
-    return auth.signInWithPopup(googleProvider);
+    return signInWithEmailAndPassword(auth, email, password);
   },
   logout: async () => {
-    return auth.signOut();
+    return signOut(auth);
   },
   sync: async () => {
     return api.post('/auth/sync');

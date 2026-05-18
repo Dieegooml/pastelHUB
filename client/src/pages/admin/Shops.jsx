@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../services/apiService';
+import { shopsService } from '../../services/shopsService';
 
 const emptyForm = {
   shopName: '', description: '', ownerId: '',
@@ -30,7 +30,7 @@ export default function Shops() {
   const loadShops = async () => {
     try {
       setLoading(true);
-      const data = await api.get('/shops');
+      const data = await shopsService.getAll();
       setShops(Array.isArray(data) ? data : []);
     } catch {
       setError('Error al cargar pastelerías');
@@ -48,10 +48,10 @@ export default function Shops() {
     setError('');
     try {
       if (editingId) {
-        await api.put(`/shops/${editingId}`, form);
+        await shopsService.update(editingId, form);
         setEditingId(null);
       } else {
-        await api.post('/shops', form);
+        await shopsService.create(form);
       }
       setForm(emptyForm);
       loadShops();
@@ -79,7 +79,7 @@ export default function Shops() {
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar esta pastelería? Esta acción no se puede deshacer.')) return;
-    await api.delete(`/shops/${id}`);
+    await shopsService.delete(id);
     loadShops();
   };
 

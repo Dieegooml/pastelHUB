@@ -33,4 +33,10 @@ export const api = {
     });
     return res.json();
   },
+  patch: async (path, body) => {
+    const res = await fetch(`${BASE}${path}`, {
+      method: 'PATCH', headers: await getHeaders(), body: JSON.stringify(body),
+    });
+    return res.json();
+  },
 };
