@@ -1,3 +1,10 @@
+const mockBatch = {
+  set: jest.fn(),
+  update: jest.fn(),
+  delete: jest.fn(),
+  commit: jest.fn().mockResolvedValue(),
+};
+
 const mockDb = {
   collection: jest.fn().mockReturnThis(),
   doc: jest.fn().mockReturnThis(),
@@ -9,6 +16,7 @@ const mockDb = {
   orderBy: jest.fn().mockReturnThis(),
   where: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
+  batch: jest.fn(() => mockBatch),
 };
 
 const mockAuth = {
