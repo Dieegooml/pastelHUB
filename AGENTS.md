@@ -86,7 +86,8 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
 - **Setup:** `tests/setup.js` — mocks firebase-admin, provides globals: `mockToken()`, `mockDocExists()`, `mockDocNotExists()`, `mockCollection()`
 - **32 tests** across: health (3), middleware (5), auth (8), shops (6), users (10)
 - **Missing tests:** reviews, payments, customers, notifications, products, orders, reports
-- **Load test:** `tests/load-test.js` — k6 script (50 VUs, ramp stages)
+- **Load test (Node.js):** `tests/load-test-runner.js` — 50 VUs (default), prueba todos los endpoints, genera HTML. Comando: `npm run load-test`
+- **Load test (k6):** `tests/load-test.js` — k6 script (50 VUs, ramp stages). Comando: `npm run load-test:k6`
 - **Rate limit test:** `test-rate-limit.js` — simulates 100+ requests
 
 ## Frontend Pages Built
