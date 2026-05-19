@@ -8,6 +8,7 @@
     "helmet": "^8.1.0"
   },
   "devDependencies": {
+    "javascript-obfuscator": "^5.4.2",
     "jest": "^30.4.2",
     "jest-html-reporter": "^4.4.0",
     "nodemon": "^3.1.14",
@@ -26,6 +27,9 @@
     "load-test:report": "node tests/load/load-report.js && start load-test-report.html",
     "load-test:k6": "k6 run tests/load/load-test.js",
     "load-test:real-auth": "set LOAD_TEST_REAL_AUTH=true&& set RESULTS_FILE=load-test-results-real-auth.json&& set REPORT_FILE=load-test-report-real-auth.html&& node tests/load/load-test-runner-real-auth-100.js && start load-test-report-real-auth.html",
-    "test:rate-limit": "set LOAD_TEST=true&& node tests/rate-limit/rate-limit-test.js && start rate-limit-test-report.html"
+    "test:rate-limit": "set LOAD_TEST=true&& node tests/rate-limit/rate-limit-test.js && start rate-limit-test-report.html",
+    "build:prod": "node obfuscate.js",
+    "start:prod": "node prod.js",
+    "seed": "node seed.js"
   }
 }

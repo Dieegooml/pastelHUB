@@ -2,6 +2,7 @@
 serviceAccountKey.json
 assignAdmin.js
 node_modules
+dist/
 
 # Reportes generados por tests
 test-report.html
