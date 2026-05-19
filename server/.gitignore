@@ -2,3 +2,9 @@
 serviceAccountKey.json
 assignAdmin.js
 node_modules
+
+# Reportes generados por tests
+test-report.html
+rate-limit-test-report.html
+load-test-report*.html
+load-test-results*.json

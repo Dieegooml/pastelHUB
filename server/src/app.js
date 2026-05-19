@@ -18,8 +18,10 @@ const corsOptions = {
 };
 
 // Configuración de limiters
+const isLoadTest = process.env.LOAD_TEST === 'true' || process.env.LOAD_TEST_REAL_AUTH === 'true';
+
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
+  windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000, // 5s (test) / 15 min
   max: 100,                   // 100 requests por IP
   message: { error: 'Demasiadas peticiones, intenta en 15 minutos' },
   standardHeaders: true,
@@ -27,7 +29,7 @@ const limiter = rateLimit({
 });
 
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
+  windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000, // 5s (test) / 15 min
   max: 10,                    // 10 requests por IP
   message: { error: 'Demasiados intentos de autenticación, intenta en 15 minutos' },
   standardHeaders: true,
