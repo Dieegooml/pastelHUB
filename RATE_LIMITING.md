@@ -1,11 +1,8 @@
-# 🛡️ RATE LIMITING - DOCUMENTACIÓN
+# RATE LIMITING — DOCUMENTACIÓN
 
 ## Descripción General
 
-El proyecto PastelHub implementa **rate limiting** usando `express-rate-limit` para proteger el servidor de abuso y ataques.
-
-**Instalado:** `npm install express-rate-limit`  
-**Versión:** Ver `server/package.json`
+El proyecto PastelHub implementa **rate limiting** usando `express-rate-limit` (v8) para proteger el servidor de abuso y ataques.
 
 ---
 
@@ -16,171 +13,131 @@ El proyecto PastelHub implementa **rate limiting** usando `express-rate-limit` p
 ```javascript
 const rateLimit = require('express-rate-limit');
 
-// Limiter General: 100 requests por IP cada 15 minutos
+// Modo LOAD_TEST: ventanas de 5s para pruebas
+const isLoadTest = process.env.LOAD_TEST === 'true' ||
+                   process.env.LOAD_TEST_REAL_AUTH === 'true';
+
+// Limiter General: 100 requests por IP
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 minutos
-  max: 100,                   // 100 requests
+  windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000,  // 5s (test) / 15 min
+  max: 100,
   message: { error: 'Demasiadas peticiones, intenta en 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Limiter Estricto para Autenticación: 10 requests por IP cada 15 minutos
+// Limiter Estricto para Autenticación: 10 requests por IP
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 minutos
-  max: 10,                    // 10 requests
+  windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000,  // 5s (test) / 15 min
+  max: 10,
   message: { error: 'Demasiados intentos de autenticación, intenta en 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Aplicación de limiters:
-app.use(limiter);  // ← Aplica a TODAS las rutas
-app.use('/api/auth', authLimiter, require('./routes/auth'));  // ← Limiter estricto en /api/auth
+// Aplicación:
+app.use(limiter);                                         // Todas las rutas
+app.use('/api/auth', authLimiter, require('./routes/auth'));  // Auth
 ```
 
 ---
 
 ## Límites Configurados
 
-| Ruta | Límite | Ventana | Mensaje |
-|------|--------|---------|---------|
-| **Todas las rutas** | 100 req/IP | 15 min | `Demasiadas peticiones, intenta en 15 minutos` |
-| **/api/auth** | 10 req/IP | 15 min | `Demasiados intentos de autenticación, intenta en 15 minutos` |
+| Ruta | Límite | Ventana (producción) | Ventana (LOAD_TEST) |
+|---|---|---|---|
+| **Todas las rutas** | 100 req/IP | 15 min | 5s |
+| **/api/auth** | 10 req/IP | 15 min | 5s |
 
 ---
 
-## Ejemplos de Uso
+## Modos de operación
 
-### Ejemplo 1: Superar límite general
+### Variable `LOAD_TEST`
 
-```bash
-# Hacer 101 requests en 15 minutos desde la misma IP
-for i in {1..101}; do
-  curl -X GET http://localhost:3001/api/users \
-    -H "Authorization: Bearer <token>"
-done
+| Variable | Ventanas | Auth | Uso |
+|---|---|---|---|
+| `LOAD_TEST=true` | 5s | Skipea verifyToken (mock) | `npm run start:load-test` |
+| `LOAD_TEST_REAL_AUTH=true` | 5s | Auth real (Firebase) | `npm run load-test:real-auth` |
+| (ninguna) | 15 min | Auth real | Producción |
 
-# Respuesta en la solicitud 101:
-HTTP/1.1 429 Too Many Requests
-{
-  "error": "Demasiadas peticiones, intenta en 15 minutos"
+### Mecanismo en `server/src/middlewares/auth.js`
+
+```javascript
+if (process.env.LOAD_TEST === 'true' &&
+    process.env.LOAD_TEST_REAL_AUTH !== 'true') {
+  // Modo bypass: asigna usuario mock
+  req.user = { uid: 'load-test-user', email: 'load@test.com', roles: ['admin'] };
+  return next();
 }
-```
-
-### Ejemplo 2: Superar límite de autenticación
-
-```bash
-# Hacer 11 intentos de login en 15 minutos desde la misma IP
-for i in {1..11}; do
-  curl -X POST http://localhost:3001/api/auth/sync \
-    -H "Authorization: Bearer <token>"
-done
-
-# Respuesta en la solicitud 11:
-HTTP/1.1 429 Too Many Requests
-{
-  "error": "Demasiados intentos de autenticación, intenta en 15 minutos"
-}
+// Modo normal: verifica token real contra Firebase Auth
 ```
 
 ---
 
 ## Headers de Rate Limiting
 
-Cada respuesta HTTP incluye headers estándar de rate limiting:
+Cada respuesta incluye headers estándar (draft-6):
 
 ```
+RateLimit-Policy: 100;w=900
 RateLimit-Limit: 100
 RateLimit-Remaining: 95
-RateLimit-Reset: 1684395600
+RateLimit-Reset: 842
 ```
 
-- **RateLimit-Limit:** Máximo de requests permitidos
-- **RateLimit-Remaining:** Requests restantes en esta ventana
-- **RateLimit-Reset:** Timestamp UNIX cuando se reinicia el contador
-
 ---
 
-## Beneficios Implementados
+## Test Automatizado
 
-✅ **Protección contra fuerza bruta** en `/api/auth`  
-✅ **Protección general** contra DDoS y abuso  
-✅ **Headers estándar** para que el cliente sepa el estado del límite  
-✅ **Mensajes claros** para el usuario final  
-✅ **Por IP:** Cada IP tiene su propio contador  
+### Script: `server/tests/rate-limit/rate-limit-test.js`
 
----
+Verifica automáticamente ambos límites usando servidores independientes (puertos 3001 y 3002) para evitar interferencia entre pruebas.
 
-## Testing del Rate Limiting
-
-### Con Postman:
-1. Crear una request a `GET /api/users`
-2. Ejecutarla 101 veces seguidas
-3. En la solicitud 101, deberías recibir `429 Too Many Requests`
-
-### Con Curl (Bash):
 ```bash
-#!/bin/bash
-for i in {1..105}; do
-  echo "Request #$i"
-  curl -s -X GET http://localhost:3001/api/users \
-    -H "Authorization: Bearer <token>" \
-    -w "\nStatus: %{http_code}\n"
-  sleep 1
+cd server
+npm run test:rate-limit
+```
+
+### Resultado esperado
+
+```
+  Límite general: bloqueo en #101 (esperado: #101) ✅ PASA
+  Límite auth:    bloqueo en #11 (esperado: #11) ✅ PASA
+```
+
+Genera `rate-limit-test-report.html`.
+
+---
+
+## Testing Manual
+
+### Con Postman / curl
+
+```bash
+# Superar límite general (101 requests)
+for i in {1..101}; do
+  curl -s -X GET http://localhost:3001/api/health -o /dev/null -w "%{http_code}\n"
 done
 ```
 
-### Con Script Node.js:
-```javascript
-const fetch = require('node-fetch');
+### Con el script de demo rápido (raíz)
 
-async function testRateLimit() {
-  const token = 'tu_firebase_token';
-  
-  for (let i = 1; i <= 105; i++) {
-    const res = await fetch('http://localhost:3001/api/users', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    console.log(`Request ${i}: ${res.status}`);
-    
-    if (res.status === 429) {
-      const data = await res.json();
-      console.log('Rate limit alcanzado:', data.error);
-      break;
-    }
-  }
-}
-
-testRateLimit();
-```
-
----
-
-## Configuración en Producción
-
-Cuando despliegues a producción, considera:
-
-```javascript
-// Cambiar estos valores según necesidad
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // Puedes cambiar a 10 o 60 minutos
-  max: 100,                   // Ajustar según el tráfico esperado
-  // ... rest of config
-});
+```bash
+node test-rate-limit.js
 ```
 
 ---
 
 ## Notas Importantes
 
-- El rate limiting se resetea **cada 15 minutos** automáticamente
+- El rate limiting se resetea cada **15 minutos** en producción, cada **5 segundos** en modo LOAD_TEST
 - Cada **IP diferente** tiene su propio contador
-- El `/api/auth` tiene límite más estricto para prevenir ataques de fuerza bruta
-- Los headers de rate limiting están habilitados (`standardHeaders: true`)
+- La ruta `/api/auth` tiene límite más estricto (10 vs 100) para prevenir fuerza bruta
+- Los headers de rate limiting siguen el draft-6 de la especificación IETF
+- `clearMocks: true` en jest.config evita contaminación entre tests
 
 ---
 
-**Documento generado:** 17/05/2026  
-**Estado:** ✅ Rate Limiting Implementado y Documentado
+**Documento generado:** 18/05/2026  
+**Estado:** Rate Limiting Implementado y Documentado

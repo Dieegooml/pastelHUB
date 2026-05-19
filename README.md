@@ -545,7 +545,13 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 |---|---|
 | `npm run dev` | Servidor en modo desarrollo con hot reload |
 | `npm run start` | Servidor en producción |
-| `npm run seed` | Poblar Firestore con datos de prueba |
+| `npm run start:load-test` | Servidor con ventanas de rate limit de 5s y bypass de Firebase Auth |
+| `npm run test` | Tests unitarios (Jest, 232 tests) + genera `test-report.html` |
+| `npm run test:coverage` | Tests unitarios con reporte de cobertura HTML |
+| `npm run load-test` | Prueba de carga: 100 VUs, bypass auth |
+| `npm run load-test:50` | Prueba de carga: 50 VUs, bypass auth |
+| `npm run load-test:real-auth` | Prueba de carga: 100 VUs, auth Firebase real (automático) |
+| `npm run test:rate-limit` | Test de rate limiting (automático, genera reporte HTML) |
 
 ### Frontend (`/client`) — React
 
