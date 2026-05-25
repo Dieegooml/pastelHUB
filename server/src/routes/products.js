@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
-const { verifyToken, requireAdmin } = require('../middlewares/auth');
+const { verifyToken, requireAdmin, requireOwnerOrAdmin } = require('../middlewares/auth');
+const { validate } = require('../middlewares/validate');
+const { createProductSchema, updateProductSchema } = require('../validators/productValidator');
+const { mapProductFromRequest } = require('../utils/mappers');
 
 const col = db.collection('products');
 
-// GET todos los productos
+// GET todos los productos (solo admin)
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
   try {
     const snap = await col.orderBy('createdAt', 'desc').get();
@@ -16,8 +19,8 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// GET productos por pastelería
-router.get('/shop/:shopId', verifyToken, requireAdmin, async (req, res) => {
+// GET productos por pastelería (público)
+router.get('/shop/:shopId', async (req, res) => {
   try {
     const snap = await col
       .where('shop_id', '==', req.params.shopId)
@@ -30,8 +33,8 @@ router.get('/shop/:shopId', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// GET un producto
-router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
+// GET un producto (público)
+router.get('/:id', async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
@@ -42,7 +45,14 @@ router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // POST crear producto
-router.post('/', verifyToken, requireAdmin, async (req, res) => {
+router.post('/', verifyToken, (req, res, next) => {
+  req.body = mapProductFromRequest(req.body);
+  next();
+}, validate(createProductSchema), requireOwnerOrAdmin(async (req) => {
+  const shopDoc = await db.collection('pastryShops').doc(req.body.shop_id).get();
+  if (!shopDoc.exists) throw new Error('not found');
+  return shopDoc.data().owner_id;
+}), async (req, res) => {
   try {
     const {
       shop_id, category_id, name,
@@ -50,12 +60,8 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
       image_url, is_available,
     } = req.body;
 
-    if (!shop_id || !name || price === undefined) {
-      return res.status(400).json({ error: 'shop_id, name y price son requeridos' });
-    }
-
     // Verificar que la pastelería existe
-    const shopDoc = await db.collection('shops').doc(shop_id).get();
+    const shopDoc = await db.collection('pastryShops').doc(shop_id).get();
     if (!shopDoc.exists) {
       return res.status(404).json({ error: 'La pastelería no existe' });
     }
@@ -82,7 +88,16 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // PUT actualizar producto
-router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
+router.put('/:id', verifyToken, (req, res, next) => {
+  req.body = mapProductFromRequest(req.body);
+  next();
+}, validate(updateProductSchema), requireOwnerOrAdmin(async (req) => {
+  const doc = await col.doc(req.params.id).get();
+  if (!doc.exists) throw new Error('not found');
+  const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
+  if (!shopDoc.exists) throw new Error('not found');
+  return shopDoc.data().owner_id;
+}), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
@@ -101,7 +116,13 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // PATCH cambiar disponibilidad
-router.patch('/:id/availability', verifyToken, requireAdmin, async (req, res) => {
+router.patch('/:id/availability', verifyToken, requireOwnerOrAdmin(async (req) => {
+  const doc = await col.doc(req.params.id).get();
+  if (!doc.exists) throw new Error('not found');
+  const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
+  if (!shopDoc.exists) throw new Error('not found');
+  return shopDoc.data().owner_id;
+}), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
@@ -122,7 +143,13 @@ router.patch('/:id/availability', verifyToken, requireAdmin, async (req, res) =>
 });
 
 // DELETE producto
-router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
+router.delete('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
+  const doc = await col.doc(req.params.id).get();
+  if (!doc.exists) throw new Error('not found');
+  const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
+  if (!shopDoc.exists) throw new Error('not found');
+  return shopDoc.data().owner_id;
+}), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
@@ -136,8 +163,8 @@ router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
 
 // ── VARIANTS (array embebido) ─────────────────────────────────────────
 
-// GET variantes de un producto
-router.get('/:id/variants', verifyToken, requireAdmin, async (req, res) => {
+// GET variantes de un producto (público)
+router.get('/:id/variants', async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
@@ -148,7 +175,13 @@ router.get('/:id/variants', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // POST agregar variante
-router.post('/:id/variants', verifyToken, requireAdmin, async (req, res) => {
+router.post('/:id/variants', verifyToken, requireOwnerOrAdmin(async (req) => {
+  const doc = await col.doc(req.params.id).get();
+  if (!doc.exists) throw new Error('not found');
+  const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
+  if (!shopDoc.exists) throw new Error('not found');
+  return shopDoc.data().owner_id;
+}), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
@@ -181,7 +214,13 @@ router.post('/:id/variants', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // PUT actualizar variante
-router.put('/:id/variants/:variantId', verifyToken, requireAdmin, async (req, res) => {
+router.put('/:id/variants/:variantId', verifyToken, requireOwnerOrAdmin(async (req) => {
+  const doc = await col.doc(req.params.id).get();
+  if (!doc.exists) throw new Error('not found');
+  const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
+  if (!shopDoc.exists) throw new Error('not found');
+  return shopDoc.data().owner_id;
+}), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
@@ -210,7 +249,13 @@ router.put('/:id/variants/:variantId', verifyToken, requireAdmin, async (req, re
 });
 
 // DELETE variante
-router.delete('/:id/variants/:variantId', verifyToken, requireAdmin, async (req, res) => {
+router.delete('/:id/variants/:variantId', verifyToken, requireOwnerOrAdmin(async (req) => {
+  const doc = await col.doc(req.params.id).get();
+  if (!doc.exists) throw new Error('not found');
+  const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
+  if (!shopDoc.exists) throw new Error('not found');
+  return shopDoc.data().owner_id;
+}), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });

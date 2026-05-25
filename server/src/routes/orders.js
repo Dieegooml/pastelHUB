@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
-const { verifyToken, requireAdmin } = require('../middlewares/auth');
+const { verifyToken, requireAdmin, requireCustomer, requireOwnerOrAdmin } = require('../middlewares/auth');
+const { validate } = require('../middlewares/validate');
+const { createOrderSchema } = require('../validators/orderValidator');
 
 const col = db.collection('orders');
 
@@ -21,7 +23,11 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // GET órdenes por pastelería
-router.get('/shop/:shopId', verifyToken, requireAdmin, async (req, res) => {
+router.get('/shop/:shopId', verifyToken, requireOwnerOrAdmin(async (req) => {
+  const shopDoc = await db.collection('pastryShops').doc(req.params.shopId).get();
+  if (!shopDoc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
+  return shopDoc.data().owner_id;
+}), async (req, res) => {
   try {
     const snap = await col
       .where('shop.shop_id', '==', req.params.shopId)
@@ -65,6 +71,20 @@ router.get('/status/:status', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
+// GET órdenes del usuario autenticado
+router.get('/my', verifyToken, requireCustomer, async (req, res) => {
+  try {
+    const snap = await col
+      .where('customer.user_id', '==', req.user.uid)
+      .orderBy('createdAt', 'desc')
+      .get();
+    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener tus órdenes' });
+  }
+});
+
 // GET una orden
 router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -77,7 +97,7 @@ router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // POST crear orden
-router.post('/', verifyToken, requireAdmin, async (req, res) => {
+router.post('/', verifyToken, validate(createOrderSchema), requireCustomer, async (req, res) => {
   try {
     const {
       customer, shop, items,
@@ -136,11 +156,6 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
         status:          'pending',
         transaction_ref: payment.transaction_ref || '',
       },
-      review: {
-        rating:     0,
-        comment:    '',
-        reply_text: '',
-      },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -153,7 +168,15 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // PATCH actualizar estado de la orden
-router.patch('/:id/status', verifyToken, requireAdmin, async (req, res) => {
+router.patch('/:id/status', verifyToken, requireOwnerOrAdmin(async (req) => {
+  const orderDoc = await col.doc(req.params.id).get();
+  if (!orderDoc.exists) throw Object.assign(new Error('Orden no encontrada'), { status: 404 });
+  const shopId = orderDoc.data().shop?.shop_id;
+  if (!shopId) throw Object.assign(new Error('La orden no tiene pastelería asociada'), { status: 400 });
+  const shopDoc = await db.collection('pastryShops').doc(shopId).get();
+  if (!shopDoc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
+  return shopDoc.data().owner_id;
+}), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
@@ -205,72 +228,6 @@ router.patch('/:id/payment-status', verifyToken, requireAdmin, async (req, res) 
     res.json({ id: req.params.id, payment: updatedPayment });
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar estado del pago' });
-  }
-});
-
-// PATCH agregar reseña a la orden
-router.patch('/:id/review', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const doc = await col.doc(req.params.id).get();
-    if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
-
-    if (doc.data().status !== 'delivered') {
-      return res.status(400).json({ error: 'Solo se pueden reseñar órdenes entregadas' });
-    }
-
-    const { rating, comment } = req.body;
-    if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: 'rating debe ser un número entre 1 y 5' });
-    }
-
-    // Verificar que no tenga ya una reseña
-    const currentReview = doc.data().review || {};
-    if (currentReview.rating > 0) {
-      return res.status(400).json({ error: 'Esta orden ya tiene una reseña' });
-    }
-
-    const review = {
-      rating:     parseInt(rating),
-      comment:    comment    || '',
-      reply_text: '',
-    };
-
-    await col.doc(req.params.id).update({
-      review,
-      updatedAt: new Date().toISOString(),
-    });
-
-    res.json({ id: req.params.id, review });
-  } catch (e) {
-    res.status(500).json({ error: 'Error al agregar reseña' });
-  }
-});
-
-// PATCH responder reseña
-router.patch('/:id/review/reply', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const doc = await col.doc(req.params.id).get();
-    if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
-
-    const { reply_text } = req.body;
-    if (!reply_text) {
-      return res.status(400).json({ error: 'reply_text es requerido' });
-    }
-
-    const review = doc.data().review || {};
-    if (!review.rating) {
-      return res.status(400).json({ error: 'Esta orden no tiene reseña aún' });
-    }
-
-    const updatedReview = { ...review, reply_text };
-    await col.doc(req.params.id).update({
-      review:    updatedReview,
-      updatedAt: new Date().toISOString(),
-    });
-
-    res.json({ id: req.params.id, review: updatedReview });
-  } catch (e) {
-    res.status(500).json({ error: 'Error al responder reseña' });
   }
 });
 
