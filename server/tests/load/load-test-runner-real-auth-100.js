@@ -5,9 +5,9 @@ const net = require('net');
 const fs = require('fs');
 const SERVER_DIR = path.resolve(__dirname, '..', '..');
 
-const CONCURRENCY = 100;
-const RAMP_SECONDS = parseInt(process.env.RAMP_SECONDS || '10', 10);
-const STEADY_SECONDS = parseInt(process.env.STEADY_SECONDS || '20', 10);
+const CONCURRENCY = parseInt(process.env.CONCURRENCY || '100', 10);
+const RAMP_SECONDS = parseInt(process.env.RAMP_SECONDS || '20', 10);
+const STEADY_SECONDS = parseInt(process.env.STEADY_SECONDS || '10', 10);
 const RESULTS_FILE = process.env.RESULTS_FILE || 'load-test-results-real-auth.json';
 const REPORT_FILE = process.env.REPORT_FILE || 'load-test-report-real-auth.html';
 

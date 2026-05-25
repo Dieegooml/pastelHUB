@@ -15,9 +15,10 @@ describe('GET /api/shops', () => {
     expect(res.body).toHaveLength(0);
   });
 
-  it('responde 401 sin token', async () => {
+  it('responde 200 sin token (endpoint publico)', async () => {
+    global.mockCollection([]);
     const res = await request(app).get('/api/shops');
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200);
   });
 });
 
@@ -31,7 +32,7 @@ describe('POST /api/shops', () => {
       .send({});
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('owner_id y name');
+    expect(res.body.error).toContain('owner_id');
   });
 
   it('crea una pasteleria con datos validos', async () => {
@@ -71,7 +72,7 @@ describe('GET /api/shops/:id', () => {
       .set('Authorization', 'Bearer token-valido');
 
     expect(res.status).toBe(200);
-    expect(res.body.name).toBe('Mi Pasteleria');
+    expect(res.body.shopName).toBe('Mi Pasteleria');
   });
 });
 

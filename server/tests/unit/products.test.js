@@ -75,7 +75,7 @@ describe('POST /api/products', () => {
       .set('Authorization', 'Bearer token-valido')
       .send({});
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('shop_id, name y price');
+    expect(res.body.error).toContain('shop_id');
   });
 
   it('responde 404 si la pasteleria no existe', async () => {

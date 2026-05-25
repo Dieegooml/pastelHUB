@@ -1,7 +1,7 @@
 const BASE = process.env.BASE_URL || 'http://localhost:3001';
-const CONCURRENCY = 100;
-const RAMP_SECONDS = parseInt(process.env.RAMP_SECONDS || '10', 10);
-const STEADY_SECONDS = parseInt(process.env.STEADY_SECONDS || '20', 10);
+const CONCURRENCY = parseInt(process.env.CONCURRENCY || '100', 10);
+const RAMP_SECONDS = parseInt(process.env.RAMP_SECONDS || '20', 10);
+const STEADY_SECONDS = parseInt(process.env.STEADY_SECONDS || '10', 10);
 const RESULTS_FILE = process.env.RESULTS_FILE || 'load-test-results.json';
 
 const endpoints = [
