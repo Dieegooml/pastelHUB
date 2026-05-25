@@ -77,7 +77,7 @@ npm run start:load-test   # terminal 1
 npm run load-test         # terminal 2
 
 # Carga (50 VUs, bypass auth)
-npm run load-test:50
+npm run load-test:500
 
 # Carga (100 VUs, auth real)
 npm run load-test:real-auth

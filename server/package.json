@@ -5,7 +5,8 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "firebase-admin": "^13.10.0",
-    "helmet": "^8.1.0"
+    "helmet": "^8.1.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "javascript-obfuscator": "^5.4.2",
