@@ -29,4 +29,43 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { verifyToken, requireAdmin };
+const requireOwner = (req, res, next) => {
+  const roles = req.user?.roles || [];
+  if (roles.includes('admin') || roles.includes('owner')) {
+    return next();
+  }
+  res.status(403).json({ error: 'Solo owners o admins' });
+};
+
+const requireModerator = (req, res, next) => {
+  const roles = req.user?.roles || [];
+  if (roles.includes('admin') || roles.includes('moderator')) {
+    return next();
+  }
+  res.status(403).json({ error: 'Solo moderadores o admins' });
+};
+
+const requireCustomer = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Autenticación requerida' });
+  }
+  next();
+};
+
+const requireOwnerOrAdmin = (getResourceOwnerId) => {
+  return async (req, res, next) => {
+    const roles = req.user?.roles || [];
+    if (roles.includes('admin')) return next();
+
+    try {
+      const ownerId = await getResourceOwnerId(req);
+      if (req.user.uid === ownerId) return next();
+    } catch {
+      return res.status(500).json({ error: 'Error al verificar propiedad del recurso' });
+    }
+
+    res.status(403).json({ error: 'No eres el propietario de este recurso' });
+  };
+};
+
+module.exports = { verifyToken, requireAdmin, requireOwner, requireModerator, requireCustomer, requireOwnerOrAdmin };
