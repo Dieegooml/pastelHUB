@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -19,10 +20,11 @@ const corsOptions = {
 
 // Configuración de limiters
 const isLoadTest = process.env.LOAD_TEST === 'true' || process.env.LOAD_TEST_REAL_AUTH === 'true';
+const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
 
 const limiter = rateLimit({
   windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000, // 5s (test) / 15 min
-  max: 100,                   // 100 requests por IP
+  max: isDev ? 500 : 100,          // 500 (dev) / 100 (prod)
   message: { error: 'Demasiadas peticiones, intenta en 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -30,7 +32,7 @@ const limiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000, // 5s (test) / 15 min
-  max: 10,                    // 10 requests por IP
+  max: isDev ? 100 : 10,           // 100 (dev) / 10 (prod)
   message: { error: 'Demasiados intentos de autenticación, intenta en 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -67,7 +69,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Manejo de rutas inexistentes
+// Servir frontend estático (producción)
+const distPath = path.join(__dirname, '../../client/dist');
+app.use(express.static(distPath));
+
+// SPA fallback: servir index.html para cualquier ruta que no sea API
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/.')) return next();
+  res.sendFile(path.join(distPath, 'index.html'), (err) => { if (err) next(); });
+});
+
+// Manejo de rutas inexistentes (solo API)
 app.use((req, res, next) => {
   res.status(404).json({ error: 'Ruta no encontrada' });
 });
