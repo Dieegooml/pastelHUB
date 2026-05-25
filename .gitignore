@@ -6,6 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 firebase-debug.log*
 firebase-debug.*.log*
+STATUS.md
 
 # Firebase cache
 .firebase/
@@ -64,6 +65,13 @@ node_modules/
 
 # dotenv environment variables file
 .env
+
+# Service account keys
+serviceAccountKey.json
+server/serviceAccountKey.json
+
+# Production build
+server/dist/
 
 # dataconnect generated files
 .dataconnect
