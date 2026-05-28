@@ -4,6 +4,7 @@ export const notificationsService = {
   getAll:           ()                   => api.get('/notifications'),
   getByUser:        (userId)             => api.get(`/notifications/user/${userId}`),
   getUnreadByUser:  (userId)             => api.get(`/notifications/user/${userId}/unread`),
+  getUnreadCount:   (userId)             => api.get(`/notifications/user/${userId}/unread/count`),
   getById:          (id)                 => api.get(`/notifications/${id}`),
   create:           (data)               => api.post('/notifications', data),
   createBulk:       (data)               => api.post('/notifications/bulk', data),

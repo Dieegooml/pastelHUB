@@ -12,6 +12,7 @@ import Checkout from "./pages/customer/Checkout";
 import MyOrders from "./pages/customer/MyOrders";
 import OrderDetail from "./pages/customer/OrderDetail";
 import Profile from "./pages/customer/Profile";
+import NotificationsPage from "./pages/customer/Notifications";
 import OwnerDashboard from "./pages/owner/OwnerDashboard";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/my-orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
           <Route path="/my-orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
           <Route path="/owner" element={<ProtectedRoute><OwnerDashboard /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute role="admin"><Dashboard /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute role="admin"><Users /></ProtectedRoute>} />
