@@ -16,6 +16,7 @@ describe('POST /api/auth/sync', () => {
     expect(res.body.isNew).toBe(true);
     expect(res.body.email).toBe('test@example.com');
     expect(res.body.roles).toEqual(['customer']);
+    expect(global.mockFirestore.set).toHaveBeenCalledTimes(2);
   });
 
   it('responde 200 si el usuario ya existe (isNew: false)', async () => {
@@ -28,6 +29,21 @@ describe('POST /api/auth/sync', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.isNew).toBe(false);
+  });
+
+  it('crea perfil customer automaticamente si el usuario existe pero no tiene perfil', async () => {
+    global.mockToken('existing-uid', ['customer']);
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ email: 'test@example.com', roles: ['customer'] }), id: 'u1' });
+    global.mockDocNotExists();
+    global.mockFirestore.set.mockResolvedValue();
+
+    const res = await request(app)
+      .post('/api/auth/sync')
+      .set('Authorization', 'Bearer token-valido');
+
+    expect(res.status).toBe(200);
+    expect(res.body.isNew).toBe(false);
+    expect(global.mockFirestore.set).toHaveBeenCalled();
   });
 
   it('responde 401 sin token', async () => {

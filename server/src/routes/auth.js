@@ -24,7 +24,23 @@ router.post('/sync', verifyToken, async (req, res) => {
       };
       await userRef.set(data);
       await admin.auth().setCustomUserClaims(uid, { roles: ['customer'] });
+
+      // Crear perfil customer automáticamente
+      await db.collection('customers').doc(uid).set({
+        defaultAddressId: '',
+        createdAt: new Date().toISOString(),
+      });
+
       return res.status(201).json({ id: uid, ...data, isNew: true });
+    }
+
+    // Auto-crear customer profile si no existe (migración transparente)
+    const customerDoc = await db.collection('customers').doc(uid).get();
+    if (!customerDoc.exists) {
+      await db.collection('customers').doc(uid).set({
+        defaultAddressId: '',
+        createdAt: new Date().toISOString(),
+      });
     }
 
     res.json({ id: uid, ...userDoc.data(), isNew: false });
