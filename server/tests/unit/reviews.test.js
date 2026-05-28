@@ -9,7 +9,7 @@ describe('GET /api/reviews', () => {
       .get('/api/reviews')
       .set('Authorization', 'Bearer token-valido');
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(1);
+    expect(res.body.data).toHaveLength(1);
   });
 
   it('responde 401 sin token', async () => {
@@ -82,8 +82,8 @@ describe('GET /api/reviews/:id', () => {
 
 describe('POST /api/reviews', () => {
   it('crea una resena correctamente', async () => {
-    global.mockToken('admin-uid', ['admin']);
-    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ status: 'delivered' }), id: 'o-1' });
+    global.mockToken('test-uid', ['customer']);
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ status: 'delivered', customer: { user_id: 'test-uid' } }), id: 'o-1' });
     global.mockFirestore.get.mockResolvedValueOnce({ empty: true, docs: [] });
     global.mockFirestore.get.mockResolvedValue({ docs: [{ data: () => ({ rating: 5 }) }], empty: false });
     global.mockFirestore.add.mockResolvedValue({ id: 'new-review' });
@@ -91,13 +91,14 @@ describe('POST /api/reviews', () => {
     const res = await request(app)
       .post('/api/reviews')
       .set('Authorization', 'Bearer token-valido')
-      .send({ customerId: 'c1', shopId: 's1', orderId: 'o-1', rating: 5, comment: 'Excelente' });
+      .send({ shopId: 's1', orderId: 'o-1', rating: 5, comment: 'Excelente' });
     expect(res.status).toBe(201);
     expect(res.body.rating).toBe(5);
+    expect(res.body.customerId).toBe('test-uid');
   });
 
   it('responde 400 si faltan campos', async () => {
-    global.mockToken('admin-uid', ['admin']);
+    global.mockToken('test-uid', ['customer']);
     const res = await request(app)
       .post('/api/reviews')
       .set('Authorization', 'Bearer token-valido')
@@ -106,42 +107,42 @@ describe('POST /api/reviews', () => {
   });
 
   it('responde 400 con rating invalido', async () => {
-    global.mockToken('admin-uid', ['admin']);
+    global.mockToken('test-uid', ['customer']);
     const res = await request(app)
       .post('/api/reviews')
       .set('Authorization', 'Bearer token-valido')
-      .send({ customerId: 'c1', shopId: 's1', orderId: 'o-1', rating: 6 });
+      .send({ shopId: 's1', orderId: 'o-1', rating: 6 });
     expect(res.status).toBe(400);
   });
 
   it('responde 404 si la orden no existe', async () => {
-    global.mockToken('admin-uid', ['admin']);
+    global.mockToken('test-uid', ['customer']);
     global.mockDocNotExists();
     const res = await request(app)
       .post('/api/reviews')
       .set('Authorization', 'Bearer token-valido')
-      .send({ customerId: 'c1', shopId: 's1', orderId: 'o-inexistente', rating: 5 });
+      .send({ shopId: 's1', orderId: 'o-inexistente', rating: 5 });
     expect(res.status).toBe(404);
   });
 
   it('responde 400 si la orden no fue entregada', async () => {
-    global.mockToken('admin-uid', ['admin']);
-    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ status: 'pending' }), id: 'o-1' });
+    global.mockToken('test-uid', ['customer']);
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ status: 'pending', customer: { user_id: 'test-uid' } }), id: 'o-1' });
     const res = await request(app)
       .post('/api/reviews')
       .set('Authorization', 'Bearer token-valido')
-      .send({ customerId: 'c1', shopId: 's1', orderId: 'o-1', rating: 5 });
+      .send({ shopId: 's1', orderId: 'o-1', rating: 5 });
     expect(res.status).toBe(400);
   });
 
   it('responde 400 si la orden ya tiene resena', async () => {
-    global.mockToken('admin-uid', ['admin']);
-    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ status: 'delivered' }), id: 'o-1' });
+    global.mockToken('test-uid', ['customer']);
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ status: 'delivered', customer: { user_id: 'test-uid' } }), id: 'o-1' });
     global.mockFirestore.get.mockResolvedValueOnce({ empty: false, docs: [{ id: 'r1', data: () => ({}) }] });
     const res = await request(app)
       .post('/api/reviews')
       .set('Authorization', 'Bearer token-valido')
-      .send({ customerId: 'c1', shopId: 's1', orderId: 'o-1', rating: 5 });
+      .send({ shopId: 's1', orderId: 'o-1', rating: 5 });
     expect(res.status).toBe(400);
   });
 });
@@ -149,8 +150,10 @@ describe('POST /api/reviews', () => {
 describe('PATCH /api/reviews/:id/status', () => {
   it('modera resena correctamente', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ shopId: 's1', status: 'pending', rating: 5 }), id: 'r-1' });
-    global.mockFirestore.get.mockResolvedValue({ docs: [{ data: () => ({ rating: 5 }) }], empty: false });
+    const reviewDoc = { exists: true, data: () => ({ shopId: 's1', status: 'pending', rating: 5 }), id: 'r-1' };
+    const recalcResult = { docs: [{ data: () => ({ rating: 5 }) }], empty: false };
+    global.mockFirestore.get.mockResolvedValueOnce(reviewDoc);
+    global.mockFirestore.get.mockResolvedValueOnce(recalcResult);
     global.mockFirestore.update.mockResolvedValue();
     const res = await request(app)
       .patch('/api/reviews/r-1/status')
@@ -218,13 +221,25 @@ describe('PUT /api/reviews/:id', () => {
     expect(res.status).toBe(400);
   });
 
-  it('responde 400 con rating invalido', async () => {
+  it('acepta rating 0 (escala 0-5)', async () => {
+    global.mockToken('admin-uid', ['admin']);
+    global.mockDocExists({ status: 'pending', rating: 3 });
+    global.mockFirestore.update.mockResolvedValue();
+    const res = await request(app)
+      .put('/api/reviews/r-1')
+      .set('Authorization', 'Bearer token-valido')
+      .send({ rating: 0 });
+    expect(res.status).toBe(200);
+    expect(res.body.rating).toBe(0);
+  });
+
+  it('responde 400 con rating mayor a 5', async () => {
     global.mockToken('admin-uid', ['admin']);
     global.mockDocExists({ status: 'pending', rating: 3 });
     const res = await request(app)
       .put('/api/reviews/r-1')
       .set('Authorization', 'Bearer token-valido')
-      .send({ rating: 0 });
+      .send({ rating: 6 });
     expect(res.status).toBe(400);
   });
 });

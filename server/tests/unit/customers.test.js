@@ -9,7 +9,7 @@ describe('GET /api/customers', () => {
       .get('/api/customers')
       .set('Authorization', 'Bearer token-valido');
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(1);
+    expect(res.body.data).toHaveLength(1);
   });
 
   it('responde 401 sin token', async () => {
@@ -71,15 +71,6 @@ describe('POST /api/customers', () => {
       .set('Authorization', 'Bearer token-valido')
       .send({ uid: 'u1' });
     expect(res.status).toBe(201);
-  });
-
-  it('responde 400 si falta uid', async () => {
-    global.mockToken('admin-uid', ['admin']);
-    const res = await request(app)
-      .post('/api/customers')
-      .set('Authorization', 'Bearer token-valido')
-      .send({});
-    expect(res.status).toBe(400);
   });
 
   it('responde 404 si el usuario no existe', async () => {

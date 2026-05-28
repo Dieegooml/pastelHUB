@@ -12,12 +12,13 @@ describe('GET /api/products', () => {
       .get('/api/products')
       .set('Authorization', 'Bearer token-valido');
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(2);
+    expect(res.body.data).toHaveLength(2);
   });
 
-  it('responde 401 sin token', async () => {
+  it('responde 200 sin token (endpoint publico)', async () => {
+    global.mockCollection([]);
     const res = await request(app).get('/api/products');
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200);
   });
 });
 
@@ -29,7 +30,7 @@ describe('GET /api/products/shop/:shopId', () => {
       .get('/api/products/shop/shop-1')
       .set('Authorization', 'Bearer token-valido');
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
   });
 });
 

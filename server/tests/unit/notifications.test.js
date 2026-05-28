@@ -9,7 +9,7 @@ describe('GET /api/notifications', () => {
       .get('/api/notifications')
       .set('Authorization', 'Bearer token-valido');
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(1);
+    expect(res.body.data).toHaveLength(1);
   });
 
   it('responde 401 sin token', async () => {

@@ -11,8 +11,8 @@ describe('GET /api/shops', () => {
       .set('Authorization', 'Bearer token-valido');
 
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body).toHaveLength(0);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data).toHaveLength(0);
   });
 
   it('responde 200 sin token (endpoint publico)', async () => {

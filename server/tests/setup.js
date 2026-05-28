@@ -1,3 +1,6 @@
+const mockCountSnap = { data: () => ({ count: 0 }) };
+const countFn = jest.fn().mockReturnValue({ get: jest.fn().mockResolvedValue(mockCountSnap) });
+
 const mockBatch = {
   set: jest.fn(),
   update: jest.fn(),
@@ -16,6 +19,8 @@ const mockDb = {
   orderBy: jest.fn().mockReturnThis(),
   where: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
+  offset: jest.fn().mockReturnThis(),
+  count: countFn,
   batch: jest.fn(() => mockBatch),
 };
 
@@ -54,8 +59,10 @@ global.mockDocNotExists = () => {
 };
 
 global.mockCollection = (docs) => {
+  const mapped = docs.map((d, i) => ({ id: d.id || `doc-${i}`, data: () => d }));
+  mockCountSnap.data = () => ({ count: mapped.length });
   mockDb.get.mockResolvedValue({
-    docs: docs.map((d, i) => ({ id: d.id || `doc-${i}`, data: () => d })),
-    empty: docs.length === 0,
+    docs: mapped,
+    empty: mapped.length === 0,
   });
 };
