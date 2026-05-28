@@ -1,4 +1,5 @@
 import { auth } from '../config/firebase';
+import { signOut } from 'firebase/auth';
 
 const BASE = import.meta.env.VITE_API_URL;
 
@@ -13,38 +14,52 @@ async function getHeaders() {
 async function handleResponse(res) {
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || data.message || `HTTP ${res.status}`);
+    const err = new Error(data.error || data.message || `HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
   }
   return data;
 }
 
+async function apiFetch(path, options = {}) {
+  const res = await fetch(`${BASE}${path}`, {
+    ...options,
+    headers: { ...(await getHeaders()), ...options.headers },
+  });
+
+  if (res.status !== 401) return handleResponse(res);
+
+  // 401 — try refreshing the token once and retry
+  if (auth.currentUser) {
+    const newToken = await auth.currentUser.getIdToken(true);
+    const retryRes = await fetch(`${BASE}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${newToken}`,
+        ...options.headers,
+      },
+    });
+    if (retryRes.ok) return retryRes.json();
+    if (retryRes.status === 401) {
+      const data = await retryRes.json().catch(() => ({}));
+      const err = new Error(data.error || `HTTP ${retryRes.status}`);
+      err.status = retryRes.status;
+      throw err;
+    }
+    return handleResponse(retryRes);
+  }
+
+  const data = await res.json().catch(() => ({}));
+  const err = new Error(data.error || `HTTP ${res.status}`);
+  err.status = res.status;
+  throw err;
+}
+
 export const api = {
-  get: async (path) => {
-    const res = await fetch(`${BASE}${path}`, { headers: await getHeaders() });
-    return handleResponse(res);
-  },
-  post: async (path, body) => {
-    const res = await fetch(`${BASE}${path}`, {
-      method: 'POST', headers: await getHeaders(), body: JSON.stringify(body),
-    });
-    return handleResponse(res);
-  },
-  put: async (path, body) => {
-    const res = await fetch(`${BASE}${path}`, {
-      method: 'PUT', headers: await getHeaders(), body: JSON.stringify(body),
-    });
-    return handleResponse(res);
-  },
-  delete: async (path) => {
-    const res = await fetch(`${BASE}${path}`, {
-      method: 'DELETE', headers: await getHeaders(),
-    });
-    return handleResponse(res);
-  },
-  patch: async (path, body) => {
-    const res = await fetch(`${BASE}${path}`, {
-      method: 'PATCH', headers: await getHeaders(), body: JSON.stringify(body),
-    });
-    return handleResponse(res);
-  },
+  get:    (path) => apiFetch(path),
+  post:   (path, body) => apiFetch(path, { method: 'POST', body: JSON.stringify(body) }),
+  put:    (path, body) => apiFetch(path, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: (path) => apiFetch(path, { method: 'DELETE' }),
+  patch:  (path, body) => apiFetch(path, { method: 'PATCH', body: JSON.stringify(body) }),
 };
