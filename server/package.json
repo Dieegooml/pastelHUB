@@ -31,6 +31,10 @@
     "test:rate-limit": "set LOAD_TEST=true&& node tests/rate-limit/rate-limit-test.js && start rate-limit-test-report.html",
     "build:prod": "node obfuscate.js",
     "start:prod": "node prod.js",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "backup": "node backup.js",
+    "backup:users": "node backup.js users",
+    "backup:shops": "node backup.js pastryShops",
+    "backup:orders": "node backup.js orders,payments,reviews"
   }
 }
