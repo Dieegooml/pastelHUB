@@ -43,6 +43,24 @@ router.get('/user/:userId', verifyToken, async (req, res) => {
   }
 });
 
+// GET conteo de no leídas por usuario (propio usuario o admin)
+router.get('/user/:userId/unread/count', verifyToken, async (req, res) => {
+  try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.userId) {
+      return res.status(403).json({ error: 'Solo puedes ver tus propias notificaciones' });
+    }
+    const snap = await col
+      .where('userId', '==', req.params.userId)
+      .where('isRead', '==', false)
+      .count()
+      .get();
+    res.json({ count: snap.data().count || 0 });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener conteo de notificaciones' });
+  }
+});
+
 // GET notificaciones no leídas por usuario (propio usuario o admin)
 router.get('/user/:userId/unread', verifyToken, async (req, res) => {
   try {
