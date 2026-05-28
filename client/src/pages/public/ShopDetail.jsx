@@ -5,6 +5,7 @@ import Navbar from '../../components/Navbar';
 import { colors, font, badge as badgeStyle } from '../../styles/theme';
 import { shopsService } from '../../services/shopsService';
 import { productsService } from '../../services/productsService';
+import { reviewsService } from '../../services/reviewsService';
 
 const smallBtn = {
   padding: '6px 14px', borderRadius: '99px', border: 'none', cursor: 'pointer',
@@ -24,6 +25,7 @@ export default function ShopDetail() {
   const navigate = useNavigate();
   const [shop, setShop] = useState(null);
   const [products, setProducts] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [toast, setToast] = useState('');
@@ -32,12 +34,14 @@ export default function ShopDetail() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [shopData, productsData] = await Promise.all([
+        const [shopData, productsData, reviewsData] = await Promise.all([
           shopsService.getById(id),
           productsService.getByShop(id),
+          reviewsService.getByShop(id).catch(() => []),
         ]);
         setShop(shopData);
         setProducts(Array.isArray(productsData) ? productsData : []);
+        setReviews(Array.isArray(reviewsData) ? reviewsData : []);
       } catch {} finally { setLoading(false); }
     };
     load();
@@ -250,6 +254,18 @@ export default function ShopDetail() {
             <div style={sidebarBox}>
               <div style={sectionTitle}>Información</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {shop.rating !== undefined && shop.rating > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>⭐</span>
+                    <div>
+                      <div style={{ fontSize: '11px', color: colors.textMuted, fontFamily: font.body }}>Puntuación</div>
+                      <div style={{ fontSize: '14px', fontFamily: font.body, color: '#f59e0b' }}>
+                        {'★'.repeat(Math.round(shop.rating))}{'☆'.repeat(5 - Math.round(shop.rating))}
+                        <span style={{ color: colors.textSecondary, marginLeft: '6px', fontSize: '13px' }}>{shop.rating.toFixed(1)} / 5</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>📍</span>
                   <div>
@@ -330,6 +346,30 @@ export default function ShopDetail() {
                     }}>
                       {cat.name || cat}
                     </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Reviews */}
+            {reviews.length > 0 && (
+              <div style={sidebarBox}>
+                <div style={sectionTitle}>Reseñas ({reviews.length})</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {reviews.slice(0, 5).map((r) => (
+                    <div key={r.id} style={{ borderBottom: `1px solid ${colors.border}`, paddingBottom: '10px' }}>
+                      <div style={{ fontSize: '16px', marginBottom: '4px' }}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <span key={star} style={{ color: star <= r.rating ? '#f59e0b' : '#ddd', marginRight: '1px' }}>★</span>
+                        ))}
+                      </div>
+                      {r.comment && <p style={{ fontFamily: font.body, fontSize: '12px', color: colors.text, margin: 0, lineHeight: 1.5 }}>{r.comment}</p>}
+                      {r.ownerReply && (
+                        <div style={{ marginTop: '6px', padding: '8px', background: colors.grayLight, borderRadius: '6px', fontSize: '11px', color: colors.textSecondary, fontFamily: font.body, borderLeft: `2px solid ${colors.accent}` }}>
+                          <strong style={{ color: colors.accent }}>Dueño:</strong> {r.ownerReply}
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>

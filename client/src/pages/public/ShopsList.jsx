@@ -322,23 +322,30 @@ export default function ShopsList() {
                     {shop.shopName}
                   </h3>
 
-                  {/* City */}
-                  {shop.city && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '4px',
-                      fontSize: '13px', color: colors.textSecondary, fontFamily: font.body,
-                      marginBottom: '10px',
-                    }}>
-                      <span>📍</span>
-                      <span>{shop.city}</span>
-                      {shop.phone && (
-                        <>
-                          <span style={{ margin: '0 4px', color: colors.border }}>·</span>
-                          <span>📞 {shop.phone}</span>
-                        </>
-                      )}
-                    </div>
-                  )}
+                  {/* City & Rating */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '4px',
+                    fontSize: '13px', color: colors.textSecondary, fontFamily: font.body,
+                    marginBottom: '10px', flexWrap: 'wrap',
+                  }}>
+                    <span>📍</span>
+                    <span>{shop.city}</span>
+                    {shop.rating !== undefined && shop.rating > 0 && (
+                      <>
+                        <span style={{ margin: '0 4px', color: colors.border }}>·</span>
+                        <span style={{ color: '#f59e0b' }}>
+                          {'★'.repeat(Math.round(shop.rating))} {'☆'.repeat(5 - Math.round(shop.rating))}
+                          <span style={{ color: colors.textSecondary, marginLeft: '4px', fontSize: '12px' }}>{shop.rating.toFixed(1)}</span>
+                        </span>
+                      </>
+                    )}
+                    {shop.phone && (
+                      <>
+                        <span style={{ margin: '0 4px', color: colors.border }}>·</span>
+                        <span>📞 {shop.phone}</span>
+                      </>
+                    )}
+                  </div>
 
                   {/* Description */}
                   {(shop.shopDescription || shop.description) && (
