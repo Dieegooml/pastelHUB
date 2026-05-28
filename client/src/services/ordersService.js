@@ -4,6 +4,7 @@ export const ordersService = {
   getAll:           ()                   => api.get('/orders'),
   getById:          (id)                 => api.get(`/orders/${id}`),
   getByShop:        (shopId)             => api.get(`/orders/shop/${shopId}`),
+  getSummary:       (shopId, days = 30)  => api.get(`/orders/shop/${shopId}/summary?days=${days}`),
   getMy:            ()                   => api.get('/orders/my'),
   getByCustomer:    (userId)             => api.get(`/orders/customer/${userId}`),
   getByStatus:      (status)             => api.get(`/orders/status/${status}`),
