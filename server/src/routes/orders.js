@@ -184,6 +184,36 @@ router.post('/', verifyToken, validate(createOrderSchema), requireCustomer, asyn
   }
 });
 
+// PATCH cancelar orden (cliente autenticado, solo si está pendiente)
+router.patch('/:id/cancel', verifyToken, async (req, res) => {
+  try {
+    const doc = await col.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
+
+    // Solo el dueño de la orden puede cancelar
+    if (doc.data().customer?.user_id !== req.user.uid) {
+      return res.status(403).json({ error: 'Solo puedes cancelar tus propias órdenes' });
+    }
+
+    if (doc.data().status !== 'pending') {
+      return res.status(400).json({ error: 'Solo se pueden cancelar órdenes pendientes' });
+    }
+
+    const status_history = doc.data().status_history || [];
+    status_history.push('cancelled');
+
+    await col.doc(req.params.id).update({
+      status: 'cancelled',
+      status_history,
+      updatedAt: new Date().toISOString(),
+    });
+
+    res.json({ id: req.params.id, status: 'cancelled', status_history });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al cancelar la orden' });
+  }
+});
+
 // PATCH actualizar estado de la orden
 router.patch('/:id/status', verifyToken, requireOwnerOrAdmin(async (req) => {
   const orderDoc = await col.doc(req.params.id).get();

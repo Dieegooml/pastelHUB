@@ -1,8 +1,8 @@
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState, Fragment, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
-import { colors, font, badge as badgeStyle, tableHeaderStyle } from '../../styles/theme';
+import { colors, font, badge as badgeStyle, tableHeaderStyle, btnDanger } from '../../styles/theme';
 import { ordersService } from '../../services/ordersService';
 
 const STATUS_TRANSLATIONS = {
@@ -31,7 +31,17 @@ export default function MyOrders() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
+
+  const handleCancel = useCallback(async (e, orderId) => {
+    e.stopPropagation();
+    if (!window.confirm('¿Cancelar esta orden?')) return;
+    setCancellingId(orderId);
+    try {
+      await ordersService.cancelOrder(orderId);
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'cancelled' } : o));
+    } catch {} finally { setCancellingId(null); }
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -104,7 +114,14 @@ export default function MyOrders() {
                         <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, color: colors.textSecondary }}>{formatDate(o.created_at)}</td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: 600, fontFamily: font.body, color: colors.primary }}>S/ {(o.totals?.total || 0).toFixed(2)}</td>
                         <td style={{ padding: '12px 16px' }}>{badge(o.status)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '12px', color: colors.accent, fontFamily: font.body, textAlign: 'right' }}>Ver detalle →</td>
+                        <td style={{ padding: '12px 16px', fontSize: '12px', color: colors.accent, fontFamily: font.body, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {o.status === 'pending' && (
+                            <button onClick={(e) => handleCancel(e, o.id)} disabled={cancellingId === o.id} style={{ ...btnDanger, marginRight: '8px', fontSize: '11px', padding: '4px 10px' }}>
+                              {cancellingId === o.id ? '...' : 'Cancelar'}
+                            </button>
+                          )}
+                          Ver detalle →
+                        </td>
                       </motion.tr>
                     </Fragment>
                   ))}

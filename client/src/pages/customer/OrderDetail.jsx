@@ -36,6 +36,7 @@ export default function OrderDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const [reviewSuccess, setReviewSuccess] = useState('');
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -59,6 +60,18 @@ export default function OrderDetail() {
     } catch {
       setReviewError('Error al enviar la reseña');
     } finally { setSubmitting(false); }
+  };
+
+  const handleCancel = async () => {
+    if (!window.confirm('¿Estás seguro de cancelar esta orden?')) return;
+    setCancelling(true);
+    try {
+      await ordersService.cancelOrder(id);
+      const data = await ordersService.getById(id);
+      setOrder(data);
+    } catch {
+      setReviewError('Error al cancelar la orden');
+    } finally { setCancelling(false); }
   };
 
   const badge = (statusKey) => {
@@ -111,7 +124,18 @@ export default function OrderDetail() {
             <h2 style={{ fontFamily: font.heading, fontSize: '22px', fontWeight: 700, color: colors.primary, margin: 0 }}>Orden #{order.id?.slice(0, 8)}</h2>
             <span style={{ fontFamily: font.body, fontSize: '13px', color: colors.textMuted }}>{order.created_at?.toDate ? order.created_at.toDate().toLocaleString('es-PE') : new Date(order.created_at).toLocaleString('es-PE')}</span>
           </div>
-          {badge(order.status)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {badge(order.status)}
+            {order.status === 'pending' && (
+              <button onClick={handleCancel} disabled={cancelling} style={{
+                padding: '6px 16px', background: '#fee2e2', color: '#ef4444', border: 'none',
+                borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+                fontFamily: font.body, opacity: cancelling ? 0.6 : 1,
+              }}>
+                {cancelling ? '...' : 'Cancelar'}
+              </button>
+            )}
+          </div>
         </div>
 
         {!isCancelled && (
