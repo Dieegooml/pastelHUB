@@ -1,4 +1,4 @@
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { api } from './apiService';
 import { auth } from '../config/firebase';
 
@@ -17,5 +17,8 @@ export const authService = {
   },
   assignRole: async (uid, roles) => {
     return api.post('/auth/assign-role', { uid, roles });
+  },
+  resetPassword: async (email) => {
+    return sendPasswordResetEmail(auth, email);
   },
 };

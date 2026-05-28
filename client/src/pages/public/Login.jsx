@@ -4,6 +4,7 @@ import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/apiService';
+import { authService } from '../../services/authService';
 import AuthLayout from '../../components/AuthLayout';
 import { colors, font, inputStyle, btnPrimary } from '../../styles/theme';
 
@@ -54,6 +55,9 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [focusField, setFocusField] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [resetMode, setResetMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
   const navigate = useNavigate();
 
   const getInputStyle = (field) => ({
@@ -86,6 +90,28 @@ export default function Login() {
     } catch (err) {
       const code = err.code;
       setError(FIREBASE_ERRORS[code] || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail)) {
+      setError('Ingresa un correo válido');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      await authService.resetPassword(resetEmail);
+      setResetSent(true);
+    } catch (err) {
+      const code = err.code;
+      if (code === 'auth/user-not-found') {
+        setError('No existe una cuenta con este correo');
+      } else {
+        setError('Error al enviar el correo. Intenta más tarde.');
+      }
     } finally {
       setLoading(false);
     }
@@ -180,32 +206,81 @@ export default function Login() {
         {fieldErrors.password && <div style={fieldErrorStyle}>{fieldErrors.password}</div>}
       </div>
 
-      <div
-        style={{
-          display: 'block', textAlign: 'right', fontFamily: font.body, fontSize: '13px',
-          color: colors.accent, cursor: 'pointer', marginTop: '-12px', marginBottom: '24px', textDecoration: 'none',
-        }}
-        onClick={() => alert('Funcionalidad en desarrollo')}
-      >
-        ¿Olvidaste tu contraseña?
-      </div>
+      {resetMode ? (
+        <>
+          {resetSent ? (
+            <div style={{
+              background: colors.successBg, color: colors.success, padding: '16px',
+              borderRadius: '10px', marginBottom: '16px', fontFamily: font.body, fontSize: '14px',
+              borderLeft: `4px solid ${colors.success}`, textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>Correo enviado</div>
+              <div style={{ fontSize: '13px' }}>Revisa tu bandeja de entrada. Si no aparece, revisa la carpeta de spam.</div>
+            </div>
+          ) : (
+            <>
+              <p style={{ fontFamily: font.body, fontSize: '14px', color: colors.textSecondary, margin: '0 0 20px' }}>
+                Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.
+              </p>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ fontFamily: font.body, fontSize: '12px', fontWeight: 500, color: '#555', marginBottom: '6px', display: 'block' }}>Correo electrónico</label>
+                <input
+                  style={{ ...inputStyle, height: '48px', fontSize: '14px' }}
+                  type="email"
+                  placeholder="correo@ejemplo.com"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <button
+                style={loading ? { ...btnPrimary, width: '100%', height: '50px', opacity: 0.6, cursor: 'not-allowed' } : { ...btnPrimary, width: '100%', height: '50px', fontSize: '15px' }}
+                onClick={handleResetPassword}
+                disabled={loading}
+              >
+                {loading ? 'Enviando...' : 'Enviar enlace de recuperación'}
+              </button>
+            </>
+          )}
+          <div style={{ textAlign: 'center', marginTop: '16px' }}>
+            <span
+              style={{ fontFamily: font.body, fontSize: '13px', color: colors.accent, cursor: 'pointer', textDecoration: 'none' }}
+              onClick={() => { setResetMode(false); setResetSent(false); setError(''); setResetEmail(''); }}
+            >
+              Volver al inicio de sesión
+            </span>
+          </div>
+        </>
+      ) : (
+        <>
+          <div
+            style={{
+              display: 'block', textAlign: 'right', fontFamily: font.body, fontSize: '13px',
+              color: colors.accent, cursor: 'pointer', marginTop: '-12px', marginBottom: '24px', textDecoration: 'none',
+            }}
+            onClick={() => { setResetMode(true); setResetEmail(email); setError(''); }}
+          >
+            ¿Olvidaste tu contraseña?
+          </div>
 
-      <button
-        style={loading ? btnDisabled : btnFull}
-        onClick={handleLogin}
-        disabled={loading}
-        onMouseEnter={(e) => { if (!loading) e.target.style.background = colors.accent; }}
-        onMouseLeave={(e) => { if (!loading) e.target.style.background = colors.primary; }}
-      >
-        {loading ? (
-          <>
-            <span style={{ display: 'inline-block', width: '18px', height: '18px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
-            Iniciando sesión...
-          </>
-        ) : (
-          'Iniciar sesión'
-        )}
-      </button>
+          <button
+            style={loading ? btnDisabled : btnFull}
+            onClick={handleLogin}
+            disabled={loading}
+            onMouseEnter={(e) => { if (!loading) e.target.style.background = colors.accent; }}
+            onMouseLeave={(e) => { if (!loading) e.target.style.background = colors.primary; }}
+          >
+            {loading ? (
+              <>
+                <span style={{ display: 'inline-block', width: '18px', height: '18px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                Iniciando sesión...
+              </>
+            ) : (
+              'Iniciar sesión'
+            )}
+          </button>
+        </>
+      )}
 
       <div style={{
         display: 'flex', alignItems: 'center', gap: '16px',
