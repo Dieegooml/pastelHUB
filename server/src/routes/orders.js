@@ -39,6 +39,115 @@ router.get('/shop/:shopId', verifyToken, requireOwnerOrAdmin(async (req) => {
   }
 });
 
+// GET resumen / estadísticas de una pastelería
+router.get('/shop/:shopId/summary', verifyToken, requireOwnerOrAdmin(async (req) => {
+  const shopDoc = await db.collection('pastryShops').doc(req.params.shopId).get();
+  if (!shopDoc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
+  return shopDoc.data().owner_id;
+}), async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 30;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+
+    const snap = await col
+      .where('shop.shop_id', '==', req.params.shopId)
+      .where('createdAt', '>=', cutoff.toISOString())
+      .get();
+
+    const orders = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    // Totals
+    const totalOrders = orders.length;
+    const delivered = orders.filter((o) => o.status === 'delivered');
+    const cancelled = orders.filter((o) => o.status === 'cancelled');
+    const totalRevenue = delivered.reduce((sum, o) => sum + (o.totals?.total || 0), 0);
+
+    // Orders by status
+    const ordersByStatus = {};
+    for (const s of ['pending', 'confirmed', 'preparing', 'on_the_way', 'delivered', 'cancelled']) {
+      ordersByStatus[s] = orders.filter((o) => o.status === s).length;
+    }
+
+    // Daily sales
+    const dailyMap = {};
+    for (const o of delivered) {
+      const d = o.createdAt ? o.createdAt.slice(0, 10) : 'unknown';
+      if (!dailyMap[d]) dailyMap[d] = { date: d, revenue: 0, orders: 0 };
+      dailyMap[d].revenue += o.totals?.total || 0;
+      dailyMap[d].orders += 1;
+    }
+    const dailySales = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
+
+    // Today / week / month
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const revenueToday = delivered
+      .filter((o) => o.createdAt?.slice(0, 10) === todayStr)
+      .reduce((s, o) => s + (o.totals?.total || 0), 0);
+    const revenueThisWeek = delivered
+      .filter((o) => o.createdAt >= weekStart.toISOString())
+      .reduce((s, o) => s + (o.totals?.total || 0), 0);
+    const revenueThisMonth = delivered
+      .filter((o) => o.createdAt >= monthStart.toISOString())
+      .reduce((s, o) => s + (o.totals?.total || 0), 0);
+
+    // Top products (only from delivered orders)
+    const productMap = {};
+    for (const o of delivered) {
+      for (const item of o.items || []) {
+        const key = item.product_id || item.name;
+        if (!productMap[key]) {
+          productMap[key] = { name: item.name || key, product_id: item.product_id, quantity: 0, revenue: 0 };
+        }
+        productMap[key].quantity += item.quantity || 0;
+        productMap[key].revenue += (item.price_at_purchase || 0) * (item.quantity || 0);
+      }
+    }
+    const topProducts = Object.values(productMap)
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 10);
+
+    // Revenue by payment method
+    const revenueByMethod = {};
+    for (const o of delivered) {
+      const method = o.payment?.method || 'unknown';
+      revenueByMethod[method] = (revenueByMethod[method] || 0) + (o.totals?.total || 0);
+    }
+
+    // Monthly revenue (for charts)
+    const monthlyMap = {};
+    for (const o of delivered) {
+      if (!o.createdAt) continue;
+      const m = o.createdAt.slice(0, 7);
+      if (!monthlyMap[m]) monthlyMap[m] = { month: m, revenue: 0, orders: 0 };
+      monthlyMap[m].revenue += o.totals?.total || 0;
+      monthlyMap[m].orders += 1;
+    }
+    const monthlyRevenue = Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month));
+
+    res.json({
+      totalOrders,
+      totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+      avgOrderValue: totalOrders > 0 ? parseFloat((totalRevenue / totalOrders).toFixed(2)) : 0,
+      revenueToday: parseFloat(revenueToday.toFixed(2)),
+      revenueThisWeek: parseFloat(revenueThisWeek.toFixed(2)),
+      revenueThisMonth: parseFloat(revenueThisMonth.toFixed(2)),
+      ordersByStatus,
+      dailySales,
+      topProducts,
+      revenueByMethod,
+      monthlyRevenue,
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener resumen de la pastelería' });
+  }
+});
+
 // GET órdenes por cliente (propio usuario o admin)
 router.get('/customer/:userId', verifyToken, async (req, res) => {
   try {
