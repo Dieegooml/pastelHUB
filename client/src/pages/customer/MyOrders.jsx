@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import { colors, font, badge as badgeStyle, tableHeaderStyle } from '../../styles/theme';
-import { useAuth } from '../../context/AuthContext';
 import { ordersService } from '../../services/ordersService';
 
 const STATUS_TRANSLATIONS = {
@@ -29,22 +28,20 @@ const formatDate = (ts) => {
 };
 
 export default function MyOrders() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
-    if (!user?.uid) return;
     const load = async () => {
       try {
-        const data = await ordersService.getByCustomer(user.uid);
+        const data = await ordersService.getMy();
         setOrders(Array.isArray(data) ? data : []);
       } catch {} finally { setLoading(false); }
     };
     load();
-  }, [user]);
+  }, []);
 
   const badge = (statusKey) => {
     const c = STATUS_COLORS[statusKey] || STATUS_COLORS.pending;

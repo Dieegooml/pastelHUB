@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
-import { colors, font, badge as badgeStyle } from '../../styles/theme';
+import { colors, font, badge as badgeStyle, inputStyle, selectStyle } from '../../styles/theme';
 import { ordersService } from '../../services/ordersService';
 
 const STATUS_TRANSLATIONS = {
@@ -31,6 +31,11 @@ export default function OrderDetail() {
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewSuccess, setReviewSuccess] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -41,6 +46,20 @@ export default function OrderDetail() {
     };
     load();
   }, [id]);
+
+  const handleSubmitReview = async () => {
+    setSubmitting(true);
+    setReviewError('');
+    try {
+      await ordersService.addReview(id, reviewRating, reviewComment);
+      setReviewSuccess('¡Reseña enviada!');
+      setReviewComment('');
+      const data = await ordersService.getById(id);
+      setOrder(data);
+    } catch {
+      setReviewError('Error al enviar la reseña');
+    } finally { setSubmitting(false); }
+  };
 
   const badge = (statusKey) => {
     const c = STATUS_COLORS[statusKey] || STATUS_COLORS.pending;
@@ -181,6 +200,76 @@ export default function OrderDetail() {
                 </span>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Review Section */}
+        {order.review?.rating !== undefined && (
+          <div style={{ marginTop: '20px', background: colors.white, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef' }}>
+            <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '12px' }}>Tu reseña</h3>
+            <div style={{ fontSize: '24px', marginBottom: '8px' }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <span key={star} style={{ color: star <= order.review.rating ? '#f59e0b' : '#ddd', marginRight: '2px' }}>★</span>
+              ))}
+            </div>
+            {order.review.comment && <p style={{ fontFamily: font.body, fontSize: '14px', color: colors.text, margin: 0, lineHeight: 1.6 }}>{order.review.comment}</p>}
+            {order.review.reply_text && (
+              <div style={{ marginTop: '12px', padding: '12px', background: colors.grayLight, borderRadius: '8px', borderLeft: `3px solid ${colors.accent}` }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: colors.accent, fontFamily: font.body, marginBottom: '4px' }}>Respuesta del dueño:</div>
+                <p style={{ fontFamily: font.body, fontSize: '13px', color: colors.text, margin: 0 }}>{order.review.reply_text}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Review Form (solo si entregada, sin reseña, o con rating 0) */}
+        {order.status === 'delivered' && (!order.review?.rating || order.review.rating === 0) && (
+          <div style={{ marginTop: '20px', background: colors.white, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef' }}>
+            <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '12px' }}>
+              {order.review?.rating === 0 ? 'Editar reseña' : 'Calificar esta orden'}
+            </h3>
+            {reviewError && <div style={{ color: colors.error, fontSize: '13px', fontFamily: font.body, marginBottom: '8px' }}>{reviewError}</div>}
+            {reviewSuccess && <div style={{ color: colors.success, fontSize: '13px', fontFamily: font.body, marginBottom: '8px' }}>{reviewSuccess}</div>}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '12px', color: colors.textSecondary, fontFamily: font.body, display: 'block', marginBottom: '6px' }}>Puntuación</label>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setReviewRating(star)}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer', fontSize: '28px',
+                      color: star <= reviewRating ? '#f59e0b' : '#ddd',
+                      transition: 'color 0.15s ease', padding: '0 2px',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.2)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '12px', color: colors.textSecondary, fontFamily: font.body, display: 'block', marginBottom: '6px' }}>Comentario (opcional)</label>
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                style={{ ...inputStyle, width: '100%', minHeight: '80px', padding: '10px 14px', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }}
+                placeholder="Cuenta tu experiencia..."
+              />
+            </div>
+            <button
+              onClick={handleSubmitReview}
+              disabled={submitting}
+              style={{
+                padding: '10px 24px', background: colors.accent, color: '#fff', border: 'none',
+                borderRadius: '99px', cursor: 'pointer', fontSize: '14px', fontWeight: 600,
+                fontFamily: font.body, opacity: submitting ? 0.7 : 1,
+              }}
+            >
+              {submitting ? 'Enviando...' : 'Enviar reseña'}
+            </button>
           </div>
         )}
       </motion.div>
