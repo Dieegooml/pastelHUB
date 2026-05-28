@@ -32,12 +32,13 @@ PastelHub es una plataforma web tipo Rappi, pero especializada exclusivamente en
 - 🎨 **Productos personalizables** — tamaño, sabor, inscripción y otras variantes por producto
 - 📦 **Seguimiento de pedidos** — estados en tiempo real desde confirmado hasta entregado
 - 💳 **Pagos múltiples** — tarjeta, efectivo, Yape y Plin
-- ⭐ **Reseñas verificadas** — solo clientes con pedido completado pueden reseñar
-- 📊 **Analytics por pastelería** — ventas, productos top, órdenes por categoría
-- 🔔 **Notificaciones en tiempo real** — alertas push/in-app con Firebase Cloud Messaging
+- ⭐ **Reseñas verificadas** — solo clientes con pedido completado pueden reseñar (auto-aprobadas)
+- 📊 **Analytics por pastelería** — ventas diarias, mensuales, productos top, ingresos por método de pago
+- 🏷️ **Promociones** — descuentos, combos y 2x1 gestionados por cada dueño
+- 🔔 **Notificaciones** — campanita con badge de no leídas, dropdown y página de usuario
 - ✅ **Flujo de aprobación** — las nuevas pastelerías requieren validación antes de publicarse
-- 🤖 **Chatbot de asistencia** — bot integrado que ayuda a clientes con pedidos, productos y FAQ
 - 🛡️ **Moderación de contenido** — revisión de reseñas, reportes y gestión de disputas
+- 🔄 **Recuperación de contraseña** — flujo completo con Firebase (sin backend propio)
 
 ---
 
@@ -58,16 +59,13 @@ PastelHub es una plataforma web tipo Rappi, pero especializada exclusivamente en
 
 | Capa | Tecnología |
 |---|---|
-| **Frontend web** | React (JavaScript/TypeScript) |
-| **UI web** | React + Tailwind CSS / Material UI |
+| **Frontend web** | React 19 + Vite 8 (JavaScript) |
+| **UI web** | Estilos inline con objeto JS (sin librerías externas) |
 | **Backend** | Node.js + Express.js |
 | **Base de datos** | Firebase Firestore (NoSQL) |
 | **Autenticación** | Firebase Authentication + Custom Claims (roles) |
-| **Almacenamiento de archivos** | Firebase Storage (imágenes de productos y banners) |
-| **Notificaciones** | Firebase Cloud Messaging (FCM) |
-| **Chatbot** | Dialogflow CX / Vertex AI + Firebase Functions |
-| **Pagos** | Integración con pasarela de pagos (configurable) |
-| **Despliegue** | Firebase Hosting (frontend React) + Cloud Run / Railway (backend) |
+| **Pruebas** | Jest 30 + Supertest (237 tests), k6 (carga) |
+| **Despliegue** | Vite build → servidor Express (frontend estático + API unificados) |
 
 ---
 
@@ -81,20 +79,22 @@ React App (navegador)
 Express API (Node.js)
         │
         ├── Firebase Auth Middleware (verifica ID Token)
-        ├── Role Guard (custom claims: admin / moderator / owner / customer)
+        ├── Role Guard (custom claims + allow-self)
         │
         ├── /api/auth
+        ├── /api/users
         ├── /api/shops
         ├── /api/products
         ├── /api/orders
-        ├── /api/payments
+        ├── /api/notifications
         ├── /api/reviews
-        └── /api/chat
+        ├── /api/reports
+        ├── /api/payments
+        ├── /api/customers
+        ├── /api/promotions
         │
         ▼
 Firebase Firestore (NoSQL)
-Firebase Storage
-Firebase Cloud Messaging
 ```
 
 ---
@@ -113,10 +113,10 @@ El esquema está diseñado como **colecciones Firestore** con modelo multi-tenan
 | `products` | Catálogo por pastelería (subcolección `variants`) |
 | `orders` | Pedidos realizados (subcolección `items`) |
 | `payments` | Registro de pagos vinculados a una orden |
-| `reviews` | Reseñas de clientes |
+| `reviews` | Reseñas de clientes (auto-aprobadas al crear) |
 | `notifications` | Notificaciones del sistema por usuario |
-| `chatSessions` | Historial de conversaciones del chatbot |
 | `reports` | Reportes de contenido inapropiado gestionados por moderadores |
+| `promotions` | Promociones (descuentos, combos, 2x1) por pastelería |
 
 ### Diagrama de base de datos
 
@@ -175,7 +175,7 @@ reviews/{reviewId}
   ├── customerId, shopId, orderId
   ├── rating, comment
   ├── ownerReply, repliedAt
-  ├── status (pending | approved | rejected)   ← gestionado por moderadores
+  ├── status (approved)   ← auto-aprobadas al crear
   └── createdAt
 
 notifications/{notificationId}
@@ -188,10 +188,17 @@ chatSessions/{sessionId}
   └── createdAt, updatedAt
 
 reports/{reportId}
-  ├── reportedBy (userId), targetType (review|shop|product)
+  ├── reportedBy (userId, tomado automáticamente del token), targetType (review|shop|product)
   ├── targetId, reason, status (open|resolved|dismissed)
   ├── assignedTo (moderatorId, nullable)
   └── createdAt, resolvedAt
+
+promotions/{promotionId}
+  ├── shop_id, name, type (discount|combo|bogo)
+  ├── description, discount_percentage, discount_amount
+  ├── combo_items, combo_price, product_ids
+  ├── start_date, end_date, is_active
+  └── createdAt, updatedAt
 ```
 
 > **Índices compuestos recomendados:** `orders` por `(shopId, status)`, `reviews` por `(shopId, rating)`, `products` por `(shopId, isAvailable)`.
@@ -546,7 +553,7 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 | `npm run dev` | Servidor en modo desarrollo con hot reload |
 | `npm run start` | Servidor en producción |
 | `npm run start:load-test` | Servidor con ventanas de rate limit de 5s y bypass de Firebase Auth |
-| `npm run test` | Tests unitarios (Jest, 232 tests) + genera `test-report.html` |
+| `npm run test` | Tests unitarios (Jest, 237 tests) + genera `test-report.html` |
 | `npm run test:coverage` | Tests unitarios con reporte de cobertura HTML |
 | `npm run load-test` | Prueba de carga: 100 VUs, bypass auth |
 | `npm run load-test:50` | Prueba de carga: 50 VUs, bypass auth |
@@ -569,54 +576,61 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 ### Auth
 | Método | Ruta | Descripción | Rol |
 |---|---|---|---|
-| `POST` | `/api/auth/register` | Registrar nuevo usuario | Público |
+| `POST` | `/api/auth/sync` | Sincronizar usuario tras login (auto-crea customer) | Token |
+| `GET` | `/api/auth/me` | Perfil del usuario autenticado | Token |
 | `POST` | `/api/auth/assign-role` | Asignar rol a usuario | Admin |
-| `GET` | `/api/auth/me` | Perfil del usuario autenticado | Autenticado |
 
 ### Pastelerías
 | Método | Ruta | Descripción | Rol |
 |---|---|---|---|
-| `GET` | `/api/shops` | Listar pastelerías activas | Público |
+| `GET` | `/api/shops` | Listar pastelerías | Público |
 | `GET` | `/api/shops/:id` | Detalle de una pastelería | Público |
-| `POST` | `/api/shops` | Crear pastelería | Owner |
-| `PUT` | `/api/shops/:id` | Actualizar pastelería | Owner |
-| `PATCH` | `/api/shops/:id/status` | Cambiar estado de aprobación | Admin / Moderator |
+| `GET` | `/api/shops/owner/:ownerId` | Pastelerías de un dueño | Público |
+| `POST` | `/api/shops` | Crear pastelería | Owner / Admin |
+| `PUT` | `/api/shops/:id` | Actualizar pastelería | Owner / Admin |
+| `DELETE` | `/api/shops/:id` | Eliminar pastelería | Owner / Admin |
 
-### Productos
+### Promociones
 | Método | Ruta | Descripción | Rol |
 |---|---|---|---|
-| `GET` | `/api/shops/:shopId/products` | Productos de una pastelería | Público |
-| `POST` | `/api/shops/:shopId/products` | Crear producto | Owner |
-| `PUT` | `/api/products/:id` | Actualizar producto | Owner |
-| `DELETE` | `/api/products/:id` | Eliminar producto | Owner |
+| `GET` | `/api/promotions/shop/:shopId` | Promociones activas | Público |
+| `POST` | `/api/promotions` | Crear promoción (descuento/combo/2x1) | Owner / Admin |
+| `PUT` | `/api/promotions/:id` | Editar promoción | Owner / Admin |
+| `PATCH` | `/api/promotions/:id/toggle` | Activar/desactivar | Owner / Admin |
+| `DELETE` | `/api/promotions/:id` | Eliminar promoción | Owner / Admin |
 
 ### Pedidos
 | Método | Ruta | Descripción | Rol |
 |---|---|---|---|
 | `POST` | `/api/orders` | Crear pedido | Customer |
-| `GET` | `/api/orders/:id` | Detalle de pedido | Customer / Owner |
-| `GET` | `/api/orders/my` | Mis pedidos | Customer |
+| `GET` | `/api/orders/shop/:shopId/summary` | Estadísticas de ventas (gráficas) | Owner / Admin |
+| `GET` | `/api/orders/:id` | Detalle de pedido | Propio / Owner / Admin |
 | `PATCH` | `/api/orders/:id/status` | Actualizar estado | Owner |
+| `PATCH` | `/api/orders/:id/cancel` | Cancelar orden pendiente | Customer |
 
 ### Reviews
 | Método | Ruta | Descripción | Rol |
 |---|---|---|---|
-| `POST` | `/api/orders/:orderId/review` | Crear reseña | Customer |
-| `POST` | `/api/reviews/:id/reply` | Responder reseña | Owner |
+| `GET` | `/api/reviews/shop/:shopId` | Reseñas aprobadas de una pastelería | Público |
+| `POST` | `/api/reviews` | Crear reseña (auto-aprobada) | Customer |
+| `PATCH` | `/api/reviews/:id/reply` | Responder reseña | Owner |
 | `PATCH` | `/api/reviews/:id/status` | Aprobar / rechazar reseña | Moderator |
 
-### Moderación
+### Reportes
 | Método | Ruta | Descripción | Rol |
 |---|---|---|---|
-| `GET` | `/api/reports` | Listar reportes abiertos | Moderator / Admin |
-| `POST` | `/api/reports` | Crear reporte | Customer / Owner |
-| `PATCH` | `/api/reports/:id` | Resolver / desestimar reporte | Moderator |
+| `GET` | `/api/reports` | Listar reportes | Moderator / Admin |
+| `POST` | `/api/reports` | Crear reporte | Autenticado |
+| `PATCH` | `/api/reports/:id/status` | Resolver / desestimar | Moderator |
+| `PATCH` | `/api/reports/:id/assign` | Asignar moderador | Moderator |
 
-### Chatbot
+### Notificaciones
 | Método | Ruta | Descripción | Rol |
 |---|---|---|---|
-| `POST` | `/api/chat/message` | Enviar mensaje al bot | Público / Customer |
-| `GET` | `/api/chat/session/:id` | Historial de sesión | Customer |
+| `GET` | `/api/notifications/user/:userId/unread/count` | Conteo de no leídas (badge) | Propio / Admin |
+| `GET` | `/api/notifications/user/:userId` | Listar notificaciones | Propio / Admin |
+| `PATCH` | `/api/notifications/:id/read` | Marcar como leída | Propio / Admin |
+| `PATCH` | `/api/notifications/user/:userId/read-all` | Marcar todas leídas | Propio / Admin |
 
 ---
 
@@ -624,14 +638,13 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 
 ### Cliente realiza un pedido
 1. Explora pastelerías en el home o buscador
-2. Entra al perfil de una pastelería
+2. Entra al perfil de una pastelería (ve rating, reseñas, promociones activas)
 3. Agrega productos al carrito (con variantes opcionales)
-4. Puede consultar al chatbot sobre productos o disponibilidad
-5. Completa el checkout: dirección, fecha/hora, método de pago
-6. El pedido queda en estado `pending`
-7. El dueño confirma → `confirmed` → `preparing` → `on_the_way` → `delivered`
-8. El cliente puede dejar una reseña tras la entrega
-9. La reseña pasa por revisión del moderador antes de publicarse
+4. Completa el checkout: dirección, método de pago
+5. El pedido queda en estado `pending`
+6. El dueño confirma → `confirmed` → `preparing` → `on_the_way` → `delivered`
+7. El cliente puede cancelar si aún está `pending`
+8. El cliente puede dejar una reseña tras la entrega (auto-aprobada)
 
 ### Registro de pastelería
 1. El dueño se registra y solicita el rol `owner`
@@ -640,19 +653,25 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 4. Si aprobada, el dueño puede publicar productos y recibir pedidos
 
 ### Moderación de reseña
-1. Cliente envía reseña → estado `pending`
-2. Moderador la revisa en el panel de moderación
-3. Si aprueba → visible en el perfil de la pastelería
-4. Si rechaza → notificación al cliente con motivo
+1. Cliente envía reseña → estado `approved` (auto-aprobada)
+2. Moderador puede cambiar estado a `rejected` si es necesario
+3. El dueño puede responder a la reseña
 
-### Chatbot de asistencia
-1. Cliente abre el chat flotante en cualquier pantalla
-2. El bot responde preguntas sobre: horarios, productos, estado de pedidos, pagos
-3. Si el bot no puede resolver → deriva al dueño o soporte
-4. El historial queda guardado en `chatSessions` para análisis
+### Promociones (dueño)
+1. Dueño accede al panel → pestaña Promociones
+2. Crea promoción: elige tipo (descuento %, monto fijo, combo, 2x1)
+3. Configura fechas de vigencia y productos aplicables
+4. La promoción se muestra automáticamente en el perfil público de la pastelería
+5. Puede activar/desactivar sin eliminar
 
----
-
+### Dashboard de ventas (dueño)
+1. Dueño accede al panel → pestaña Resumen
+2. Ve tarjetas con ingresos: totales, hoy, esta semana, este mes
+3. Gráfica de barras de ventas diarias (últimos 90 días)
+4. Gráfica de ingresos mensuales
+5. Órdenes por estado con barras de progreso
+6. Top 10 productos más vendidos
+7. Ingresos por método de pago
 
 ---
 
@@ -660,53 +679,78 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 
 ```
 pastelhub/
-├── client/                        # Frontend React
+├── client/                        # Frontend React (Vite)
 │   ├── src/
 │   │   ├── config/
 │   │   │   ├── constants.js       # URLs, keys
 │   │   │   └── firebase.js        # Inicialización Firebase SDK
-│   │   ├── models/                # Tipos/interfaces: Shop, Product, Order...
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx    # onAuthStateChanged + roles
 │   │   ├── services/
-│   │   │   ├── apiService.js      # Llamadas al backend Express
-│   │   │   ├── authService.js     # Firebase Auth
-│   │   │   ├── storageService.js  # Firebase Storage
-│   │   │   └── chatService.js     # Chatbot API
-│   │   ├── store/                 # Estado global (auth, carrito) — Zustand / Redux
+│   │   │   ├── apiService.js      # Base fetch + interceptor 401 con refresh
+│   │   │   ├── authService.js     # Firebase Auth (login, register, reset password)
+│   │   │   ├── usersService.js
+│   │   │   ├── shopsService.js
+│   │   │   ├── productsService.js
+│   │   │   ├── ordersService.js
+│   │   │   ├── reviewsService.js
+│   │   │   ├── paymentsService.js
+│   │   │   ├── notificationsService.js
+│   │   │   ├── reportsService.js
+│   │   │   ├── customersService.js
+│   │   │   └── promotionsService.js
 │   │   ├── pages/
-│   │   │   ├── customer/          # Vistas del cliente
-│   │   │   ├── owner/             # Vistas del dueño
-│   │   │   ├── moderator/         # Vistas del moderador
-│   │   │   └── admin/             # Vistas del admin
-│   │   ├── components/            # Componentes reutilizables
-│   │   ├── hooks/                 # Custom hooks
+│   │   │   ├── public/            # Login, Register, NotFound, ShopsList, ShopDetail
+│   │   │   ├── customer/          # Cart, Checkout, MyOrders, OrderDetail, Profile, Notifications
+│   │   │   ├── owner/             # OwnerDashboard (info, productos, órdenes, promociones, resumen)
+│   │   │   └── admin/             # Dashboard, Users, Shops, Products, Orders, Reviews, Reports, Notifications, Payments, Customers
+│   │   ├── components/            # Navbar, ProtectedRoute, AuthLayout, ErrorBoundary
+│   │   ├── styles/
+│   │   │   └── theme.js           # Colores, fuentes, estilos reutilizables (inline, sin Tailwind/MUI)
+│   │   ├── App.jsx
 │   │   └── main.jsx
-│   ├── public/                    # Assets estáticos
+│   ├── public/
+│   │   ├── favicon.png
+│   │   └── manifest.json
 │   ├── index.html
 │   └── package.json
 │
 ├── server/                        # Backend Express
 │   ├── src/
-│   │   ├── routes/                # Definición de rutas
-│   │   ├── controllers/           # Lógica de negocio
+│   │   ├── app.js                 # Express app (routes, cors, rate limiters)
+│   │   ├── server.js              # Entry point (app.listen)
+│   │   ├── routes/                # 11 routers: auth, users, shops, products, orders,
+│   │   │                          #   reviews, payments, notifications, reports, customers, promotions
 │   │   ├── middlewares/
-│   │   │   ├── auth.js            # Verificación Firebase ID Token
-│   │   │   └── roles.js           # Guard por custom claims
-│   │   ├── services/
-│   │   │   ├── firebase.js        # Inicialización Admin SDK
-│   │   │   ├── storage.js         # Firebase Storage
-│   │   │   ├── fcm.js             # Notificaciones push
-│   │   │   └── chat.js            # Integración Dialogflow
-│   │   └── utils/
-│   └── .env.example
+│   │   │   └── auth.js            # verifyToken, requireAdmin, requireOwner, requireModerator,
+│   │   │                          #   requireCustomer, requireOwnerOrAdmin
+│   │   ├── config/
+│   │   │   └── firebase.js        # Inicialización Admin SDK
+│   │   ├── utils/
+│   │   │   ├── paginate.js        # Paginación con count() de Firestore
+│   │   │   └── mappers.js         # Mapeo camelCase ↔ snake_case
+│   │   └── validators/            # Schemas Zod por recurso
+│   ├── tests/
+│   │   ├── setup.js               # Mock de firebase-admin + helpers
+│   │   ├── health.test.js
+│   │   ├── middleware.test.js
+│   │   ├── auth.test.js
+│   │   ├── shops.test.js
+│   │   ├── users.test.js
+│   │   └── reviews.test.js
+│   ├── backup.js                  # Script de backup Firestore → JSON
+│   └── package.json
 │
-├── firebase.json                  # Configuración Firebase Hosting + Rules
-├── firestore.rules                # Reglas de seguridad Firestore
-├── firestore.indexes.json         # Índices compuestos
-├── storage.rules                  # Reglas Firebase Storage
+├── assets/
+│   ├── diagramaPastelHUB.png
 │
-└── docs/                          # Documentación
-    ├── erd-firestore.png
-    └── schema.md
+├── test-rate-limit.js             # Script de prueba de rate limiting
+├── AGENTS.md                      # Memoria para asistentes IA
+├── API_ENDPOINTS.md               # Documentación completa de endpoints
+├── CLOUD_SETUP.md                 # Guía de despliegue en la nube
+├── RATE_LIMITING.md               # Documentación de rate limiting
+├── README.md
+└── STATUS.md
 ```
 
 ---
