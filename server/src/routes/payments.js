@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
-const { verifyToken, requireAdmin } = require('../middlewares/auth');
+const { verifyToken, requireAdmin, requireCustomer } = require('../middlewares/auth');
+const { paginate } = require('../utils/paginate');
 
 const col = db.collection('payments');
 
@@ -11,9 +12,8 @@ const VALID_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
 // GET todos los pagos
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const snap = await col.orderBy('createdAt', 'desc').get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
+    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener pagos' });
   }
@@ -25,20 +25,31 @@ router.get('/status/:status', verifyToken, requireAdmin, async (req, res) => {
     if (!VALID_STATUSES.includes(req.params.status)) {
       return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
     }
-    const snap = await col
-      .where('paymentStatus', '==', req.params.status)
-      .orderBy('createdAt', 'desc')
-      .get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
+    const result = await paginate(col, req.query, {
+      orderBy: 'createdAt', filters: [{ field: 'paymentStatus', value: req.params.status }],
+    });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al filtrar pagos por estado' });
   }
 });
 
-// GET pago por orden (relación 1:1)
-router.get('/order/:orderId', verifyToken, requireAdmin, async (req, res) => {
+// GET pago por orden (cliente de la orden, dueño de la shop o admin)
+router.get('/order/:orderId', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin')) {
+      const orderDoc = await db.collection('orders').doc(req.params.orderId).get();
+      if (!orderDoc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
+      const order = orderDoc.data();
+      const isCustomer = order.customer_id === req.user.uid;
+      const isOwner = order.shopId
+        ? await db.collection('pastryShops').doc(order.shopId).get().then(s => s.exists && s.data().owner_id === req.user.uid)
+        : false;
+      if (!isCustomer && !isOwner) {
+        return res.status(403).json({ error: 'No tienes permiso para ver este pago' });
+      }
+    }
     const snap = await col
       .where('orderId', '==', req.params.orderId)
       .limit(1)
@@ -51,19 +62,33 @@ router.get('/order/:orderId', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// GET un pago
-router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
+// GET un pago (cliente de la orden, dueño de la shop o admin)
+router.get('/:id', verifyToken, async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pago no encontrado' });
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin')) {
+      const data = doc.data();
+      const orderDoc = await db.collection('orders').doc(data.orderId).get();
+      if (!orderDoc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
+      const order = orderDoc.data();
+      const isCustomer = order.customer_id === req.user.uid;
+      const isOwner = order.shopId
+        ? await db.collection('pastryShops').doc(order.shopId).get().then(s => s.exists && s.data().owner_id === req.user.uid)
+        : false;
+      if (!isCustomer && !isOwner) {
+        return res.status(403).json({ error: 'No tienes permiso para ver este pago' });
+      }
+    }
     res.json({ id: doc.id, ...doc.data() });
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener el pago' });
   }
 });
 
-// POST crear pago
-router.post('/', verifyToken, requireAdmin, async (req, res) => {
+// POST crear pago (cliente autenticado)
+router.post('/', verifyToken, requireCustomer, async (req, res) => {
   try {
     const { orderId, paymentMethod, amount, transactionRef } = req.body;
 

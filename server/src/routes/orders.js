@@ -4,6 +4,8 @@ const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireCustomer, requireOwnerOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { createOrderSchema } = require('../validators/orderValidator');
+const { recalcShopRating } = require('./reviews');
+const { paginate } = require('../utils/paginate');
 
 const col = db.collection('orders');
 
@@ -14,9 +16,8 @@ const VALID_PAYMENT_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
 // GET todas las órdenes
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const snap = await col.orderBy('createdAt', 'desc').get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
+    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener órdenes' });
   }
@@ -29,26 +30,26 @@ router.get('/shop/:shopId', verifyToken, requireOwnerOrAdmin(async (req) => {
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
-    const snap = await col
-      .where('shop.shop_id', '==', req.params.shopId)
-      .orderBy('createdAt', 'desc')
-      .get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
+    const result = await paginate(col, req.query, {
+      orderBy: 'createdAt', filters: [{ field: 'shop.shop_id', value: req.params.shopId }],
+    });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener órdenes de la pastelería' });
   }
 });
 
-// GET órdenes por cliente
-router.get('/customer/:userId', verifyToken, requireAdmin, async (req, res) => {
+// GET órdenes por cliente (propio usuario o admin)
+router.get('/customer/:userId', verifyToken, async (req, res) => {
   try {
-    const snap = await col
-      .where('customer.user_id', '==', req.params.userId)
-      .orderBy('createdAt', 'desc')
-      .get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.userId) {
+      return res.status(403).json({ error: 'Solo puedes ver tus propias órdenes' });
+    }
+    const result = await paginate(col, req.query, {
+      orderBy: 'createdAt', filters: [{ field: 'customer.user_id', value: req.params.userId }],
+    });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener órdenes del cliente' });
   }
@@ -60,12 +61,10 @@ router.get('/status/:status', verifyToken, requireAdmin, async (req, res) => {
     if (!VALID_STATUSES.includes(req.params.status)) {
       return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
     }
-    const snap = await col
-      .where('status', '==', req.params.status)
-      .orderBy('createdAt', 'desc')
-      .get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
+    const result = await paginate(col, req.query, {
+      orderBy: 'createdAt', filters: [{ field: 'status', value: req.params.status }],
+    });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al filtrar órdenes por estado' });
   }
@@ -74,22 +73,40 @@ router.get('/status/:status', verifyToken, requireAdmin, async (req, res) => {
 // GET órdenes del usuario autenticado
 router.get('/my', verifyToken, requireCustomer, async (req, res) => {
   try {
-    const snap = await col
-      .where('customer.user_id', '==', req.user.uid)
-      .orderBy('createdAt', 'desc')
-      .get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
+    const result = await paginate(col, req.query, {
+      orderBy: 'createdAt', filters: [{ field: 'customer.user_id', value: req.user.uid }],
+    });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener tus órdenes' });
   }
 });
 
-// GET una orden
-router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
+// GET una orden (admin, dueño de la orden, o dueño de la pastelería)
+router.get('/:id', verifyToken, async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
+
+    const roles = req.user?.roles || [];
+    const isAdmin = roles.includes('admin');
+    const isOwner = doc.data().customer?.user_id === req.user.uid;
+    let isShopOwner = false;
+
+    if (!isAdmin && !isOwner) {
+      const shopId = doc.data().shop?.shop_id;
+      if (shopId) {
+        const shopDoc = await db.collection('pastryShops').doc(shopId).get();
+        if (shopDoc.exists && shopDoc.data().owner_id === req.user.uid) {
+          isShopOwner = true;
+        }
+      }
+    }
+
+    if (!isAdmin && !isOwner && !isShopOwner) {
+      return res.status(403).json({ error: 'No tienes permiso para ver esta orden' });
+    }
+
     res.json({ id: doc.id, ...doc.data() });
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener la orden' });
@@ -228,6 +245,132 @@ router.patch('/:id/payment-status', verifyToken, requireAdmin, async (req, res) 
     res.json({ id: req.params.id, payment: updatedPayment });
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar estado del pago' });
+  }
+});
+
+// PATCH agregar reseña a una orden (cliente autenticado)
+router.patch('/:id/review', verifyToken, requireCustomer, async (req, res) => {
+  try {
+    const doc = await col.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
+
+    // Solo el dueño de la orden puede reseñar
+    if (doc.data().customer?.user_id !== req.user.uid) {
+      return res.status(403).json({ error: 'Solo puedes reseñar tus propias órdenes' });
+    }
+
+    if (doc.data().status !== 'delivered') {
+      return res.status(400).json({ error: 'Solo se pueden reseñar órdenes entregadas' });
+    }
+
+    // Verificar que la orden no tenga ya una reseña embebida
+    if (doc.data().review?.rating !== undefined && doc.data().review?.rating > 0) {
+      return res.status(400).json({ error: 'Esta orden ya tiene una reseña' });
+    }
+
+    const { rating, comment } = req.body;
+    if (rating === undefined) {
+      return res.status(400).json({ error: 'rating es requerido' });
+    }
+
+    const parsedRating = parseInt(rating);
+    if (isNaN(parsedRating) || parsedRating < 0 || parsedRating > 5) {
+      return res.status(400).json({ error: 'rating debe ser un número entero entre 0 y 5' });
+    }
+
+    const shopId = doc.data().shop?.shop_id;
+    const reviewEmbed = {
+      rating: parsedRating,
+      comment: comment || '',
+      reply_text: '',
+      replied_at: '',
+      created_at: new Date().toISOString(),
+    };
+
+    // Actualizar la orden con la reseña embebida
+    await col.doc(req.params.id).update({ review: reviewEmbed, updatedAt: new Date().toISOString() });
+
+    // Crear el documento en la colección reviews para el rating del shop
+    const reviewsCol = db.collection('reviews');
+    const existingReview = await reviewsCol.where('orderId', '==', req.params.id).limit(1).get();
+    if (existingReview.empty) {
+      await reviewsCol.add({
+        customerId: req.user.uid,
+        shopId,
+        orderId: req.params.id,
+        rating: parsedRating,
+        comment: comment || '',
+        ownerReply: '',
+        repliedAt: '',
+        status: 'approved',
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    // Recalcular rating de la pastelería
+    if (shopId) {
+      await recalcShopRating(shopId);
+    }
+
+    res.json({ id: req.params.id, review: reviewEmbed });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al agregar reseña' });
+  }
+});
+
+// PATCH responder reseña de una orden (owner/admin)
+router.patch('/:id/review/reply', verifyToken, async (req, res) => {
+  try {
+    const doc = await col.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
+
+    if (!doc.data().review?.rating && doc.data().review?.rating !== 0) {
+      return res.status(400).json({ error: 'Esta orden no tiene una reseña' });
+    }
+
+    // Verificar permisos: admin o dueño de la pastelería
+    const roles = req.user?.roles || [];
+    let authorized = roles.includes('admin');
+    if (!authorized) {
+      const shopId = doc.data().shop?.shop_id;
+      if (shopId) {
+        const shopDoc = await db.collection('pastryShops').doc(shopId).get();
+        if (shopDoc.exists && shopDoc.data().owner_id === req.user.uid) {
+          authorized = true;
+        }
+      }
+    }
+
+    if (!authorized) {
+      return res.status(403).json({ error: 'Solo el dueño de la pastelería o un admin puede responder' });
+    }
+
+    const { reply_text } = req.body;
+    if (!reply_text) {
+      return res.status(400).json({ error: 'reply_text es requerido' });
+    }
+
+    const reviewEmbed = {
+      ...doc.data().review,
+      reply_text,
+      replied_at: new Date().toISOString(),
+    };
+
+    await col.doc(req.params.id).update({ review: reviewEmbed, updatedAt: new Date().toISOString() });
+
+    // También actualizar en la colección reviews
+    const reviewsCol = db.collection('reviews');
+    const existingReview = await reviewsCol.where('orderId', '==', req.params.id).limit(1).get();
+    if (!existingReview.empty) {
+      await existingReview.docs[0].ref.update({
+        ownerReply: reply_text,
+        repliedAt: new Date().toISOString(),
+      });
+    }
+
+    res.json({ id: req.params.id, review: reviewEmbed });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al responder la reseña' });
   }
 });
 

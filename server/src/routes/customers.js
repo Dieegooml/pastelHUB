@@ -1,24 +1,28 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
-const { verifyToken, requireAdmin } = require('../middlewares/auth');
+const { verifyToken, requireAdmin, requireCustomer } = require('../middlewares/auth');
+const { paginate } = require('../utils/paginate');
 
 const col = db.collection('customers');
 
 // GET todos los customers
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const snap = await col.orderBy('createdAt', 'desc').get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
+    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener customers' });
   }
 });
 
-// GET un customer
-router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
+// GET un customer (propio o admin)
+router.get('/:id', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso' });
+    }
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Customer no encontrado' });
     res.json({ id: doc.id, ...doc.data() });
@@ -27,9 +31,13 @@ router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// GET customer con sus direcciones
-router.get('/:id/full', verifyToken, requireAdmin, async (req, res) => {
+// GET customer con sus direcciones (propio o admin)
+router.get('/:id/full', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso' });
+    }
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Customer no encontrado' });
 
@@ -42,25 +50,21 @@ router.get('/:id/full', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// POST crear customer (vinculado a un user existente)
-router.post('/', verifyToken, requireAdmin, async (req, res) => {
+// POST crear customer (auto-creación: usa req.user.uid)
+router.post('/', verifyToken, requireCustomer, async (req, res) => {
   try {
-    const { uid } = req.body;
-
-    if (!uid) {
-      return res.status(400).json({ error: 'uid es requerido' });
-    }
+    const uid = req.user.uid;
 
     // Verificar que el user existe en Firestore
     const userDoc = await db.collection('users').doc(uid).get();
     if (!userDoc.exists) {
-      return res.status(404).json({ error: 'El usuario no existe' });
+      return res.status(404).json({ error: 'El usuario no existe. Sincroniza primero.' });
     }
 
     // Verificar que no tenga ya un perfil customer
     const existing = await col.doc(uid).get();
     if (existing.exists) {
-      return res.status(400).json({ error: 'Este usuario ya tiene un perfil customer' });
+      return res.status(400).json({ error: 'Ya tienes un perfil customer' });
     }
 
     const data = {
@@ -86,9 +90,13 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// PATCH actualizar dirección por defecto
-router.patch('/:id/default-address', verifyToken, requireAdmin, async (req, res) => {
+// PATCH actualizar dirección por defecto (propio o admin)
+router.patch('/:id/default-address', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso' });
+    }
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Customer no encontrado' });
 
@@ -139,9 +147,13 @@ router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
 
 // ── DIRECCIONES (subcolección) ────────────────────────────────────────
 
-// GET todas las direcciones de un customer
-router.get('/:id/addresses', verifyToken, requireAdmin, async (req, res) => {
+// GET todas las direcciones de un customer (propio o admin)
+router.get('/:id/addresses', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso' });
+    }
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Customer no encontrado' });
 
@@ -153,9 +165,13 @@ router.get('/:id/addresses', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// GET una dirección
-router.get('/:id/addresses/:addressId', verifyToken, requireAdmin, async (req, res) => {
+// GET una dirección (propio o admin)
+router.get('/:id/addresses/:addressId', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso' });
+    }
     const addressDoc = await col
       .doc(req.params.id)
       .collection('addresses')
@@ -168,9 +184,13 @@ router.get('/:id/addresses/:addressId', verifyToken, requireAdmin, async (req, r
   }
 });
 
-// POST crear dirección
-router.post('/:id/addresses', verifyToken, requireAdmin, async (req, res) => {
+// POST crear dirección (propio o admin)
+router.post('/:id/addresses', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso' });
+    }
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Customer no encontrado' });
 
@@ -179,7 +199,6 @@ router.post('/:id/addresses', verifyToken, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'street y city son requeridos' });
     }
 
-    // Verificar si ya tiene direcciones para saber si esta será la default
     const existingSnap = await col.doc(req.params.id).collection('addresses').get();
     const isFirst      = existingSnap.empty;
 
@@ -193,7 +212,6 @@ router.post('/:id/addresses', verifyToken, requireAdmin, async (req, res) => {
 
     const ref = await col.doc(req.params.id).collection('addresses').add(data);
 
-    // Si es la primera dirección, establecerla como default automáticamente
     if (isFirst) {
       await col.doc(req.params.id).update({ defaultAddressId: ref.id });
     }
@@ -204,9 +222,13 @@ router.post('/:id/addresses', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// PUT actualizar dirección
-router.put('/:id/addresses/:addressId', verifyToken, requireAdmin, async (req, res) => {
+// PUT actualizar dirección (propio o admin)
+router.put('/:id/addresses/:addressId', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso' });
+    }
     const addressRef = col
       .doc(req.params.id)
       .collection('addresses')
@@ -230,9 +252,13 @@ router.put('/:id/addresses/:addressId', verifyToken, requireAdmin, async (req, r
   }
 });
 
-// DELETE dirección
-router.delete('/:id/addresses/:addressId', verifyToken, requireAdmin, async (req, res) => {
+// DELETE dirección (propio o admin)
+router.delete('/:id/addresses/:addressId', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso' });
+    }
     const addressRef = col
       .doc(req.params.id)
       .collection('addresses')
@@ -246,7 +272,6 @@ router.delete('/:id/addresses/:addressId', verifyToken, requireAdmin, async (req
 
     await addressRef.delete();
 
-    // Si era la dirección default, asignar otra automáticamente
     if (wasDefault) {
       const remaining = await col.doc(req.params.id).collection('addresses').get();
       const newDefault = remaining.empty ? '' : remaining.docs[0].id;

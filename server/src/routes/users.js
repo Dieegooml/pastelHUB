@@ -2,15 +2,15 @@ const express = require('express');
 const router = express.Router();
 const { db, admin } = require('../config/firebase');
 const { verifyToken, requireAdmin } = require('../middlewares/auth');
+const { paginate } = require('../utils/paginate');
 
 const col = db.collection('users');
 
 // GET todos los usuarios
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const snap = await col.orderBy('createdAt', 'desc').get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
+    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener usuarios' });
   }
@@ -122,9 +122,13 @@ router.patch('/:id/status', verifyToken, requireAdmin, async (req, res) => {
 
 // ── DIRECCIONES (array embebido) ──────────────────────────────────────
 
-// GET direcciones de un usuario
-router.get('/:id/addresses', verifyToken, requireAdmin, async (req, res) => {
+// GET direcciones de un usuario (propio usuario o admin)
+router.get('/:id/addresses', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'Solo puedes ver tus propias direcciones' });
+    }
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json(doc.data().addresses || []);
@@ -133,9 +137,13 @@ router.get('/:id/addresses', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// POST agregar dirección
-router.post('/:id/addresses', verifyToken, requireAdmin, async (req, res) => {
+// POST agregar dirección (propio usuario o admin)
+router.post('/:id/addresses', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso' });
+    }
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
 
@@ -148,8 +156,6 @@ router.post('/:id/addresses', verifyToken, requireAdmin, async (req, res) => {
     const address_id  = `addr_${Date.now()}`;
     const isFirst     = addresses.length === 0;
 
-    // Si es la primera o se marca como default,
-    // quitar is_default de las demás
     const updatedAddresses = addresses.map(a => ({
       ...a,
       is_default: (is_default || isFirst) ? false : a.is_default,
@@ -175,9 +181,13 @@ router.post('/:id/addresses', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// PUT actualizar dirección
-router.put('/:id/addresses/:addressId', verifyToken, requireAdmin, async (req, res) => {
+// PUT actualizar dirección (propio usuario o admin)
+router.put('/:id/addresses/:addressId', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso' });
+    }
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
 
@@ -187,7 +197,6 @@ router.put('/:id/addresses/:addressId', verifyToken, requireAdmin, async (req, r
 
     const { street, city, is_default } = req.body;
 
-    // Si se marca como default, quitar is_default de las demás
     const updated = addresses.map((a, i) => ({
       ...a,
       is_default: is_default ? i === index : a.is_default,
@@ -211,9 +220,13 @@ router.put('/:id/addresses/:addressId', verifyToken, requireAdmin, async (req, r
   }
 });
 
-// DELETE dirección
-router.delete('/:id/addresses/:addressId', verifyToken, requireAdmin, async (req, res) => {
+// DELETE dirección (propio usuario o admin)
+router.delete('/:id/addresses/:addressId', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso' });
+    }
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
 
@@ -223,7 +236,6 @@ router.delete('/:id/addresses/:addressId', verifyToken, requireAdmin, async (req
 
     let updated = addresses.filter(a => a.address_id !== req.params.addressId);
 
-    // Si era la default y quedan más, asignar la primera como default
     if (target.is_default && updated.length > 0) {
       updated[0].is_default = true;
     }

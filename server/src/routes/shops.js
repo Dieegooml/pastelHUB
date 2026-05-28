@@ -5,15 +5,16 @@ const { verifyToken, requireAdmin, requireOwnerOrAdmin } = require('../middlewar
 const { validate } = require('../middlewares/validate');
 const { createShopSchema, updateShopSchema } = require('../validators/shopValidator');
 const { mapShopToResponse, mapShopFromRequest } = require('../utils/mappers');
+const { paginate } = require('../utils/paginate');
 
 const col = db.collection('pastryShops');
 
 // GET todas las pastelerías (público)
 router.get('/', async (req, res) => {
   try {
-    const snap = await col.orderBy('createdAt', 'desc').get();
-    const data = snap.docs.map(d => mapShopToResponse({ id: d.id, ...d.data() }));
-    res.json(data);
+    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
+    result.data = result.data.map(d => mapShopToResponse(d));
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener pastelerías' });
   }
@@ -127,14 +128,23 @@ router.delete('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
   }
 });
 
+// GET pastelerías por owner (público)
+router.get('/owner/:ownerId', async (req, res) => {
+  try {
+    const result = await paginate(col, req.query, {
+      orderBy: 'createdAt', filters: [{ field: 'owner_id', value: req.params.ownerId }],
+    });
+    result.data = result.data.map(d => mapShopToResponse(d));
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener pastelerías del owner' });
+  }
+});
+
 // ── SCHEDULES (array embebido) ────────────────────────────────────────
 
-// GET horarios
-router.get('/:id/schedules', verifyToken, requireOwnerOrAdmin(async (req) => {
-  const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
-  return doc.data().owner_id;
-}), async (req, res) => {
+// GET horarios (público)
+router.get('/:id/schedules', async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
@@ -247,12 +257,8 @@ router.delete('/:id/schedules/:day', verifyToken, requireOwnerOrAdmin(async (req
 
 // ── CATEGORIES (array embebido) ───────────────────────────────────────
 
-// GET categorías
-router.get('/:id/categories', verifyToken, requireOwnerOrAdmin(async (req) => {
-  const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
-  return doc.data().owner_id;
-}), async (req, res) => {
+// GET categorías (público)
+router.get('/:id/categories', async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });

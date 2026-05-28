@@ -1,19 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
-const { verifyToken, requireAdmin, requireOwnerOrAdmin } = require('../middlewares/auth');
+const { verifyToken, requireOwnerOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { createProductSchema, updateProductSchema } = require('../validators/productValidator');
 const { mapProductFromRequest } = require('../utils/mappers');
+const { paginate } = require('../utils/paginate');
 
 const col = db.collection('products');
 
-// GET todos los productos (solo admin)
-router.get('/', verifyToken, requireAdmin, async (req, res) => {
+// GET todos los productos (público)
+router.get('/', async (req, res) => {
   try {
-    const snap = await col.orderBy('createdAt', 'desc').get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
+    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener productos' });
   }
@@ -22,12 +22,10 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
 // GET productos por pastelería (público)
 router.get('/shop/:shopId', async (req, res) => {
   try {
-    const snap = await col
-      .where('shop_id', '==', req.params.shopId)
-      .orderBy('createdAt', 'desc')
-      .get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json(data);
+    const result = await paginate(col, req.query, {
+      orderBy: 'createdAt', filters: [{ field: 'shop_id', value: req.params.shopId }],
+    });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener productos de la pastelería' });
   }
