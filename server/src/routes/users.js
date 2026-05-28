@@ -16,9 +16,13 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// GET un usuario
-router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
+// GET un usuario (propio usuario o admin)
+router.get('/:id', verifyToken, async (req, res) => {
   try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso para ver este usuario' });
+    }
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json({ id: doc.id, ...doc.data() });
@@ -61,22 +65,35 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// PUT actualizar usuario
-router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
+// PUT actualizar usuario (propio usuario o admin; solo admin cambia roles)
+router.put('/:id', verifyToken, async (req, res) => {
   try {
+    const userRoles = req.user?.roles || [];
+    if (!userRoles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso para editar este usuario' });
+    }
+
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    const { full_name, phone, roles } = req.body;
+    const { full_name, phone, roles: newRoles } = req.body;
 
-    if (roles) {
-      await admin.auth().setCustomUserClaims(req.params.id, { roles });
+    if (newRoles && !userRoles.includes('admin')) {
+      return res.status(403).json({ error: 'Solo admins pueden cambiar roles' });
+    }
+
+    if (newRoles) {
+      await admin.auth().setCustomUserClaims(req.params.id, { roles: newRoles });
+    }
+
+    if (full_name !== undefined) {
+      await admin.auth().updateUser(req.params.id, { displayName: full_name });
     }
 
     const updates = {
       ...(full_name !== undefined && { full_name }),
       ...(phone     !== undefined && { phone }),
-      ...(roles     !== undefined && { roles }),
+      ...(newRoles  !== undefined && { roles: newRoles }),
       updatedAt: new Date().toISOString(),
     };
 

@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { updatePassword } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
-import { colors, font, inputStyle, btnPrimary, btnDanger, badge as badgeStyle } from '../../styles/theme';
+import { colors, font, inputStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary, btnSmallSecondary, badge as badgeStyle, labelStyle } from '../../styles/theme';
 import { usersService } from '../../services/usersService';
 
 const ROLE_COLORS = {
@@ -15,28 +15,100 @@ const ROLE_COLORS = {
   customer: { bg: '#e8f5e9', color: '#2e7d32' },
 };
 
+function AddressForm({ initial, onSave, onCancel }) {
+  const [street, setStreet] = useState(initial?.street || '');
+  const [city, setCity] = useState(initial?.city || '');
+  const [isDefault, setIsDefault] = useState(initial?.is_default || false);
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!street || !city) return;
+    setSaving(true);
+    try {
+      await onSave({ street, city, is_default: isDefault });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div style={{ background: colors.grayLight, borderRadius: '10px', padding: '16px', marginTop: '8px' }}>
+      <label style={labelStyle}>Calle / Dirección</label>
+      <input style={{ ...inputStyle, height: '40px', fontSize: '13px', marginBottom: '10px' }} value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Av. Principal 123" />
+      <label style={labelStyle}>Ciudad</label>
+      <input style={{ ...inputStyle, height: '40px', fontSize: '13px', marginBottom: '10px' }} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lima" />
+      <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+        <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />
+        Dirección por defecto
+      </label>
+      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+        <button onClick={handleSubmit} disabled={saving || !street || !city} style={{ ...btnSmallPrimary, opacity: saving || !street || !city ? 0.6 : 1 }}>{saving ? '...' : 'Guardar'}</button>
+        <button onClick={onCancel} style={btnSmallSecondary}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [saving, setSaving] = useState({ name: false, phone: false });
 
-  useEffect(() => {
-    if (user?.uid) {
-      usersService.getById(user.uid).then((u) => {
-        if (u?.phone) setPhone(u.phone);
-      }).catch(() => {});
-    }
+  const [addresses, setAddresses] = useState([]);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
+
+  const loadProfile = useCallback(async () => {
+    if (!user?.uid) return;
+    try {
+      const u = await usersService.getById(user.uid);
+      if (u) {
+        setFullName(u.full_name || '');
+        setPhone(u.phone || '');
+        setAddresses(u.addresses || []);
+      }
+    } catch { }
   }, [user]);
+
+  useEffect(() => { loadProfile(); }, [loadProfile]);
+
+  const handleSaveName = async () => {
+    if (!user?.uid || !fullName.trim()) return;
+    setSaving((s) => ({ ...s, name: true }));
+    setError('');
+    setSuccess('');
+    try {
+      await usersService.update(user.uid, { full_name: fullName.trim() });
+      setSuccess('Nombre actualizado');
+      await refreshUser();
+    } catch (e) {
+      setError(e?.response?.data?.error || 'Error al actualizar nombre');
+    } finally { setSaving((s) => ({ ...s, name: false })); }
+  };
+
+  const handleSavePhone = async () => {
+    if (!user?.uid) return;
+    setSaving((s) => ({ ...s, phone: true }));
+    setError('');
+    setSuccess('');
+    try {
+      await usersService.update(user.uid, { phone });
+      setSuccess('Teléfono actualizado');
+    } catch (e) {
+      setError(e?.response?.data?.error || 'Error al actualizar teléfono');
+    } finally { setSaving((s) => ({ ...s, phone: false })); }
+  };
 
   const handleUpdatePassword = async () => {
     if (!newPassword || newPassword.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres');
       return;
     }
+    setError('');
+    setSuccess('');
     try {
       await updatePassword(auth.currentUser, newPassword);
       setNewPassword('');
@@ -46,16 +118,37 @@ export default function Profile() {
     }
   };
 
-  const handleUpdatePhone = async () => {
-    if (!user?.uid) return;
-    setSaving(true);
+  const handleAddAddress = async (data) => {
     try {
-      await usersService.update(user.uid, { phone });
-      setSuccess('Teléfono actualizado');
-      await refreshUser();
-    } catch {
-      setError('Error al actualizar teléfono');
-    } finally { setSaving(false); }
+      await usersService.addAddress(user.uid, data);
+      setShowAddressForm(false);
+      await loadProfile();
+      setSuccess('Dirección agregada');
+    } catch (e) {
+      setError(e?.response?.data?.error || 'Error al agregar dirección');
+    }
+  };
+
+  const handleUpdateAddress = async (data) => {
+    try {
+      await usersService.updateAddress(user.uid, editingAddress.address_id, data);
+      setEditingAddress(null);
+      await loadProfile();
+      setSuccess('Dirección actualizada');
+    } catch (e) {
+      setError(e?.response?.data?.error || 'Error al actualizar dirección');
+    }
+  };
+
+  const handleDeleteAddress = async (addressId) => {
+    if (!window.confirm('¿Eliminar esta dirección?')) return;
+    try {
+      await usersService.deleteAddress(user.uid, addressId);
+      await loadProfile();
+      setSuccess('Dirección eliminada');
+    } catch (e) {
+      setError(e?.response?.data?.error || 'Error al eliminar dirección');
+    }
   };
 
   return (
@@ -72,6 +165,7 @@ export default function Profile() {
         {error && <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
         {success && <div style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
 
+        {/* ── Avatar / Identidad ── */}
         <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
             <div style={{
@@ -83,11 +177,10 @@ export default function Profile() {
               {user?.email?.charAt(0).toUpperCase() || '?'}
             </div>
             <div>
-              <div style={{ fontSize: '18px', fontWeight: 600, fontFamily: font.body, color: colors.text }}>{user?.displayName || 'Sin nombre'}</div>
+              <div style={{ fontSize: '18px', fontWeight: 600, fontFamily: font.body, color: colors.text }}>{fullName || user?.displayName || 'Sin nombre'}</div>
               <div style={{ fontSize: '13px', color: colors.textSecondary, fontFamily: font.body }}>{user?.email}</div>
             </div>
           </div>
-
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {user?.roles?.map((role) => {
               const rc = ROLE_COLORS[role] || { bg: '#f0f0f0', color: '#666' };
@@ -100,19 +193,81 @@ export default function Profile() {
           </div>
         </div>
 
+        {/* ── Información personal ── */}
         <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '16px' }}>
-          <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '16px' }}>Información</h3>
+          <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '16px' }}>Información personal</h3>
+
           <div style={{ marginBottom: '14px' }}>
-            <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body, display: 'block', marginBottom: '4px' }}>Teléfono</label>
+            <label style={labelStyle}>Nombre completo</label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <input style={{ ...inputStyle, height: '42px', fontSize: '13px', flex: 1 }} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="999 999 999" />
-              <button onClick={handleUpdatePhone} disabled={saving} style={{ ...btnPrimary, padding: '0 20px', fontSize: '13px', opacity: saving ? 0.7 : 1 }}>
-                {saving ? '...' : 'Guardar'}
+              <input style={{ ...inputStyle, height: '42px', fontSize: '13px', flex: 1 }} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre" />
+              <button onClick={handleSaveName} disabled={saving.name || !fullName.trim()} style={{ ...btnPrimary, padding: '0 20px', fontSize: '13px', opacity: saving.name ? 0.7 : 1 }}>
+                {saving.name ? '...' : 'Guardar'}
               </button>
             </div>
           </div>
+
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>Teléfono</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input style={{ ...inputStyle, height: '42px', fontSize: '13px', flex: 1 }} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="999 999 999" />
+              <button onClick={handleSavePhone} disabled={saving.phone} style={{ ...btnPrimary, padding: '0 20px', fontSize: '13px', opacity: saving.phone ? 0.7 : 1 }}>
+                {saving.phone ? '...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Mis Direcciones ── */}
+        <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0 }}>Mis Direcciones</h3>
+            {!showAddressForm && !editingAddress && (
+              <button onClick={() => setShowAddressForm(true)} style={btnSmallPrimary}>+ Agregar</button>
+            )}
+          </div>
+
+          {showAddressForm && (
+            <AddressForm onSave={handleAddAddress} onCancel={() => setShowAddressForm(false)} />
+          )}
+
+          {addresses.length === 0 && !showAddressForm && (
+            <p style={{ fontFamily: font.body, fontSize: '13px', color: colors.textSecondary, margin: 0 }}>No tienes direcciones registradas.</p>
+          )}
+
+          {addresses.map((addr) => (
+            <div key={addr.address_id} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+              padding: '12px 0', borderBottom: '1px solid #f0f0f0',
+            }}>
+              {editingAddress?.address_id === addr.address_id ? (
+                <div style={{ flex: 1 }}>
+                  <AddressForm initial={addr} onSave={handleUpdateAddress} onCancel={() => setEditingAddress(null)} />
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <div style={{ fontFamily: font.body, fontSize: '14px', color: colors.text, fontWeight: 500 }}>{addr.street}</div>
+                    <div style={{ fontFamily: font.body, fontSize: '12px', color: colors.textSecondary }}>{addr.city}</div>
+                    {addr.is_default && (
+                      <span style={{ ...badgeStyle('#e8f5e9', '#2e7d32'), marginTop: '4px', display: 'inline-block' }}>Por defecto</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                    <button onClick={() => setEditingAddress(addr)} style={btnGhost}>Editar</button>
+                    <button onClick={() => handleDeleteAddress(addr.address_id)} style={btnDanger}>Eliminar</button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* ── Seguridad ── */}
+        <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '16px' }}>
+          <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '16px' }}>Seguridad</h3>
           <div>
-            <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body, display: 'block', marginBottom: '4px' }}>Nueva contraseña</label>
+            <label style={labelStyle}>Nueva contraseña</label>
             <div style={{ display: 'flex', gap: '8px' }}>
               <input style={{ ...inputStyle, height: '42px', fontSize: '13px', flex: 1 }} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••" />
               <button onClick={handleUpdatePassword} style={{ ...btnPrimary, padding: '0 20px', fontSize: '13px' }}>Actualizar</button>
