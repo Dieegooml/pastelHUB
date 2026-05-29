@@ -4,7 +4,6 @@ export const customersService = {
   getAll: () => api.get('/customers'),
   getById: (id) => api.get(`/customers/${id}`),
   create: (data) => api.post('/customers', data),
-  update: (id, data) => api.put(`/customers/${id}`, data),
   delete: (id) => api.delete(`/customers/${id}`),
   getAddresses: (id) => api.get(`/customers/${id}/addresses`),
   addAddress: (id, data) => api.post(`/customers/${id}/addresses`, data),
