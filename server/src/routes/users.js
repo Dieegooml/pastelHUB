@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { db, admin } = require('../config/firebase');
 const { verifyToken, requireAdmin } = require('../middlewares/auth');
+const { validate } = require('../middlewares/validate');
+const { createUserSchema, updateUserSchema, addressSchema } = require('../validators/userValidator');
 const { paginate } = require('../utils/paginate');
 
 const col = db.collection('users');
@@ -32,13 +34,9 @@ router.get('/:id', verifyToken, async (req, res) => {
 });
 
 // POST crear usuario
-router.post('/', verifyToken, requireAdmin, async (req, res) => {
+router.post('/', verifyToken, requireAdmin, validate(createUserSchema), async (req, res) => {
   try {
     const { name, email, password, phone, roles } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'name, email y password son requeridos' });
-    }
 
     const userRecord = await admin.auth().createUser({ email, password });
     const assignedRoles = roles || ['customer'];
@@ -66,7 +64,7 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // PUT actualizar usuario (propio usuario o admin; solo admin cambia roles)
-router.put('/:id', verifyToken, async (req, res) => {
+router.put('/:id', verifyToken, validate(updateUserSchema), async (req, res) => {
   try {
     const userRoles = req.user?.roles || [];
     if (!userRoles.includes('admin') && req.user.uid !== req.params.id) {
@@ -155,7 +153,7 @@ router.get('/:id/addresses', verifyToken, async (req, res) => {
 });
 
 // POST agregar dirección (propio usuario o admin)
-router.post('/:id/addresses', verifyToken, async (req, res) => {
+router.post('/:id/addresses', verifyToken, validate(addressSchema), async (req, res) => {
   try {
     const roles = req.user?.roles || [];
     if (!roles.includes('admin') && req.user.uid !== req.params.id) {
@@ -165,9 +163,6 @@ router.post('/:id/addresses', verifyToken, async (req, res) => {
     if (!doc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     const { street, city, is_default } = req.body;
-    if (!street || !city) {
-      return res.status(400).json({ error: 'street y city son requeridos' });
-    }
 
     const addresses   = doc.data().addresses || [];
     const address_id  = `addr_${Date.now()}`;

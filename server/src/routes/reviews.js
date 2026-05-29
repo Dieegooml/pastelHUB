@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireModerator, requireCustomer } = require('../middlewares/auth');
+const { validate } = require('../middlewares/validate');
+const { createReviewSchema, updateReviewSchema, replySchema } = require('../validators/reviewValidator');
 const { paginate } = require('../utils/paginate');
 
 const col = db.collection('reviews');
@@ -100,18 +102,9 @@ router.get('/:id', verifyToken, async (req, res) => {
 });
 
 // POST crear reseña (cliente autenticado)
-router.post('/', verifyToken, requireCustomer, async (req, res) => {
+router.post('/', verifyToken, requireCustomer, validate(createReviewSchema), async (req, res) => {
   try {
     const { shopId, orderId, rating, comment } = req.body;
-
-    if (!shopId || !orderId || rating === undefined) {
-      return res.status(400).json({ error: 'shopId, orderId y rating son requeridos' });
-    }
-
-    const parsedRating = parseInt(rating);
-    if (isNaN(parsedRating) || parsedRating < 0 || parsedRating > 5) {
-      return res.status(400).json({ error: 'rating debe ser un número entero entre 0 y 5' });
-    }
 
     // Verificar que la orden existe
     const orderDoc = await db.collection('orders').doc(orderId).get();
@@ -139,7 +132,7 @@ router.post('/', verifyToken, requireCustomer, async (req, res) => {
       customerId:  req.user.uid,
       shopId,
       orderId,
-      rating:      parsedRating,
+      rating,
       comment:     comment || '',
       ownerReply:  '',
       repliedAt:   '',
@@ -181,7 +174,7 @@ router.patch('/:id/status', verifyToken, requireModerator, async (req, res) => {
 });
 
 // PATCH responder reseña (owner/admin — verifica que el usuario sea dueño de la pastelería o admin)
-router.patch('/:id/reply', verifyToken, async (req, res) => {
+router.patch('/:id/reply', verifyToken, validate(replySchema), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Reseña no encontrada' });
@@ -203,9 +196,6 @@ router.patch('/:id/reply', verifyToken, async (req, res) => {
     }
 
     const { ownerReply } = req.body;
-    if (!ownerReply) {
-      return res.status(400).json({ error: 'ownerReply es requerido' });
-    }
 
     const updates = {
       ownerReply,
@@ -220,7 +210,7 @@ router.patch('/:id/reply', verifyToken, async (req, res) => {
 });
 
 // PUT editar reseña (solo comment y rating, solo si está pending)
-router.put('/:id', verifyToken, async (req, res) => {
+router.put('/:id', verifyToken, validate(updateReviewSchema), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Reseña no encontrada' });
@@ -236,15 +226,8 @@ router.put('/:id', verifyToken, async (req, res) => {
 
     const { rating, comment } = req.body;
 
-    if (rating !== undefined) {
-      const parsed = parseInt(rating);
-      if (isNaN(parsed) || parsed < 0 || parsed > 5) {
-        return res.status(400).json({ error: 'rating debe ser un número entero entre 0 y 5' });
-      }
-    }
-
     const updates = {
-      ...(rating  !== undefined && { rating: parseInt(rating) }),
+      ...(rating  !== undefined && { rating }),
       ...(comment !== undefined && { comment }),
     };
 

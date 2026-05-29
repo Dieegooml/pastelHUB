@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireModerator } = require('../middlewares/auth');
+const { validate } = require('../middlewares/validate');
+const { createReportSchema, assignReportSchema, updateReportStatusSchema, editReportSchema } = require('../validators/reportValidator');
 const { paginate } = require('../utils/paginate');
 
 const col = db.collection('reports');
@@ -98,19 +100,11 @@ router.get('/:id', verifyToken, async (req, res) => {
 });
 
 // POST crear reporte (cualquier usuario autenticado)
-router.post('/', verifyToken, async (req, res) => {
+router.post('/', verifyToken, validate(createReportSchema), async (req, res) => {
   try {
     const { targetType, targetId, reason } = req.body;
 
-    if (!targetType || !targetId || !reason) {
-      return res.status(400).json({ error: 'targetType, targetId y reason son requeridos' });
-    }
-
     const reportedBy = req.user.uid;
-
-    if (!VALID_TARGET_TYPES.includes(targetType)) {
-      return res.status(400).json({ error: `targetType inválido. Válidos: ${VALID_TARGET_TYPES.join(', ')}` });
-    }
 
     // Verificar que el usuario que reporta existe
     const userDoc = await db.collection('users').doc(reportedBy).get();
@@ -158,7 +152,7 @@ router.post('/', verifyToken, async (req, res) => {
 });
 
 // PATCH asignar reporte (admin o moderador puede asignarse a sí mismo)
-router.patch('/:id/assign', verifyToken, async (req, res) => {
+router.patch('/:id/assign', verifyToken, validate(assignReportSchema), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Reporte no encontrado' });
@@ -173,9 +167,6 @@ router.patch('/:id/assign', verifyToken, async (req, res) => {
     }
 
     const { moderatorId } = req.body;
-    if (!moderatorId) {
-      return res.status(400).json({ error: 'moderatorId es requerido' });
-    }
 
     // Verificar que el usuario tiene rol moderator
     const modDoc = await db.collection('users').doc(moderatorId).get();
@@ -194,7 +185,7 @@ router.patch('/:id/assign', verifyToken, async (req, res) => {
 });
 
 // PATCH resolver o desestimar reporte (admin o moderator asignado)
-router.patch('/:id/status', verifyToken, async (req, res) => {
+router.patch('/:id/status', verifyToken, validate(updateReportStatusSchema), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Reporte no encontrado' });
@@ -209,9 +200,6 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
     }
 
     const { status } = req.body;
-    if (!['resolved', 'dismissed'].includes(status)) {
-      return res.status(400).json({ error: 'Estado inválido. Válidos: resolved, dismissed' });
-    }
 
     const updates = {
       status,
@@ -226,7 +214,7 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
 });
 
 // PUT editar reporte (solo el reporter si está open)
-router.put('/:id', verifyToken, async (req, res) => {
+router.put('/:id', verifyToken, validate(editReportSchema), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Reporte no encontrado' });
@@ -242,9 +230,6 @@ router.put('/:id', verifyToken, async (req, res) => {
     }
 
     const { reason } = req.body;
-    if (!reason) {
-      return res.status(400).json({ error: 'reason es requerido' });
-    }
 
     await col.doc(req.params.id).update({ reason });
     res.json({ id: req.params.id, reason });

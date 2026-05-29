@@ -28,7 +28,7 @@ describe('POST /api/users', () => {
       .send({ name: 'Test', email: 'test@test.com' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('name, email y password');
+    expect(res.body.error).toContain('password');
   });
 
   it('responde 400 si falta email', async () => {
@@ -67,7 +67,7 @@ describe('PUT /api/users/:id', () => {
     const res = await request(app)
       .put('/api/users/user-1')
       .set('Authorization', 'Bearer token-valido')
-      .send({ full_name: 'Actualizado' });
+      .send({ name: 'Actualizado' });
 
     expect(res.status).toBe(200);
   });
@@ -79,7 +79,7 @@ describe('PUT /api/users/:id', () => {
     const res = await request(app)
       .put('/api/users/user-inexistente')
       .set('Authorization', 'Bearer token-valido')
-      .send({ full_name: 'Nadie' });
+      .send({ name: 'Nadie' });
 
     expect(res.status).toBe(404);
   });

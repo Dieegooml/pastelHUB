@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireCustomer } = require('../middlewares/auth');
+const { validate } = require('../middlewares/validate');
+const { createCustomerSchema, addressSchema, defaultAddressSchema, updateAddressSchema } = require('../validators/customerValidator');
 const { paginate } = require('../utils/paginate');
 
 const col = db.collection('customers');
@@ -51,7 +53,7 @@ router.get('/:id/full', verifyToken, async (req, res) => {
 });
 
 // POST crear customer (auto-creación: usa req.user.uid)
-router.post('/', verifyToken, requireCustomer, async (req, res) => {
+router.post('/', verifyToken, requireCustomer, validate(createCustomerSchema), async (req, res) => {
   try {
     const uid = req.user.uid;
 
@@ -91,7 +93,7 @@ router.post('/', verifyToken, requireCustomer, async (req, res) => {
 });
 
 // PATCH actualizar dirección por defecto (propio o admin)
-router.patch('/:id/default-address', verifyToken, async (req, res) => {
+router.patch('/:id/default-address', verifyToken, validate(defaultAddressSchema), async (req, res) => {
   try {
     const roles = req.user?.roles || [];
     if (!roles.includes('admin') && req.user.uid !== req.params.id) {
@@ -101,9 +103,6 @@ router.patch('/:id/default-address', verifyToken, async (req, res) => {
     if (!doc.exists) return res.status(404).json({ error: 'Customer no encontrado' });
 
     const { addressId } = req.body;
-    if (!addressId) {
-      return res.status(400).json({ error: 'addressId es requerido' });
-    }
 
     // Verificar que la dirección existe en la subcolección
     const addressDoc = await col.doc(req.params.id).collection('addresses').doc(addressId).get();
@@ -185,7 +184,7 @@ router.get('/:id/addresses/:addressId', verifyToken, async (req, res) => {
 });
 
 // POST crear dirección (propio o admin)
-router.post('/:id/addresses', verifyToken, async (req, res) => {
+router.post('/:id/addresses', verifyToken, validate(addressSchema), async (req, res) => {
   try {
     const roles = req.user?.roles || [];
     if (!roles.includes('admin') && req.user.uid !== req.params.id) {
@@ -195,9 +194,6 @@ router.post('/:id/addresses', verifyToken, async (req, res) => {
     if (!doc.exists) return res.status(404).json({ error: 'Customer no encontrado' });
 
     const { street, city, district, reference } = req.body;
-    if (!street || !city) {
-      return res.status(400).json({ error: 'street y city son requeridos' });
-    }
 
     const existingSnap = await col.doc(req.params.id).collection('addresses').get();
     const isFirst      = existingSnap.empty;
@@ -223,7 +219,7 @@ router.post('/:id/addresses', verifyToken, async (req, res) => {
 });
 
 // PUT actualizar dirección (propio o admin)
-router.put('/:id/addresses/:addressId', verifyToken, async (req, res) => {
+router.put('/:id/addresses/:addressId', verifyToken, validate(updateAddressSchema), async (req, res) => {
   try {
     const roles = req.user?.roles || [];
     if (!roles.includes('admin') && req.user.uid !== req.params.id) {

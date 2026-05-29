@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin } = require('../middlewares/auth');
+const { validate } = require('../middlewares/validate');
+const { createNotificationSchema, bulkNotificationSchema } = require('../validators/notificationValidator');
 const { paginate } = require('../utils/paginate');
 
 const col = db.collection('notifications');
@@ -97,17 +99,9 @@ router.get('/:id', verifyToken, async (req, res) => {
 });
 
 // POST crear notificación
-router.post('/', verifyToken, requireAdmin, async (req, res) => {
+router.post('/', verifyToken, requireAdmin, validate(createNotificationSchema), async (req, res) => {
   try {
-    const { userId, type, message } = req.body;
-
-    if (!userId || !type || !message) {
-      return res.status(400).json({ error: 'userId, type y message son requeridos' });
-    }
-
-    if (!VALID_TYPES.includes(type)) {
-      return res.status(400).json({ error: `Tipo inválido. Válidos: ${VALID_TYPES.join(', ')}` });
-    }
+    const { userId, type, message, title } = req.body;
 
     // Verificar que el usuario existe
     const userDoc = await db.collection('users').doc(userId).get();
@@ -131,21 +125,9 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // POST crear notificación masiva (para varios usuarios a la vez)
-router.post('/bulk', verifyToken, requireAdmin, async (req, res) => {
+router.post('/bulk', verifyToken, requireAdmin, validate(bulkNotificationSchema), async (req, res) => {
   try {
-    const { userIds, type, message } = req.body;
-
-    if (!userIds?.length || !type || !message) {
-      return res.status(400).json({ error: 'userIds, type y message son requeridos' });
-    }
-
-    if (!VALID_TYPES.includes(type)) {
-      return res.status(400).json({ error: `Tipo inválido. Válidos: ${VALID_TYPES.join(', ')}` });
-    }
-
-    if (userIds.length > 500) {
-      return res.status(400).json({ error: 'Máximo 500 usuarios por envío masivo' });
-    }
+    const { userIds, type, message, title } = req.body;
 
     const batch    = db.batch();
     const now      = new Date().toISOString();

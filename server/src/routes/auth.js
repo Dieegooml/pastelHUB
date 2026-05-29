@@ -3,6 +3,8 @@ const express = require('express');
 const router  = express.Router();
 const { admin, db } = require('../config/firebase');
 const { verifyToken, requireAdmin } = require('../middlewares/auth');
+const { validate } = require('../middlewares/validate');
+const { assignRoleSchema } = require('../validators/authValidator');
 
 // POST — sincronizar usuario tras login
 router.post('/sync', verifyToken, async (req, res) => {
@@ -61,18 +63,9 @@ router.get('/me', verifyToken, async (req, res) => {
 });
 
 // POST — asignar rol (solo admin)
-router.post('/assign-role', verifyToken, requireAdmin, async (req, res) => {
+router.post('/assign-role', verifyToken, requireAdmin, validate(assignRoleSchema), async (req, res) => {
   try {
     const { uid, roles } = req.body;
-    if (!uid || !roles?.length) {
-      return res.status(400).json({ error: 'uid y roles son requeridos' });
-    }
-
-    const VALID_ROLES = ['admin', 'moderator', 'owner', 'customer'];
-    if (!roles.every(r => VALID_ROLES.includes(r))) {
-      return res.status(400).json({ error: `Roles inválidos. Válidos: ${VALID_ROLES.join(', ')}` });
-    }
-
     const userDoc = await db.collection('users').doc(uid).get();
     if (!userDoc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
 

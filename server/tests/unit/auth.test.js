@@ -88,7 +88,7 @@ describe('POST /api/auth/assign-role', () => {
       .send({});
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('uid y roles son requeridos');
+    expect(res.body.error).toContain('uid');
   });
 
   it('responde 400 si roles contiene valores invalidos', async () => {
@@ -100,7 +100,7 @@ describe('POST /api/auth/assign-role', () => {
       .send({ uid: 'some-uid', roles: ['superadmin'] });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('Roles inválidos');
+    expect(res.body.error).toContain('Invalid option');
   });
 
   it('asigna rol correctamente y responde 200', async () => {

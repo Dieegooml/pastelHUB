@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireCustomer } = require('../middlewares/auth');
+const { validate } = require('../middlewares/validate');
+const { createPaymentSchema, updatePaymentSchema } = require('../validators/paymentValidator');
 const { paginate } = require('../utils/paginate');
 
 const col = db.collection('payments');
@@ -88,17 +90,9 @@ router.get('/:id', verifyToken, async (req, res) => {
 });
 
 // POST crear pago (cliente autenticado)
-router.post('/', verifyToken, requireCustomer, async (req, res) => {
+router.post('/', verifyToken, requireCustomer, validate(createPaymentSchema), async (req, res) => {
   try {
     const { orderId, paymentMethod, amount, transactionRef } = req.body;
-
-    if (!orderId || !paymentMethod || amount === undefined) {
-      return res.status(400).json({ error: 'orderId, paymentMethod y amount son requeridos' });
-    }
-
-    if (!VALID_METHODS.includes(paymentMethod)) {
-      return res.status(400).json({ error: `Método inválido. Válidos: ${VALID_METHODS.join(', ')}` });
-    }
 
     // Verificar que la orden existe
     const orderDoc = await db.collection('orders').doc(orderId).get();
@@ -116,7 +110,7 @@ router.post('/', verifyToken, requireCustomer, async (req, res) => {
       orderId,
       paymentMethod,
       paymentStatus:  'pending',
-      amount:         parseFloat(amount),
+      amount,
       transactionRef: transactionRef || '',
       paidAt:         '',
       createdAt:      new Date().toISOString(),
@@ -154,7 +148,7 @@ router.patch('/:id/status', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // PUT actualizar pago (solo mientras esté pendiente)
-router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
+router.put('/:id', verifyToken, requireAdmin, validate(updatePaymentSchema), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pago no encontrado' });
@@ -165,10 +159,6 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
 
     // No permitir cambiar orderId ni campos críticos
     const { orderId, createdAt, paidAt, ...rest } = req.body;
-    if (rest.paymentMethod && !VALID_METHODS.includes(rest.paymentMethod)) {
-      return res.status(400).json({ error: `Método inválido. Válidos: ${VALID_METHODS.join(', ')}` });
-    }
-    if (rest.amount !== undefined) rest.amount = parseFloat(rest.amount);
 
     await col.doc(req.params.id).update(rest);
     res.json({ id: req.params.id, ...rest });
