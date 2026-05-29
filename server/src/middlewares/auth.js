@@ -29,14 +29,6 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-const requireOwner = (req, res, next) => {
-  const roles = req.user?.roles || [];
-  if (roles.includes('admin') || roles.includes('owner')) {
-    return next();
-  }
-  res.status(403).json({ error: 'Solo owners o admins' });
-};
-
 const requireModerator = (req, res, next) => {
   const roles = req.user?.roles || [];
   if (roles.includes('admin') || roles.includes('moderator')) {
@@ -64,12 +56,13 @@ const requireOwnerOrAdmin = (getResourceOwnerId) => {
     try {
       const ownerId = await getResourceOwnerId(req);
       if (req.user.uid === ownerId) return next();
-    } catch {
-      return res.status(500).json({ error: 'Error al verificar propiedad del recurso' });
+    } catch (e) {
+      const status = e.status || 500;
+      return res.status(status).json({ error: e.message || 'Error al verificar propiedad del recurso' });
     }
 
     res.status(403).json({ error: 'No eres el propietario de este recurso' });
   };
 };
 
-module.exports = { verifyToken, requireAdmin, requireOwner, requireModerator, requireCustomer, requireOwnerOrAdmin };
+module.exports = { verifyToken, requireAdmin, requireModerator, requireCustomer, requireOwnerOrAdmin };
