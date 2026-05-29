@@ -5,6 +5,7 @@ const SHOP_CAMEL_TO_SNAKE = {
   bannerUrl: 'banner_url',
   approvalStatus: 'status',
   shopDescription: 'description',
+  deliveryRange: 'delivery_range',
 };
 
 const SHOP_SNAKE_TO_CAMEL = {
@@ -14,6 +15,7 @@ const SHOP_SNAKE_TO_CAMEL = {
   banner_url: 'bannerUrl',
   status: 'approvalStatus',
   description: 'shopDescription',
+  delivery_range: 'deliveryRange',
 };
 
 const PRODUCT_CAMEL_TO_SNAKE = {
