@@ -293,13 +293,14 @@ router.post('/', verifyToken, validate(createOrderSchema), requireCustomer, asyn
 });
 
 // PATCH cancelar orden (cliente autenticado, solo si está pendiente)
-router.patch('/:id/cancel', verifyToken, async (req, res) => {
+router.patch('/:id/cancel', verifyToken, requireCustomer, async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
 
-    // Solo el dueño de la orden puede cancelar
-    if (doc.data().customer?.user_id !== req.user.uid) {
+    // Solo el dueño de la orden puede cancelar (admin puede cancelar cualquier orden)
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && doc.data().customer?.user_id !== req.user.uid) {
       return res.status(403).json({ error: 'Solo puedes cancelar tus propias órdenes' });
     }
 
