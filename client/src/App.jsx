@@ -24,6 +24,7 @@ import Customers from "./pages/admin/Customers";
 import Reports from "./pages/admin/Reports";
 import Notifications from "./pages/admin/Notifications";
 import Payments from "./pages/admin/Payments";
+import Promotions from "./pages/admin/Promotions";
 
 export default function App() {
   return (
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="/admin/reports" element={<ProtectedRoute role="admin"><Reports /></ProtectedRoute>} />
           <Route path="/admin/notifications" element={<ProtectedRoute role="admin"><Notifications /></ProtectedRoute>} />
           <Route path="/admin/payments" element={<ProtectedRoute role="admin"><Payments /></ProtectedRoute>} />
+          <Route path="/admin/promotions" element={<ProtectedRoute role="admin"><Promotions /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

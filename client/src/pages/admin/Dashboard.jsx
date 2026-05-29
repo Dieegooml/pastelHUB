@@ -8,29 +8,44 @@ import { usersService } from '../../services/usersService';
 import { shopsService } from '../../services/shopsService';
 import { ordersService } from '../../services/ordersService';
 import { reviewsService } from '../../services/reviewsService';
+import { promotionsService } from '../../services/promotionsService';
+import { customersService } from '../../services/customersService';
+import { reportsService } from '../../services/reportsService';
+import { notificationsService } from '../../services/notificationsService';
+import { paymentsService } from '../../services/paymentsService';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ users: 0, shops: 0, orders: 0, reviews: 0 });
+  const [stats, setStats] = useState({ users: 0, shops: 0, orders: 0, reviews: 0, promotions: 0, customers: 0, reports: 0, notifications: 0, payments: 0 });
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [users, shops, orders, reviews] = await Promise.all([
+        const [users, shops, orders, reviews, promotions, customers, reports, notifications, payments] = await Promise.all([
           usersService.getAll().catch(() => []),
           shopsService.getAll().catch(() => []),
           ordersService.getAll().catch(() => []),
           reviewsService.getAll().catch(() => []),
+          promotionsService.getAll().catch(() => []),
+          customersService.getAll().catch(() => []),
+          reportsService.getAll().catch(() => []),
+          notificationsService.getAll().catch(() => []),
+          paymentsService.getAll().catch(() => []),
         ]);
         setStats({
-          users: Array.isArray(users) ? users.length : 0,
-          shops: Array.isArray(shops) ? shops.length : 0,
-          orders: Array.isArray(orders) ? orders.length : 0,
-          reviews: Array.isArray(reviews) ? reviews.length : 0,
+          users: users?.data?.length || 0,
+          shops: shops?.data?.length || 0,
+          orders: orders?.data?.length || 0,
+          reviews: reviews?.data?.length || 0,
+          promotions: promotions?.data?.length || 0,
+          customers: customers?.data?.length || 0,
+          reports: reports?.data?.length || 0,
+          notifications: notifications?.data?.length || 0,
+          payments: payments?.data?.length || 0,
         });
-        if (Array.isArray(orders)) setRecentOrders(orders.slice(0, 5));
+        if (orders?.data) setRecentOrders(orders.data.slice(0, 5));
       } catch {} finally { setLoading(false); }
     };
     load();
@@ -41,6 +56,11 @@ export default function AdminDashboard() {
     { label: 'Pastelerías', value: stats.shops, color: '#2196f3', path: '/admin/shops' },
     { label: 'Órdenes', value: stats.orders, color: '#f59e0b', path: '/admin/orders' },
     { label: 'Reseñas', value: stats.reviews, color: '#9c27b0', path: '/admin/reviews' },
+    { label: 'Promociones', value: stats.promotions, color: '#e91e63', path: '/admin/promotions' },
+    { label: 'Clientes', value: stats.customers, color: '#00bcd4', path: '/admin/customers' },
+    { label: 'Reportes', value: stats.reports, color: '#ff5722', path: '/admin/reports' },
+    { label: 'Notificaciones', value: stats.notifications, color: '#607d8b', path: '/admin/notifications' },
+    { label: 'Pagos', value: stats.payments, color: '#4caf50', path: '/admin/payments' },
   ];
 
   return (
