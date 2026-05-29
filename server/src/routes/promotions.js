@@ -1,12 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
-const { verifyToken, requireOwnerOrAdmin } = require('../middlewares/auth');
+const { verifyToken, requireAdmin, requireOwnerOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { createPromotionSchema, updatePromotionSchema } = require('../validators/promotionValidator');
 const { paginate } = require('../utils/paginate');
 
 const col = db.collection('promotions');
+
+// GET todas las promociones (admin — todas las pastelerías)
+router.get('/', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener promociones' });
+  }
+});
 
 // GET todas las promociones de una pastelería (público)
 router.get('/shop/:shopId', async (req, res) => {
