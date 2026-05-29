@@ -55,75 +55,70 @@ async function seed() {
   // ── 2. Pastelería ────────────────────────────────────
   const shopRef = db.collection('pastryShops').doc();
   const shopId = shopRef.id;
+  const catId1 = 'cat_tortas';
+  const catId2 = 'cat_cupcakes';
+
   await shopRef.set({
-    ownerId: 'owner-001',
-    shopName: 'Dulce Aroma',
+    owner_id: 'owner-001',
+    name: 'Dulce Aroma',
     description: 'Pastelería artesanal con más de 10 años de experiencia. Especialistas en tortas personalizadas.',
-    logoUrl: '',
-    bannerUrl: '',
+    logo_url: '',
+    banner_url: '',
     address: 'Jr. Las Flores 456',
     city: 'Lima',
     district: 'Barranco',
     phone: '+51 999 111 222',
     email: 'contacto@dulcearoma.com',
     rating: 0,
-    isActive: true,
-    approvalStatus: 'approved',
+    status: 'approved',
+    categories: [
+      { category_id: catId1, name: 'Tortas', image_url: '' },
+      { category_id: catId2, name: 'Cupcakes', image_url: '' },
+    ],
+    schedules: [
+      { day: 'Mon', open_time: '08:00', close_time: '20:00' },
+      { day: 'Tue', open_time: '08:00', close_time: '20:00' },
+      { day: 'Wed', open_time: '08:00', close_time: '20:00' },
+      { day: 'Thu', open_time: '08:00', close_time: '20:00' },
+      { day: 'Fri', open_time: '08:00', close_time: '20:00' },
+      { day: 'Sat', open_time: '09:00', close_time: '18:00' },
+      { day: 'Sun', open_time: '00:00', close_time: '00:00' },
+    ],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
   console.log(`  Pastelería creada: Dulce Aroma (${shopId})`);
-
-  // ── 3. Categorías ────────────────────────────────────
-  const catRef1 = db.collection('pastryShops').doc(shopId).collection('categories').doc();
-  await catRef1.set({ categoryName: 'Tortas', description: 'Tortas clásicas y personalizadas', isActive: true });
-  const catId1 = catRef1.id;
-
-  const catRef2 = db.collection('pastryShops').doc(shopId).collection('categories').doc();
-  await catRef2.set({ categoryName: 'Cupcakes', description: 'Cupcakes decorados', isActive: true });
-  const catId2 = catRef2.id;
   console.log('  Categorías creadas: Tortas, Cupcakes');
-
-  // ── 4. Horarios ──────────────────────────────────────
-  const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  const scheduleData = { openTime: '08:00', closeTime: '20:00', isClosed: false };
-
-  for (const day of days) {
-    await db.collection('pastryShops').doc(shopId).collection('schedules').doc(day).set(scheduleData);
-  }
-  await db.collection('pastryShops').doc(shopId).collection('schedules').doc('Domingo').set({
-    openTime: '00:00', closeTime: '00:00', isClosed: true,
-  });
   console.log('  Horarios creados (Lun–Sáb 8:00–20:00, Dom cerrado)');
 
-  // ── 5. Productos ─────────────────────────────────────
+  // ── 3. Productos ────────────────────────────────────
   const products = [
     {
-      shopId, categoryId: catId1,
-      productName: 'Torta de Chocolate',
+      shop_id: shopId, category_id: catId1,
+      name: 'Torta de Chocolate',
       description: 'Torta de chocolate belga con relleno de ganache',
-      price: 89.90, stock: 10, imageUrl: '', isAvailable: true,
+      price: 89.90, stock: 10, image_url: '', is_available: true,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     },
     {
-      shopId, categoryId: catId1,
-      productName: 'Torta de Fresa',
+      shop_id: shopId, category_id: catId1,
+      name: 'Torta de Fresa',
       description: 'Torta con fresas frescas y crema pastelera',
-      price: 79.90, stock: 8, imageUrl: '', isAvailable: true,
+      price: 79.90, stock: 8, image_url: '', is_available: true,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     },
     {
-      shopId, categoryId: catId2,
-      productName: 'Cupcake de Vainilla',
+      shop_id: shopId, category_id: catId2,
+      name: 'Cupcake de Vainilla',
       description: 'Cupcake esponjoso con frosting de vainilla',
-      price: 8.50, stock: 24, imageUrl: '', isAvailable: true,
+      price: 8.50, stock: 24, image_url: '', is_available: true,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     },
     {
-      shopId, categoryId: catId2,
-      productName: 'Cupcake Red Velvet',
+      shop_id: shopId, category_id: catId2,
+      name: 'Cupcake Red Velvet',
       description: 'Cupcake Red Velvet con frosting de queso',
-      price: 9.90, stock: 20, imageUrl: '', isAvailable: true,
+      price: 9.90, stock: 20, image_url: '', is_available: true,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     },
   ];
@@ -132,9 +127,9 @@ async function seed() {
   for (const p of products) {
     const ref = await db.collection('products').add(p);
     productIds.push(ref.id);
-    console.log(`  Producto creado: ${p.productName} (${ref.id})`);
+    console.log(`  Producto creado: ${p.name} (${ref.id})`);
 
-    if (p.productName === 'Torta de Chocolate') {
+    if (p.name === 'Torta de Chocolate') {
       const vRef1 = await ref.collection('variants').add({ variantType: 'size', variantValue: 'Pequeña (6 porciones)', extraPrice: 0 });
       const vRef2 = await ref.collection('variants').add({ variantType: 'size', variantValue: 'Mediana (10 porciones)', extraPrice: 20 });
       const vRef3 = await ref.collection('variants').add({ variantType: 'size', variantValue: 'Grande (15 porciones)', extraPrice: 45 });
@@ -143,7 +138,7 @@ async function seed() {
     }
   }
 
-  // ── 6. Pedido ───────────────────────────────────────
+  // ── 4. Pedido ───────────────────────────────────────
   const orderRef = db.collection('orders').doc();
   const orderId = orderRef.id;
   const item1Ref = orderRef.collection('items').doc();
@@ -170,7 +165,7 @@ async function seed() {
   });
   console.log(`  Pedido creado: ${orderId} (entregado, S/ 103.40)`);
 
-  // ── 7. Pago ──────────────────────────────────────────
+  // ── 5. Pago ──────────────────────────────────────────
   await db.collection('payments').add({
     orderId,
     paymentMethod: 'yape',
@@ -181,7 +176,42 @@ async function seed() {
   });
   console.log('  Pago creado: Yape, S/ 103.40');
 
-  // ── 8. Reseña ────────────────────────────────────────
+  // ── 6. Promociones ────────────────────────────────────
+  const now = new Date();
+  const future = new Date(now.getTime() + 30 * 86400000);
+  await db.collection('promotions').add({
+    shop_id: shopId,
+    name: '10% de descuento en tortas',
+    type: 'discount',
+    description: 'Aprovecha el 10% de descuento en tortas de la casa',
+    discount_percentage: 10,
+    discount_amount: null,
+    combo_items: [],
+    combo_price: null,
+    product_ids: [productIds[0], productIds[1]],
+    start_date: now.toISOString(),
+    end_date: future.toISOString(),
+    is_active: true,
+  });
+  console.log('  Promoción creada: 10% descuento en tortas');
+
+  await db.collection('promotions').add({
+    shop_id: shopId,
+    name: '2x1 en cupcakes',
+    type: 'bogo',
+    description: 'Lleva 2 cupcakes al precio de 1',
+    discount_percentage: null,
+    discount_amount: null,
+    combo_items: [],
+    combo_price: null,
+    product_ids: [productIds[2], productIds[3]],
+    start_date: now.toISOString(),
+    end_date: future.toISOString(),
+    is_active: true,
+  });
+  console.log('  Promoción creada: 2x1 en cupcakes');
+
+  // ── 7. Reseña ────────────────────────────────────────
   await db.collection('reviews').add({
     customerId: 'customer-001',
     shopId,
@@ -198,10 +228,11 @@ async function seed() {
   // ── Actualizar rating de la pastelería ───────────────
   await shopRef.update({ rating: 5.0 });
 
-  // ── 9. Notificación ──────────────────────────────────
+  // ── 8. Notificación ─────────────────────────────────
   await db.collection('notifications').add({
     userId: 'customer-001',
     type: 'order_update',
+    title: 'Pedido entregado',
     message: 'Tu pedido en Dulce Aroma ha sido entregado. ¡Déjanos tu reseña!',
     isRead: false,
     createdAt: new Date().toISOString(),
@@ -209,13 +240,14 @@ async function seed() {
   await db.collection('notifications').add({
     userId: 'owner-001',
     type: 'new_review',
+    title: 'Nueva reseña',
     message: 'María Pérez dejó una reseña de 5 estrellas en tu pastelería.',
     isRead: false,
     createdAt: new Date().toISOString(),
   });
   console.log('  Notificaciones creadas: 2');
 
-  // ── 10. Reporte ──────────────────────────────────────
+  // ── 9. Reporte ──────────────────────────────────────
   await db.collection('reports').add({
     reportedBy: 'customer-001',
     targetType: 'review',
@@ -227,7 +259,7 @@ async function seed() {
   });
   console.log('  Reporte creado: open');
 
-  // ── 11. Perfil customer ──────────────────────────────
+  // ── 10. Perfil customer ──────────────────────────────
   const custDoc = {
     uid: 'customer-001',
     defaultAddressId: '',
