@@ -47,7 +47,7 @@ export default function Users() {
     try {
       setLoading(true);
       const data = await usersService.getAll();
-      setUsers(Array.isArray(data) ? data : []);
+      setUsers(data?.data || []);
     } catch {
       setError('Error al cargar usuarios');
     } finally {
@@ -67,8 +67,7 @@ export default function Users() {
     setForm({ ...form, roles: updated.length ? updated : ['customer'] });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setError('');
     setSuccess('');
     try {
@@ -237,7 +236,7 @@ export default function Users() {
           </h3>
           <div style={sectionDivider} />
 
-          <form onSubmit={handleSubmit}>
+          <div>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: isMobile ? '1' : '1 / 2' }}>
                 <label style={labelStyle}>Nombre completo *</label>
@@ -287,7 +286,7 @@ export default function Users() {
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '1.2rem' }}>
-              <button type="submit" style={btnPrimary}
+              <button onClick={handleSubmit} style={btnPrimary}
                 onMouseEnter={(e) => e.target.style.background = colors.accent}
                 onMouseLeave={(e) => e.target.style.background = colors.primary}
               >
@@ -299,7 +298,7 @@ export default function Users() {
                 </button>
               )}
             </div>
-          </form>
+          </div>
         </motion.div>
 
         {loading ? (

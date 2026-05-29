@@ -75,7 +75,7 @@ export default function Products() {
     try {
       setLoading(true);
       const data = await productsService.getByShop(shopId);
-      setProducts(Array.isArray(data) ? data : []);
+      setProducts(data?.data || []);
     } catch {
       setError('Error al cargar productos');
     } finally {
@@ -87,8 +87,7 @@ export default function Products() {
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setError('');
     setSuccess('');
     try {
@@ -258,7 +257,7 @@ export default function Products() {
           </h3>
           <div style={sectionDivider} />
 
-          <form onSubmit={handleSubmit}>
+          <div>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: isMobile ? '1' : '1 / -1' }}>
                 <label style={labelStyle}>Pastelería</label>
@@ -312,7 +311,7 @@ export default function Products() {
             </div>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '1.5rem' }}>
-              <button type="submit" style={btnPrimary}
+              <button onClick={handleSubmit} style={btnPrimary}
                 onMouseEnter={(e) => e.target.style.background = colors.accent}
                 onMouseLeave={(e) => e.target.style.background = colors.primary}
               >
@@ -324,7 +323,7 @@ export default function Products() {
                 </button>
               )}
             </div>
-          </form>
+          </div>
         </motion.div>
 
         {showVariantPanel && editingId && (

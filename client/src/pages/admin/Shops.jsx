@@ -69,7 +69,7 @@ export default function Shops() {
     const load = async () => {
       try {
         const data = await usersService.getAll();
-        setUsers(Array.isArray(data) ? data : []);
+        setUsers(data?.data || []);
       } catch {} finally { setLoadingUsers(false); }
     };
     load();
@@ -79,7 +79,7 @@ export default function Shops() {
     try {
       setLoading(true);
       const data = await shopsService.getAll();
-      setShops(Array.isArray(data) ? data : []);
+      setShops(data?.data || []);
     } catch {
       setError('Error al cargar pastelerías');
     } finally {
@@ -91,8 +91,7 @@ export default function Shops() {
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setError('');
     setSuccess('');
     try {
@@ -201,7 +200,7 @@ export default function Shops() {
           </h3>
           <div style={sectionDivider} />
 
-          <form onSubmit={handleSubmit}>
+          <div>
             {/* Basic info */}
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -300,7 +299,7 @@ export default function Shops() {
             </div>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '1.5rem' }}>
-              <button type="submit" style={btnPrimary}
+              <button onClick={handleSubmit} style={btnPrimary}
                 onMouseEnter={(e) => e.target.style.background = colors.accent}
                 onMouseLeave={(e) => e.target.style.background = colors.primary}
               >
@@ -312,7 +311,7 @@ export default function Shops() {
                 </button>
               )}
             </div>
-          </form>
+          </div>
         </motion.div>
 
         {loading ? (
