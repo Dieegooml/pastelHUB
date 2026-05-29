@@ -1,6 +1,7 @@
 import { useEffect, useState, Fragment } from 'react';
 import { motion } from 'framer-motion';
 import { ordersService } from '../../services/ordersService';
+import { reviewsService } from '../../services/reviewsService';
 import Navbar from '../../components/Navbar';
 import AdminNav from './AdminNav';
 import { colors, font, inputStyle, selectStyle, badge as themeBadge, tableHeaderStyle, btnSmallPrimary, btnDanger } from '../../styles/theme';
@@ -93,6 +94,7 @@ export default function Orders() {
   const [newPaymentStatus, setNewPaymentStatus] = useState({});
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   const [replyForm, setReplyForm] = useState({});
+  const [reviewMap, setReviewMap] = useState({});
 
   const loadOrders = async () => {
     try {
@@ -135,11 +137,12 @@ export default function Orders() {
   };
 
   const handleAddReview = async (id) => {
+    const order = orders.find((o) => o.id === id);
     try {
-      await ordersService.addReview(id, reviewForm.rating, reviewForm.comment);
+      const created = await reviewsService.create({ orderId: id, shopId: order?.shop?.shop_id || '', rating: reviewForm.rating, comment: reviewForm.comment });
       setReviewForm({ rating: 5, comment: '' });
+      setReviewMap((p) => ({ ...p, [id]: created }));
       setSuccess('Reseña agregada');
-      loadOrders();
     } catch {
       setError('Error al agregar reseña');
     }
@@ -147,11 +150,16 @@ export default function Orders() {
 
   const handleReplyReview = async (id) => {
     if (!replyForm[id]) return;
+    const review = reviewMap[id];
+    if (!review?.id) {
+      setError('No se encontró la reseña para responder');
+      return;
+    }
     try {
-      await ordersService.replyReview(id, replyForm[id]);
+      const updated = await reviewsService.reply(review.id, replyForm[id]);
       setReplyForm((p) => ({ ...p, [id]: '' }));
+      setReviewMap((p) => ({ ...p, [id]: { ...review, ...updated } }));
       setSuccess('Respuesta agregada');
-      loadOrders();
     } catch {
       setError('Error al responder reseña');
     }
@@ -168,7 +176,16 @@ export default function Orders() {
     }
   };
 
-  const toggleExpand = (id) => setExpandedId(expandedId === id ? null : id);
+  const toggleExpand = async (id) => {
+    if (expandedId === id) { setExpandedId(null); return; }
+    setExpandedId(id);
+    if (!reviewMap[id]) {
+      try {
+        const review = await reviewsService.getByOrder(id);
+        setReviewMap((p) => ({ ...p, [id]: review }));
+      } catch {} // no review yet
+    }
+  };
 
   const handleCopy = (id) => {
     navigator.clipboard.writeText(id);
@@ -442,51 +459,58 @@ export default function Orders() {
                                     </div>
                                   </div>
 
-                                  {(o.review?.rating || o.review?.comment) && (
-                                    <div style={{ marginTop: '16px', padding: '14px', background: colors.white, borderRadius: '10px', border: `1px solid ${colors.border}` }}>
-                                      <strong style={{ fontSize: '13px', fontFamily: font.body }}>Reseña:</strong>
-                                      <div style={{ fontSize: '13px', marginTop: '4px', fontFamily: font.body }}>
-                                        {'⭐'.repeat(o.review.rating)} {o.review.comment && `— ${o.review.comment}`}
-                                      </div>
-                                      {o.review.reply_text && (
-                                        <div style={{ fontSize: '13px', marginTop: '6px', color: colors.textSecondary, fontFamily: font.body }}>
-                                          <strong>Respuesta:</strong> {o.review.reply_text}
-                                        </div>
-                                      )}
-                                      {!o.review.reply_text && (
-                                        <div style={{ display: 'flex', gap: '6px', marginTop: '8px', alignItems: 'end' }}>
-                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
-                                            <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body }}>Responder</label>
-                                            <input style={{ ...smallInput, minWidth: '200px' }} value={replyForm[o.id] || ''} onChange={(e) => setReplyForm((p) => ({ ...p, [o.id]: e.target.value }))} placeholder="Escribe una respuesta..." />
+                                  {(() => {
+                                    const r = reviewMap[o.id];
+                                    if (r?.rating || r?.comment) {
+                                      return (
+                                        <div style={{ marginTop: '16px', padding: '14px', background: colors.white, borderRadius: '10px', border: `1px solid ${colors.border}` }}>
+                                          <strong style={{ fontSize: '13px', fontFamily: font.body }}>Reseña:</strong>
+                                          <div style={{ fontSize: '13px', marginTop: '4px', fontFamily: font.body }}>
+                                            {'⭐'.repeat(r.rating)} {r.comment && `— ${r.comment}`}
                                           </div>
-                                          <button onClick={() => handleReplyReview(o.id)} style={{ padding: '6px 14px', background: colors.accent, color: '#fff', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: font.body }}>
-                                            Responder
-                                          </button>
+                                          {r.ownerReply && (
+                                            <div style={{ fontSize: '13px', marginTop: '6px', color: colors.textSecondary, fontFamily: font.body }}>
+                                              <strong>Respuesta:</strong> {r.ownerReply}
+                                            </div>
+                                          )}
+                                          {!r.ownerReply && (
+                                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px', alignItems: 'end' }}>
+                                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+                                                <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body }}>Responder</label>
+                                                <input style={{ ...smallInput, minWidth: '200px' }} value={replyForm[o.id] || ''} onChange={(e) => setReplyForm((p) => ({ ...p, [o.id]: e.target.value }))} placeholder="Escribe una respuesta..." />
+                                              </div>
+                                              <button onClick={() => handleReplyReview(o.id)} style={{ padding: '6px 14px', background: colors.accent, color: '#fff', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: font.body }}>
+                                                Responder
+                                              </button>
+                                            </div>
+                                          )}
                                         </div>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {(!o.review?.rating || o.review?.rating === 0) && o.status === 'delivered' && (
-                                    <div style={{ marginTop: '16px', padding: '14px', background: colors.white, borderRadius: '10px', border: `1px solid ${colors.border}` }}>
-                                      <strong style={{ fontSize: '13px', fontFamily: font.body }}>Agregar reseña:</strong>
-                                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'end', flexWrap: 'wrap' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                          <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body }}>Rating</label>
-                                          <select style={smallSelect} value={reviewForm.rating} onChange={(e) => setReviewForm((p) => ({ ...p, rating: Number(e.target.value) }))}>
-                                            {[1, 2, 3, 4, 5].map((r) => <option key={r} value={r}>{'⭐'.repeat(r)}</option>)}
-                                          </select>
+                                      );
+                                    }
+                                    if (!r && o.status === 'delivered') {
+                                      return (
+                                        <div style={{ marginTop: '16px', padding: '14px', background: colors.white, borderRadius: '10px', border: `1px solid ${colors.border}` }}>
+                                          <strong style={{ fontSize: '13px', fontFamily: font.body }}>Agregar reseña:</strong>
+                                          <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'end', flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                              <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body }}>Rating</label>
+                                              <select style={smallSelect} value={reviewForm.rating} onChange={(e) => setReviewForm((p) => ({ ...p, rating: Number(e.target.value) }))}>
+                                                {[1, 2, 3, 4, 5].map((r) => <option key={r} value={r}>{'⭐'.repeat(r)}</option>)}
+                                              </select>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: '150px' }}>
+                                              <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body }}>Comentario</label>
+                                              <input style={smallInput} value={reviewForm.comment} onChange={(e) => setReviewForm((p) => ({ ...p, comment: e.target.value }))} placeholder="Comentario..." />
+                                            </div>
+                                            <button onClick={() => handleAddReview(o.id)} style={{ padding: '6px 14px', background: colors.accent, color: '#fff', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: font.body }}>
+                                              Agregar
+                                            </button>
+                                          </div>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: '150px' }}>
-                                          <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body }}>Comentario</label>
-                                          <input style={smallInput} value={reviewForm.comment} onChange={(e) => setReviewForm((p) => ({ ...p, comment: e.target.value }))} placeholder="Comentario..." />
-                                        </div>
-                                        <button onClick={() => handleAddReview(o.id)} style={{ padding: '6px 14px', background: colors.accent, color: '#fff', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: font.body }}>
-                                          Agregar
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
+                                      );
+                                    }
+                                    return null;
+                                  })()}
                                 </motion.div>
                               </td>
                             </tr>

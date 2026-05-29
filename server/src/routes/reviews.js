@@ -65,6 +65,18 @@ router.get('/status/:status', verifyToken, requireModerator, async (req, res) =>
   }
 });
 
+// GET reseña por ID de orden
+router.get('/by-order/:orderId', verifyToken, async (req, res) => {
+  try {
+    const snap = await col.where('orderId', '==', req.params.orderId).limit(1).get();
+    if (snap.empty) return res.status(404).json({ error: 'Reseña no encontrada para esta orden' });
+    const doc = snap.docs[0];
+    res.json({ id: doc.id, ...doc.data() });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener la reseña' });
+  }
+});
+
 // GET una reseña (autor, dueño de la pastelería o admin)
 router.get('/:id', verifyToken, async (req, res) => {
   try {

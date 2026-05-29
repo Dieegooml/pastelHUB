@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import { colors, font, badge as badgeStyle, inputStyle, selectStyle } from '../../styles/theme';
 import { ordersService } from '../../services/ordersService';
+import { reviewsService } from '../../services/reviewsService';
 
 const STATUS_TRANSLATIONS = {
   pending: 'Pendiente', confirmed: 'Confirmado', preparing: 'Preparando',
@@ -52,11 +53,9 @@ export default function OrderDetail() {
     setSubmitting(true);
     setReviewError('');
     try {
-      await ordersService.addReview(id, reviewRating, reviewComment);
+      await reviewsService.create({ orderId: id, rating: reviewRating, comment: reviewComment });
       setReviewSuccess('¡Reseña enviada!');
       setReviewComment('');
-      const data = await ordersService.getById(id);
-      setOrder(data);
     } catch {
       setReviewError('Error al enviar la reseña');
     } finally { setSubmitting(false); }
