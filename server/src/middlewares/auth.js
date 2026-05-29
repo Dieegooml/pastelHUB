@@ -46,8 +46,12 @@ const requireModerator = (req, res, next) => {
 };
 
 const requireCustomer = (req, res, next) => {
+  const roles = req.user?.roles || [];
   if (!req.user) {
     return res.status(401).json({ error: 'Autenticación requerida' });
+  }
+  if (!roles.includes('customer') && !roles.includes('admin')) {
+    return res.status(403).json({ error: 'Solo clientes o admins' });
   }
   next();
 };

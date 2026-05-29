@@ -113,8 +113,26 @@ describe('requireCustomer middleware', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('permite cualquier usuario autenticado', () => {
+  it('rechaza si el usuario no tiene rol customer ni admin (403)', () => {
+    const req = { user: { uid: 'owner-uid', roles: ['owner'] } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+    requireCustomer(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Solo clientes o admins' });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('permite si el usuario tiene rol customer', () => {
     const req = { user: { uid: 'customer-uid', roles: ['customer'] } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+    requireCustomer(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('permite si el usuario tiene rol admin', () => {
+    const req = { user: { uid: 'admin-uid', roles: ['admin'] } };
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
     const next = jest.fn();
     requireCustomer(req, res, next);
