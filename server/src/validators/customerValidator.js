@@ -25,4 +25,10 @@ const updateAddressSchema = z.object({
   message: 'Debe enviar al menos un campo para actualizar',
 });
 
-module.exports = { createCustomerSchema, addressSchema, defaultAddressSchema, updateAddressSchema };
+const updateCustomerSchema = z.object({
+  phone: z.string().optional(),
+}).refine(data => Object.keys(data).length > 0, {
+  message: 'Debe enviar al menos un campo para actualizar',
+});
+
+module.exports = { createCustomerSchema, addressSchema, defaultAddressSchema, updateAddressSchema, updateCustomerSchema };

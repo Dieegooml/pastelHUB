@@ -142,6 +142,61 @@ describe('PATCH /api/customers/:id/default-address', () => {
   });
 });
 
+describe('PUT /api/customers/:id', () => {
+  it('actualiza customer correctamente (admin)', async () => {
+    global.mockToken('admin-uid', ['admin']);
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ phone: '' }), id: 'c-1' });
+    global.mockFirestore.update.mockResolvedValue();
+    const res = await request(app)
+      .put('/api/customers/c-1')
+      .set('Authorization', 'Bearer token-valido')
+      .send({ phone: '999888777' });
+    expect(res.status).toBe(200);
+    expect(res.body.phone).toBe('999888777');
+  });
+
+  it('actualiza customer propio', async () => {
+    global.mockToken('c-1', ['customer']);
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ phone: '' }), id: 'c-1' });
+    global.mockFirestore.update.mockResolvedValue();
+    const res = await request(app)
+      .put('/api/customers/c-1')
+      .set('Authorization', 'Bearer token-valido')
+      .send({ phone: '999888777' });
+    expect(res.status).toBe(200);
+    expect(res.body.phone).toBe('999888777');
+  });
+
+  it('responde 403 si no es admin ni propio', async () => {
+    global.mockToken('other-uid', ['customer']);
+    const res = await request(app)
+      .put('/api/customers/c-1')
+      .set('Authorization', 'Bearer token-valido')
+      .send({ phone: '999888777' });
+    expect(res.status).toBe(403);
+  });
+
+  it('responde 404 si no existe', async () => {
+    global.mockToken('admin-uid', ['admin']);
+    global.mockDocNotExists();
+    const res = await request(app)
+      .put('/api/customers/inexistente')
+      .set('Authorization', 'Bearer token-valido')
+      .send({ phone: '999888777' });
+    expect(res.status).toBe(404);
+  });
+
+  it('responde 400 si el body esta vacio', async () => {
+    global.mockToken('admin-uid', ['admin']);
+    global.mockDocExists({ phone: '' });
+    const res = await request(app)
+      .put('/api/customers/c-1')
+      .set('Authorization', 'Bearer token-valido')
+      .send({});
+    expect(res.status).toBe(400);
+  });
+});
+
 describe('DELETE /api/customers/:id', () => {
   it('elimina customer y sus direcciones', async () => {
     global.mockToken('admin-uid', ['admin']);

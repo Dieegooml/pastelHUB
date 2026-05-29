@@ -3,7 +3,7 @@ const router = express.Router();
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireCustomer } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
-const { createCustomerSchema, addressSchema, defaultAddressSchema, updateAddressSchema } = require('../validators/customerValidator');
+const { createCustomerSchema, addressSchema, defaultAddressSchema, updateAddressSchema, updateCustomerSchema } = require('../validators/customerValidator');
 const { paginate } = require('../utils/paginate');
 
 const col = db.collection('customers');
@@ -49,6 +49,26 @@ router.get('/:id/full', verifyToken, async (req, res) => {
     res.json({ id: doc.id, ...doc.data(), addresses });
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener el customer con direcciones' });
+  }
+});
+
+// PUT actualizar customer (propio o admin)
+router.put('/:id', verifyToken, validate(updateCustomerSchema), async (req, res) => {
+  try {
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && req.user.uid !== req.params.id) {
+      return res.status(403).json({ error: 'No tienes permiso' });
+    }
+    const doc = await col.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Customer no encontrado' });
+
+    const { phone } = req.body;
+    const updates = { ...(phone !== undefined && { phone }) };
+
+    await col.doc(req.params.id).update(updates);
+    res.json({ id: req.params.id, ...doc.data(), ...updates });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al actualizar el customer' });
   }
 });
 
