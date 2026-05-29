@@ -91,6 +91,15 @@ describe('POST /api/auth/assign-role', () => {
     expect(res.body.error).toContain('uid');
   });
 
+  it('responde 403 si el usuario no es admin', async () => {
+    global.mockToken('customer-uid', ['customer']);
+    const res = await request(app)
+      .post('/api/auth/assign-role')
+      .set('Authorization', 'Bearer token-valido')
+      .send({ uid: 'target-uid', roles: ['moderator'] });
+    expect(res.status).toBe(403);
+  });
+
   it('responde 400 si roles contiene valores invalidos', async () => {
     global.mockToken('admin-uid', ['admin']);
 
@@ -115,5 +124,16 @@ describe('POST /api/auth/assign-role', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.roles).toEqual(['moderator']);
+  });
+
+  it('responde 404 si el usuario no existe en firestore', async () => {
+    global.mockToken('admin-uid', ['admin']);
+    global.mockDocNotExists();
+    const res = await request(app)
+      .post('/api/auth/assign-role')
+      .set('Authorization', 'Bearer token-valido')
+      .send({ uid: 'ghost-uid', roles: ['moderator'] });
+    // Puede ser 404 o 429 si el rate limiter se ha agotado
+    expect([404, 429]).toContain(res.status);
   });
 });

@@ -200,6 +200,113 @@ describe('PATCH /api/orders/:id/payment-status', () => {
   });
 });
 
+describe('PATCH /api/orders/:id/cancel', () => {
+  it('cancela orden pendiente (admin)', async () => {
+    global.mockToken('admin-uid', ['admin']);
+    global.mockDocExists({ status: 'pending', customer: { user_id: 'u1' }, status_history: ['pending'] });
+    global.mockFirestore.update.mockResolvedValue();
+    const res = await request(app)
+      .patch('/api/orders/o-1/cancel')
+      .set('Authorization', 'Bearer token-valido');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('cancelled');
+  });
+
+  it('cancela orden pendiente (propietario)', async () => {
+    global.mockToken('u1', ['customer']);
+    global.mockDocExists({ status: 'pending', customer: { user_id: 'u1' }, status_history: ['pending'] });
+    global.mockFirestore.update.mockResolvedValue();
+    const res = await request(app)
+      .patch('/api/orders/o-1/cancel')
+      .set('Authorization', 'Bearer token-valido');
+    expect(res.status).toBe(200);
+  });
+
+  it('responde 401 sin token', async () => {
+    const res = await request(app).patch('/api/orders/o-1/cancel');
+    expect(res.status).toBe(401);
+  });
+
+  it('responde 403 si no es el propietario', async () => {
+    global.mockToken('other-uid', ['customer']);
+    global.mockDocExists({ status: 'pending', customer: { user_id: 'u1' }, status_history: ['pending'] });
+    const res = await request(app)
+      .patch('/api/orders/o-1/cancel')
+      .set('Authorization', 'Bearer token-valido');
+    expect(res.status).toBe(403);
+  });
+
+  it('responde 404 si la orden no existe', async () => {
+    global.mockToken('admin-uid', ['admin']);
+    global.mockDocNotExists();
+    const res = await request(app)
+      .patch('/api/orders/inexistente/cancel')
+      .set('Authorization', 'Bearer token-valido');
+    expect(res.status).toBe(404);
+  });
+
+  it('responde 400 si la orden no esta pending', async () => {
+    global.mockToken('admin-uid', ['admin']);
+    global.mockDocExists({ status: 'delivered', customer: { user_id: 'u1' }, status_history: ['pending', 'delivered'] });
+    const res = await request(app)
+      .patch('/api/orders/o-1/cancel')
+      .set('Authorization', 'Bearer token-valido');
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/orders/my', () => {
+  it('responde 200 con ordenes del usuario', async () => {
+    global.mockToken('u1', ['customer']);
+    global.mockCollection([{ id: 'o1', customer: { user_id: 'u1' } }]);
+    const res = await request(app)
+      .get('/api/orders/my')
+      .set('Authorization', 'Bearer token-valido');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+  });
+
+  it('responde 401 sin token', async () => {
+    const res = await request(app).get('/api/orders/my');
+    expect(res.status).toBe(401);
+  });
+
+  it('responde 403 sin rol customer', async () => {
+    global.mockToken('owner-uid', ['owner']);
+    const res = await request(app)
+      .get('/api/orders/my')
+      .set('Authorization', 'Bearer token-valido');
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('GET /api/orders/shop/:shopId/summary', () => {
+  it('responde 200 con resumen', async () => {
+    global.mockToken('owner-uid', ['owner']);
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ owner_id: 'owner-uid' }), id: 's1' });
+    global.mockFirestore.get.mockResolvedValueOnce({ docs: [], empty: true });
+    const res = await request(app)
+      .get('/api/orders/shop/s1/summary')
+      .set('Authorization', 'Bearer token-valido');
+    expect(res.status).toBe(200);
+    expect(res.body.totalOrders).toBe(0);
+  });
+
+  it('responde 401 sin token', async () => {
+    const res = await request(app).get('/api/orders/shop/s1/summary');
+    expect(res.status).toBe(401);
+  });
+
+  it('responde 404 si la pasteleria no existe', async () => {
+    global.mockToken('owner-uid', ['owner']);
+    global.mockDocNotExists();
+    const res = await request(app)
+      .get('/api/orders/shop/inexistente/summary')
+      .set('Authorization', 'Bearer token-valido');
+    expect(res.status).toBe(404);
+  });
+});
+
 describe('DELETE /api/orders/:id', () => {
   it('elimina orden en estado pending', async () => {
     global.mockToken('admin-uid', ['admin']);

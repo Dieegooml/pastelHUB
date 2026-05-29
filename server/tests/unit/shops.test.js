@@ -20,6 +20,36 @@ describe('GET /api/shops', () => {
     const res = await request(app).get('/api/shops');
     expect(res.status).toBe(200);
   });
+
+  it('filtra por status activo', async () => {
+    global.mockCollection([{ id: 's1', status: 'approved' }]);
+    const res = await request(app).get('/api/shops?status=approved');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+  });
+
+  it('filtra por status sin resultados', async () => {
+    global.mockCollection([]);
+    const res = await request(app).get('/api/shops?status=rejected');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(0);
+  });
+});
+
+describe('GET /api/shops/owner/:ownerId', () => {
+  it('responde 200 con pastelerias del owner', async () => {
+    global.mockCollection([{ id: 's1', owner_id: 'owner-uid' }]);
+    const res = await request(app).get('/api/shops/owner/owner-uid');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+  });
+
+  it('responde 200 con lista vacia si el owner no tiene pastelerias', async () => {
+    global.mockCollection([]);
+    const res = await request(app).get('/api/shops/owner/owner-sin-tiendas');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(0);
+  });
 });
 
 describe('POST /api/shops', () => {
