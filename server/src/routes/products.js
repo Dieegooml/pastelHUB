@@ -4,7 +4,7 @@ const { db } = require('../config/firebase');
 const { verifyToken, requireOwnerOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { createProductSchema, updateProductSchema } = require('../validators/productValidator');
-const { mapProductFromRequest } = require('../utils/mappers');
+const { mapProductFromRequest, mapProductToResponse } = require('../utils/mappers');
 const { paginate } = require('../utils/paginate');
 
 const col = db.collection('products');
@@ -13,6 +13,7 @@ const col = db.collection('products');
 router.get('/', async (req, res) => {
   try {
     const result = await paginate(col, req.query, { orderBy: 'createdAt' });
+    if (result.data) result.data = result.data.map(d => mapProductToResponse(d));
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener productos' });
@@ -25,6 +26,7 @@ router.get('/shop/:shopId', async (req, res) => {
     const result = await paginate(col, req.query, {
       orderBy: 'createdAt', filters: [{ field: 'shop_id', value: req.params.shopId }],
     });
+    if (result.data) result.data = result.data.map(d => mapProductToResponse(d));
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener productos de la pastelería' });
@@ -36,7 +38,7 @@ router.get('/:id', async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
-    res.json({ id: doc.id, ...doc.data() });
+    res.json(mapProductToResponse({ id: doc.id, ...doc.data() }));
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener el producto' });
   }

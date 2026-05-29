@@ -42,7 +42,7 @@ describe('GET /api/products/:id', () => {
       .get('/api/products/p-1')
       .set('Authorization', 'Bearer token-valido');
     expect(res.status).toBe(200);
-    expect(res.body.name).toBe('Pastel');
+    expect(res.body.productName).toBe('Pastel');
   });
 
   it('responde 404 si no existe', async () => {
