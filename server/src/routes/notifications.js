@@ -113,6 +113,7 @@ router.post('/', verifyToken, requireAdmin, validate(createNotificationSchema), 
       userId,
       type,
       message,
+      title:     title || '',
       isRead:    false,
       createdAt: new Date().toISOString(),
     };
@@ -135,7 +136,7 @@ router.post('/bulk', verifyToken, requireAdmin, validate(bulkNotificationSchema)
 
     userIds.forEach(userId => {
       const ref = col.doc();
-      const data = { userId, type, message, isRead: false, createdAt: now };
+      const data = { userId, type, message, title: title || '', isRead: false, createdAt: now };
       batch.set(ref, data);
       created.push({ id: ref.id, ...data });
     });

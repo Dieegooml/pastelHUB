@@ -21,7 +21,7 @@ export default function Notifications() {
     try {
       setLoading(true);
       const data = await notificationsService.getAll();
-      setNotifs(Array.isArray(data) ? data : []);
+      setNotifs(data?.data || []);
     } catch { setError('Error al cargar notificaciones'); } finally { setLoading(false); }
   };
 
@@ -31,10 +31,10 @@ export default function Notifications() {
     if (!form.title || !form.message) { setError('Título y mensaje son obligatorios'); return; }
     try {
       if (form.userId) {
-        await notificationsService.create({ user_id: form.userId, title: form.title, message: form.message, type: form.type });
+        await notificationsService.create({ userId: form.userId, title: form.title, message: form.message, type: form.type });
       } else {
         const allNotifs = await notificationsService.getAll().catch(() => []);
-        const userIds = [...new Set(Array.isArray(allNotifs) ? allNotifs.map((n) => n.user_id).filter(Boolean) : [])];
+        const userIds = [...new Set((allNotifs?.data || []).map((n) => n.user_id).filter(Boolean))];
         if (userIds.length === 0) { setError('No hay usuarios para notificar'); return; }
         await notificationsService.createBulk({ user_ids: userIds, title: form.title, message: form.message, type: form.type });
       }
