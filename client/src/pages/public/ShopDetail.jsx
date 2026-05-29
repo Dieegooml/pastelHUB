@@ -40,8 +40,8 @@ export default function ShopDetail() {
           reviewsService.getByShop(id).catch(() => []),
         ]);
         setShop(shopData);
-        setProducts(Array.isArray(productsData) ? productsData : []);
-        setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+        setProducts(productsData?.data || []);
+        setReviews(reviewsData?.data || []);
       } catch {} finally { setLoading(false); }
     };
     load();

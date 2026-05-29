@@ -1,6 +1,7 @@
 import { api } from './apiService';
 
 export const promotionsService = {
+  getAll:            ()                    => api.get('/promotions'),
   getByShopPublic:   (shopId)              => api.get(`/promotions/shop/${shopId}`),
   getByShopAll:      (shopId)              => api.get(`/promotions/shop/${shopId}/all`),
   getById:           (id)                  => api.get(`/promotions/${id}`),

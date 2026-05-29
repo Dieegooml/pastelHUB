@@ -102,7 +102,7 @@ export default function Orders() {
       const data = filter === 'all'
         ? await ordersService.getAll()
         : await ordersService.getByStatus(filter);
-      setOrders(Array.isArray(data) ? data : []);
+      setOrders(data?.data || []);
     } catch {
       setError('Error al cargar órdenes');
     } finally {

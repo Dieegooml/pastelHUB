@@ -37,7 +37,7 @@ export default function Payments() {
     try {
       setLoading(true);
       const data = await paymentsService.getAll();
-      setPayments(Array.isArray(data) ? data : []);
+      setPayments(data?.data || []);
     } catch { setError('Error al cargar pagos'); } finally { setLoading(false); }
   };
 
@@ -100,11 +100,11 @@ export default function Payments() {
                         onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
                       >
                         <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{p.id?.slice(0, 8)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{p.order_id?.slice(0, 8) || '—'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{p.orderId?.slice(0, 8) || '—'}</td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: 600, fontFamily: font.body, color: colors.primary }}>S/ {(p.amount || 0).toFixed(2)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, color: colors.textSecondary }}>{p.method || '—'}</td>
-                        <td style={{ padding: '12px 16px' }}>{badge(p.status)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: font.body, color: colors.textSecondary }}>{formatDate(p.created_at)}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, color: colors.textSecondary }}>{p.paymentMethod || '—'}</td>
+                        <td style={{ padding: '12px 16px' }}>{badge(p.paymentStatus)}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: font.body, color: colors.textSecondary }}>{formatDate(p.createdAt)}</td>
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                             <select style={{ ...selectStyle, height: '32px', padding: '0 8px', fontSize: '11px', width: '100px' }} value={statusUpdate[p.id] || ''} onChange={(e) => setStatusUpdate((s) => ({ ...s, [p.id]: e.target.value }))}>

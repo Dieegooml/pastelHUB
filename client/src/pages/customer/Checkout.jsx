@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import { colors, font, inputStyle, selectStyle, btnPrimary } from '../../styles/theme';
+import { useAuth } from '../../context/AuthContext';
 import { ordersService } from '../../services/ordersService';
 
 export default function Checkout() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -43,16 +45,21 @@ export default function Checkout() {
       if (!shopId) { setError('Error con el carrito'); setLoading(false); return; }
 
       const orderData = {
+        customer: { user_id: user?.uid || '' },
+        shop: { shop_id: shopId },
         items: items.map((item) => ({
           product_id: item.id,
           quantity: item.quantity,
           price_at_purchase: item.price,
           name: item.name,
         })),
-        shipping_address: { address: form.address, city: form.city },
-        customer_info: { name: form.customerName, email: form.email, phone: form.phone },
-        notes: form.notes,
-        payment_method: form.paymentMethod,
+        totals: {
+          subtotal: total,
+          delivery_fee: deliveryFee,
+        },
+        payment: {
+          method: form.paymentMethod,
+        },
       };
 
       await ordersService.create(orderData);

@@ -38,12 +38,15 @@ export default function OrderDetail() {
   const [reviewError, setReviewError] = useState('');
   const [reviewSuccess, setReviewSuccess] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [review, setReview] = useState(null);
 
   useEffect(() => {
     const load = async () => {
       try {
         const data = await ordersService.getById(id);
         setOrder(data);
+        const rev = await reviewsService.getByOrder(id).catch(() => null);
+        if (rev) setReview(rev);
       } catch {} finally { setLoading(false); }
     };
     load();
@@ -53,7 +56,7 @@ export default function OrderDetail() {
     setSubmitting(true);
     setReviewError('');
     try {
-      await reviewsService.create({ orderId: id, rating: reviewRating, comment: reviewComment });
+      await reviewsService.create({ orderId: id, shopId: order.shop?.shop_id, rating: reviewRating, comment: reviewComment });
       setReviewSuccess('¡Reseña enviada!');
       setReviewComment('');
     } catch {
@@ -121,7 +124,7 @@ export default function OrderDetail() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
           <div>
             <h2 style={{ fontFamily: font.heading, fontSize: '22px', fontWeight: 700, color: colors.primary, margin: 0 }}>Orden #{order.id?.slice(0, 8)}</h2>
-            <span style={{ fontFamily: font.body, fontSize: '13px', color: colors.textMuted }}>{order.created_at?.toDate ? order.created_at.toDate().toLocaleString('es-PE') : new Date(order.created_at).toLocaleString('es-PE')}</span>
+            <span style={{ fontFamily: font.body, fontSize: '13px', color: colors.textMuted }}>{order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString('es-PE') : new Date(order.createdAt).toLocaleString('es-PE')}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {badge(order.status)}
@@ -167,10 +170,9 @@ export default function OrderDetail() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
           <div style={{ background: colors.white, borderRadius: '12px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef' }}>
-            <div style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Dirección de entrega</div>
+            <div style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Pastelería</div>
             <div style={{ fontSize: '14px', fontFamily: font.body, color: colors.text, lineHeight: 1.6 }}>
-              {order.shipping_address?.address || '—'}<br />
-              {order.shipping_address?.city || '—'}
+              {order.shop?.name || '—'}
             </div>
           </div>
           <div style={{ background: colors.white, borderRadius: '12px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef' }}>
@@ -227,29 +229,29 @@ export default function OrderDetail() {
         )}
 
         {/* Review Section */}
-        {order.review?.rating !== undefined && (
+        {review?.rating !== undefined && (
           <div style={{ marginTop: '20px', background: colors.white, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef' }}>
             <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '12px' }}>Tu reseña</h3>
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>
               {[1, 2, 3, 4, 5].map((star) => (
-                <span key={star} style={{ color: star <= order.review.rating ? '#f59e0b' : '#ddd', marginRight: '2px' }}>★</span>
+                <span key={star} style={{ color: star <= review.rating ? '#f59e0b' : '#ddd', marginRight: '2px' }}>★</span>
               ))}
             </div>
-            {order.review.comment && <p style={{ fontFamily: font.body, fontSize: '14px', color: colors.text, margin: 0, lineHeight: 1.6 }}>{order.review.comment}</p>}
-            {order.review.reply_text && (
+            {review.comment && <p style={{ fontFamily: font.body, fontSize: '14px', color: colors.text, margin: 0, lineHeight: 1.6 }}>{review.comment}</p>}
+            {review.reply_text && (
               <div style={{ marginTop: '12px', padding: '12px', background: colors.grayLight, borderRadius: '8px', borderLeft: `3px solid ${colors.accent}` }}>
                 <div style={{ fontSize: '12px', fontWeight: 600, color: colors.accent, fontFamily: font.body, marginBottom: '4px' }}>Respuesta del dueño:</div>
-                <p style={{ fontFamily: font.body, fontSize: '13px', color: colors.text, margin: 0 }}>{order.review.reply_text}</p>
+                <p style={{ fontFamily: font.body, fontSize: '13px', color: colors.text, margin: 0 }}>{review.reply_text}</p>
               </div>
             )}
           </div>
         )}
 
         {/* Review Form (solo si entregada, sin reseña, o con rating 0) */}
-        {order.status === 'delivered' && (!order.review?.rating || order.review.rating === 0) && (
+        {order.status === 'delivered' && (!review?.rating || review.rating === 0) && (
           <div style={{ marginTop: '20px', background: colors.white, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef' }}>
             <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '12px' }}>
-              {order.review?.rating === 0 ? 'Editar reseña' : 'Calificar esta orden'}
+              {review?.rating === 0 ? 'Editar reseña' : 'Calificar esta orden'}
             </h3>
             {reviewError && <div style={{ color: colors.error, fontSize: '13px', fontFamily: font.body, marginBottom: '8px' }}>{reviewError}</div>}
             {reviewSuccess && <div style={{ color: colors.success, fontSize: '13px', fontFamily: font.body, marginBottom: '8px' }}>{reviewSuccess}</div>}

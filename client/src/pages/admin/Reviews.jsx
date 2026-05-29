@@ -72,7 +72,7 @@ export default function Reviews() {
       const data = filter === 'all'
         ? await reviewsService.getAll()
         : await reviewsService.getByStatus(filter);
-      setReviews(Array.isArray(data) ? data : []);
+      setReviews(data?.data || []);
     } catch {
       setError('Error al cargar reseñas');
     } finally {

@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import AdminNav from './AdminNav';
-import { colors, font, inputStyle, tableHeaderStyle, btnSmallPrimary, btnDanger } from '../../styles/theme';
+import { colors, font, tableHeaderStyle, btnDanger } from '../../styles/theme';
 import { customersService } from '../../services/customersService';
 
 const stagger = {
@@ -15,16 +15,35 @@ export default function Customers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [expanded, setExpanded] = useState({});
+  const [addresses, setAddresses] = useState({});
+  const [addrLoading, setAddrLoading] = useState({});
 
   const load = async () => {
     try {
       setLoading(true);
       const data = await customersService.getAll();
-      setCustomers(Array.isArray(data) ? data : []);
+      setCustomers(data?.data || []);
     } catch { setError('Error al cargar clientes'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
+
+  const toggleExpand = async (id) => {
+    if (expanded[id]) {
+      setExpanded((p) => ({ ...p, [id]: false }));
+      return;
+    }
+    setExpanded((p) => ({ ...p, [id]: true }));
+    if (!addresses[id]) {
+      setAddrLoading((p) => ({ ...p, [id]: true }));
+      try {
+        const data = await customersService.getById(id);
+        const addr = await customersService.getAddresses(id).catch(() => []);
+        setAddresses((p) => ({ ...p, [id]: { customer: data, addresses: Array.isArray(addr) ? addr : [] } }));
+      } catch {} finally { setAddrLoading((p) => ({ ...p, [id]: false })); }
+    }
+  };
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este cliente?')) return;
@@ -67,20 +86,53 @@ export default function Customers() {
                   </thead>
                   <tbody>
                     {customers.map((c, i) => (
-                      <motion.tr
-                        key={c.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                        style={{ borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, transition: 'background 0.15s ease' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
-                      >
-                        <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{c.id?.slice(0, 8)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', fontFamily: font.body }}>{c.name || '—'}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, color: colors.textSecondary }}>{c.email || '—'}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{c.phone || '—'}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <button onClick={() => handleDelete(c.id)} style={btnDanger}>Eliminar</button>
-                        </td>
-                      </motion.tr>
+                      <Fragment key={c.id}>
+                        <motion.tr
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
+                          style={{ borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, transition: 'background 0.15s ease', cursor: 'pointer' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
+                          onClick={() => toggleExpand(c.id)}
+                        >
+                          <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{c.id?.slice(0, 8)}</td>
+                          <td style={{ padding: '12px 16px', fontSize: '14px', fontFamily: font.body }}>{c.name || '—'}</td>
+                          <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, color: colors.textSecondary }}>{c.email || '—'}</td>
+                          <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{c.phone || '—'}</td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }} style={btnDanger}>Eliminar</button>
+                          </td>
+                        </motion.tr>
+                        {expanded[c.id] && (
+                          <motion.tr
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                            style={{ background: colors.grayLight }}
+                          >
+                            <td colSpan={5} style={{ padding: '16px 20px' }}>
+                              {addrLoading[c.id] ? (
+                                <div style={{ color: colors.textMuted, fontSize: '13px', fontFamily: font.body }}>Cargando...</div>
+                              ) : addresses[c.id] ? (
+                                <div>
+                                  <div style={{ fontSize: '13px', fontFamily: font.body, color: colors.text, marginBottom: '8px' }}>
+                                    <strong>Email:</strong> {addresses[c.id].customer?.email || '—'}<br />
+                                    <strong>Teléfono:</strong> {addresses[c.id].customer?.phone || '—'}<br />
+                                    <strong>Default Address ID:</strong> {addresses[c.id].customer?.defaultAddressId || '—'}
+                                  </div>
+                                  {addresses[c.id].addresses?.length > 0 && (
+                                    <div>
+                                      <div style={{ fontSize: '12px', fontWeight: 600, fontFamily: font.body, color: colors.primary, marginBottom: '6px' }}>Direcciones ({addresses[c.id].addresses.length})</div>
+                                      {addresses[c.id].addresses.map((a) => (
+                                        <div key={a.id} style={{ fontSize: '12px', fontFamily: font.body, color: colors.textSecondary, marginBottom: '4px', paddingLeft: '12px', borderLeft: `2px solid ${colors.accent}` }}>
+                                          {a.street}, {a.city}{a.district ? `, ${a.district}` : ''}{a.reference ? ` — ${a.reference}` : ''}{a.isDefault ? ' ★' : ''}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : null}
+                            </td>
+                          </motion.tr>
+                        )}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>

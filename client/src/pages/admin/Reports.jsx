@@ -13,6 +13,8 @@ const STATUS_COLORS = {
   resolved: { bg: '#e8f5e9', color: '#2e7d32' },
   dismissed: { bg: '#fce4ec', color: '#c62828' },
 };
+const TARGET_TYPES = ['all', 'review', 'shop', 'product'];
+const TARGET_TRANSLATIONS = { all: 'Todos', review: 'Reseña', shop: 'Pastelería', product: 'Producto' };
 
 const stagger = {
   hidden: { opacity: 0, y: 20 },
@@ -21,24 +23,39 @@ const stagger = {
 
 export default function Reports() {
   const [reports, setReports] = useState([]);
-  const [filter, setFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [targetFilter, setTargetFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [moderatorId, setModeratorId] = useState({});
 
   const load = async () => {
     try {
       setLoading(true);
-      const data = filter === 'all' ? await reportsService.getAll() : await reportsService.getByStatus(filter);
-      setReports(Array.isArray(data) ? data : []);
+      let data;
+      if (targetFilter !== 'all') {
+        data = await reportsService.getByTarget(targetFilter);
+      } else if (statusFilter !== 'all') {
+        data = await reportsService.getByStatus(statusFilter);
+      } else {
+        data = await reportsService.getAll();
+      }
+      setReports(data?.data || []);
     } catch { setError('Error al cargar reportes'); } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => { load(); }, [statusFilter, targetFilter]);
 
   const handleStatus = async (id, status) => {
     try { await reportsService.updateStatus(id, status); setSuccess(`Reporte ${STATUS_TRANSLATIONS[status]?.toLowerCase() || status}`); load(); }
     catch { setError('Error al actualizar'); }
+  };
+
+  const handleAssign = async (id) => {
+    if (!moderatorId[id]) return;
+    try { await reportsService.assignModerator(id, moderatorId[id]); setSuccess('Moderador asignado'); setModeratorId((p) => ({ ...p, [id]: '' })); load(); }
+    catch { setError('Error al asignar moderador'); }
   };
 
   const badge = (statusKey) => {
@@ -57,10 +74,17 @@ export default function Reports() {
         {success && <div style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
         {error && <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
 
-        <motion.div variants={stagger} initial="hidden" animate="visible" custom={0} style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <motion.div variants={stagger} initial="hidden" animate="visible" custom={0} style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
           {STATUSES.map((s) => (
-            <button key={s} onClick={() => setFilter(s)} style={statusTab(filter === s)}>
+            <button key={s} onClick={() => { setStatusFilter(s); setTargetFilter('all'); }} style={statusTab(statusFilter === s && targetFilter === 'all')}>
               {s === 'all' ? 'Todos' : STATUS_TRANSLATIONS[s]}
+            </button>
+          ))}
+        </motion.div>
+        <motion.div variants={stagger} initial="hidden" animate="visible" custom={0} style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+          {TARGET_TYPES.map((t) => (
+            <button key={t} onClick={() => { setTargetFilter(t); setStatusFilter('all'); }} style={{ ...statusTab(targetFilter === t && statusFilter === 'all'), fontSize: '11px' }}>
+              {TARGET_TRANSLATIONS[t]}
             </button>
           ))}
         </motion.div>
@@ -101,15 +125,25 @@ export default function Reports() {
                           <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: colors.textSecondary }} title={r.reason || ''}>{r.reason || '—'}</td>
                           <td style={{ padding: '12px 16px' }}>{badge(r.status)}</td>
                           <td style={{ padding: '12px 16px' }}>
-                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                               {r.status === 'pending' && (
                                 <>
                                   <button onClick={() => handleStatus(r.id, 'reviewed')} style={{ padding: '4px 12px', background: '#e3f2fd', color: '#1565c0', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body }}>Revisar</button>
                                   <button onClick={() => handleStatus(r.id, 'dismissed')} style={btnDanger}>Descartar</button>
+                                  <input
+                                    placeholder="Moderador ID"
+                                    value={moderatorId[r.id] || ''}
+                                    onChange={(e) => setModeratorId((p) => ({ ...p, [r.id]: e.target.value }))}
+                                    style={{ padding: '4px 8px', border: `1px solid ${colors.border}`, borderRadius: '6px', fontSize: '11px', fontFamily: font.body, width: '100px', outline: 'none' }}
+                                  />
+                                  <button onClick={() => handleAssign(r.id)} style={{ padding: '4px 10px', background: colors.primary, color: '#fff', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body }}>Asignar</button>
                                 </>
                               )}
                               {r.status === 'reviewed' && (
-                                <button onClick={() => handleStatus(r.id, 'resolved')} style={{ padding: '4px 12px', background: '#e8f5e9', color: '#2e7d32', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body }}>Resolver</button>
+                                <>
+                                  <button onClick={() => handleStatus(r.id, 'resolved')} style={{ padding: '4px 12px', background: '#e8f5e9', color: '#2e7d32', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body }}>Resolver</button>
+                                  <span style={{ fontSize: '11px', color: colors.textMuted, fontFamily: font.body }}>{r.moderator_id ? `Mod: ${r.moderator_id.slice(0, 8)}` : ''}</span>
+                                </>
                               )}
                             </div>
                           </td>

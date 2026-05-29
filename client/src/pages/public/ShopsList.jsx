@@ -67,7 +67,7 @@ export default function ShopsList() {
     const load = async () => {
       try {
         const data = await shopsService.getAll();
-        setShops(Array.isArray(data) ? data : []);
+        setShops(data?.data || []);
       } catch {
         setError('Error al cargar las pastelerías');
       } finally {
