@@ -82,7 +82,7 @@ describe('GET /api/orders/:id', () => {
 
 describe('POST /api/orders', () => {
   const validOrder = {
-    customer: { user_id: 'u1' },
+    customer: { user_id: 'admin-uid' },
     shop: { shop_id: 's1' },
     items: [{ product_id: 'p1', name: 'Pastel', quantity: 2, price_at_purchase: 25 }],
     payment: { method: 'yape' },
@@ -120,6 +120,15 @@ describe('POST /api/orders', () => {
     expect(res.status).toBe(400);
   });
 
+  it('responde 403 si el customer user_id no coincide', async () => {
+    global.mockToken('admin-uid', ['admin']);
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Authorization', 'Bearer token-valido')
+      .send({ ...validOrder, customer: { user_id: 'other-user' } });
+    expect(res.status).toBe(403);
+  });
+
   it('responde 404 si el cliente no existe', async () => {
     global.mockToken('admin-uid', ['admin']);
     global.mockDocNotExists();
@@ -132,7 +141,7 @@ describe('POST /api/orders', () => {
 
   it('responde 404 si la pasteleria no existe', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ full_name: 'Test' }), id: 'u1' });
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ full_name: 'Test' }), id: 'admin-uid' });
     global.mockFirestore.get.mockResolvedValueOnce({ exists: false, data: () => undefined, id: null });
     const res = await request(app)
       .post('/api/orders')

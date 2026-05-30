@@ -142,6 +142,22 @@ describe('PUT /api/shops/:id', () => {
       .send({ name: 'Nuevo' });
     expect(res.status).toBe(404);
   });
+
+  it('ignora el campo status enviado por un owner (privilege escalation)', async () => {
+    global.mockToken('owner-uid', ['owner']);
+    global.mockDocExists({ name: 'Original', owner_id: 'owner-uid' });
+    global.mockFirestore.update.mockResolvedValue();
+    const res = await request(app)
+      .put('/api/shops/shop-1')
+      .set('Authorization', 'Bearer token-valido')
+      .send({ name: 'Actualizado', status: 'approved' });
+    expect(res.status).toBe(200);
+    // status no debe aparecer en la respuesta ni en los datos enviados a Firestore
+    expect(res.body.status).toBeUndefined();
+    // Verificar que update NO fue llamado con status
+    const updateCall = global.mockFirestore.update.mock.calls[0][0];
+    expect(updateCall.status).toBeUndefined();
+  });
 });
 
 describe('PATCH /api/shops/:id/status', () => {

@@ -68,6 +68,31 @@ describe('GET /api/payments/:id', () => {
     expect(res.body.amount).toBe(50);
   });
 
+  it('responde 200 si el customer es dueno de la orden', async () => {
+    global.mockToken('customer-uid', ['customer']);
+    // Primer get: payment doc
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ orderId: 'o-1', amount: 50 }), id: 'pay-1' });
+    // Segundo get: order doc donde el customer es el dueno
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ customer: { user_id: 'customer-uid' }, shop: { shop_id: 's1' } }), id: 'o-1' });
+    const res = await request(app)
+      .get('/api/payments/pay-1')
+      .set('Authorization', 'Bearer token-valido');
+    expect(res.status).toBe(200);
+    expect(res.body.amount).toBe(50);
+  });
+
+  it('responde 403 si el customer no es dueno de la orden', async () => {
+    global.mockToken('other-customer', ['customer']);
+    // Primer get: payment doc
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ orderId: 'o-1', amount: 50 }), id: 'pay-1' });
+    // Segundo get: order doc donde el customer NO es dueno
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ customer: { user_id: 'real-owner' }, shop: { shop_id: 's1' } }), id: 'o-1' });
+    const res = await request(app)
+      .get('/api/payments/pay-1')
+      .set('Authorization', 'Bearer token-valido');
+    expect(res.status).toBe(403);
+  });
+
   it('responde 404 si no existe', async () => {
     global.mockToken('admin-uid', ['admin']);
     global.mockDocNotExists();
@@ -81,7 +106,7 @@ describe('GET /api/payments/:id', () => {
 describe('POST /api/payments', () => {
   it('crea un pago correctamente', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ status: 'pending' }), id: 'o-1' });
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ status: 'pending', customer: { user_id: 'admin-uid' } }), id: 'o-1' });
     global.mockFirestore.get.mockResolvedValueOnce({ empty: true, docs: [] });
     global.mockFirestore.add.mockResolvedValue({ id: 'new-pay' });
     const res = await request(app)
@@ -122,7 +147,7 @@ describe('POST /api/payments', () => {
 
   it('responde 400 si la orden ya tiene pago', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ status: 'pending' }), id: 'o-1' });
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ status: 'pending', customer: { user_id: 'admin-uid' } }), id: 'o-1' });
     global.mockFirestore.get.mockResolvedValueOnce({ empty: false, docs: [{ id: 'pay1' }] });
     const res = await request(app)
       .post('/api/payments')

@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../src/app');
-const { requireModerator, requireCustomer, requireOwnerOrAdmin } = require('../../src/middlewares/auth');
+const { requireModerator, requireCustomer, requireOwnerOrAdmin, requireSelfOrAdmin } = require('../../src/middlewares/auth');
 
 describe('verifyToken middleware', () => {
   it('rechaza peticion sin token (401)', async () => {
@@ -141,6 +141,45 @@ describe('requireOwnerOrAdmin middleware', () => {
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
     const next = jest.fn();
     await middleware(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
+});
+
+describe('requireSelfOrAdmin middleware', () => {
+  it('rechaza si no es admin ni el mismo usuario (403)', () => {
+    const mw = requireSelfOrAdmin();
+    const req = { user: { uid: 'other-uid', roles: ['customer'] }, params: { id: 'target-id' } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+    mw(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('permite si es admin', () => {
+    const mw = requireSelfOrAdmin();
+    const req = { user: { uid: 'admin-uid', roles: ['admin'] }, params: { id: 'target-id' } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+    mw(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('permite si es el mismo usuario', () => {
+    const mw = requireSelfOrAdmin();
+    const req = { user: { uid: 'self-uid', roles: ['customer'] }, params: { id: 'self-uid' } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+    mw(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('usa el nombre de parametro configurable', () => {
+    const mw = requireSelfOrAdmin('userId');
+    const req = { user: { uid: 'self-uid', roles: ['customer'] }, params: { userId: 'self-uid' } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+    mw(req, res, next);
     expect(next).toHaveBeenCalled();
   });
 });

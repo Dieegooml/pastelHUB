@@ -18,8 +18,8 @@ const mockDb = {
   delete: jest.fn(),
   orderBy: jest.fn().mockReturnThis(),
   where: jest.fn().mockReturnThis(),
-  limit: jest.fn().mockReturnThis(),
-  offset: jest.fn().mockReturnThis(),
+  limit: jest.fn().mockImplementation(function (n) { this._limit = n; return this; }),
+  offset: jest.fn().mockImplementation(function (n) { this._offset = n; return this; }),
   count: countFn,
   batch: jest.fn(() => mockBatch),
 };
@@ -54,15 +54,22 @@ global.mockDocExists = (data) => {
   mockDb.get.mockResolvedValue({ exists: true, data: () => data, id: 'test-id' });
 };
 
-global.mockDocNotExists = () => {
-  mockDb.get.mockResolvedValue({ exists: false, data: () => undefined, id: null });
+global.mockDocNotExists = (docId = 'test-id') => {
+  mockDb.get.mockResolvedValue({ exists: false, data: () => undefined, id: docId });
 };
 
 global.mockCollection = (docs) => {
   const mapped = docs.map((d, i) => ({ id: d.id || `doc-${i}`, data: () => d }));
   mockCountSnap.data = () => ({ count: mapped.length });
-  mockDb.get.mockResolvedValue({
-    docs: mapped,
-    empty: mapped.length === 0,
+  mockDb._limit = undefined;
+  mockDb._offset = undefined;
+  mockDb.get.mockImplementation(() => {
+    const limit = mockDb._limit ?? mapped.length;
+    const offset = mockDb._offset ?? 0;
+    const sliced = mapped.slice(offset, offset + limit);
+    return Promise.resolve({
+      docs: sliced,
+      empty: sliced.length === 0,
+    });
   });
 };
