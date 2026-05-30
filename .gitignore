@@ -73,5 +73,8 @@ server/serviceAccountKey.json
 # Production build
 server/dist/
 
+# Firestore backup files
+server/backups/
+
 # dataconnect generated files
 .dataconnect
