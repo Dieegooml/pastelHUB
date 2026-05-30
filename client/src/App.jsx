@@ -14,6 +14,9 @@ import OrderDetail from "./pages/customer/OrderDetail";
 import Profile from "./pages/customer/Profile";
 import NotificationsPage from "./pages/customer/Notifications";
 import OwnerDashboard from "./pages/owner/OwnerDashboard";
+import Support from "./pages/customer/Support";
+import SupportNew from "./pages/customer/SupportNew";
+import SupportDetail from "./pages/customer/SupportDetail";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
 import Shops from "./pages/admin/Shops";
@@ -25,6 +28,7 @@ import Reports from "./pages/admin/Reports";
 import Notifications from "./pages/admin/Notifications";
 import Payments from "./pages/admin/Payments";
 import Promotions from "./pages/admin/Promotions";
+import ModeratorDashboard from "./pages/moderator/ModeratorDashboard";
 
 export default function App() {
   return (
@@ -42,6 +46,9 @@ export default function App() {
           <Route path="/my-orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+          <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+          <Route path="/support/new" element={<ProtectedRoute><SupportNew /></ProtectedRoute>} />
+          <Route path="/support/:id" element={<ProtectedRoute><SupportDetail /></ProtectedRoute>} />
           <Route path="/owner" element={<ProtectedRoute role={['owner', 'admin']}><OwnerDashboard /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute role="admin"><Dashboard /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute role="admin"><Users /></ProtectedRoute>} />
@@ -54,6 +61,7 @@ export default function App() {
           <Route path="/admin/notifications" element={<ProtectedRoute role="admin"><Notifications /></ProtectedRoute>} />
           <Route path="/admin/payments" element={<ProtectedRoute role="admin"><Payments /></ProtectedRoute>} />
           <Route path="/admin/promotions" element={<ProtectedRoute role="admin"><Promotions /></ProtectedRoute>} />
+          <Route path="/moderator" element={<ProtectedRoute role={['moderator', 'admin']}><ModeratorDashboard /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

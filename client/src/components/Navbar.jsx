@@ -40,6 +40,7 @@ export default function Navbar() {
 
   const isAdmin = user?.roles?.includes('admin');
   const isOwner = user?.roles?.includes('owner');
+  const isModerator = user?.roles?.includes('moderator');
 
   const loadUnread = useCallback(async () => {
     if (!user?.uid) return;
@@ -128,6 +129,10 @@ export default function Navbar() {
           Mis órdenes
         </button>
 
+        <button onClick={() => navigate('/support')} style={btnStyle(location.pathname.startsWith('/support'))}>
+          Soporte
+        </button>
+
         <button onClick={() => navigate('/profile')} style={btnStyle(location.pathname === '/profile')}>
           Perfil
         </button>
@@ -140,6 +145,19 @@ export default function Navbar() {
             border: location.pathname === '/owner' ? 'none' : `1px solid ${colors.border}`,
           }}>
             Dueño
+          </button>
+        )}
+
+        {isModerator && !isAdmin && (
+          <button onClick={() => navigate('/moderator')} style={{
+            padding: '8px 16px', borderRadius: '99px',
+            border: location.pathname.startsWith('/moderator') || location.pathname === '/support' ? 'none' : `1px solid ${colors.border}`,
+            fontSize: '13px', fontWeight: 500, fontFamily: font.body, cursor: 'pointer',
+            background: location.pathname.startsWith('/moderator') || location.pathname === '/support' ? '#7c3aed' : colors.white,
+            color: location.pathname.startsWith('/moderator') || location.pathname === '/support' ? '#fff' : colors.textSecondary,
+            transition: 'all 0.2s ease',
+          }}>
+            Moderar
           </button>
         )}
 

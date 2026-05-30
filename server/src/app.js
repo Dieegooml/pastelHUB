@@ -64,6 +64,7 @@ app.use('/api/promotions', require('./routes/promotions'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/customers', require('./routes/customers'));
+app.use('/api/support', require('./routes/support'));
 
 // Ruta para salud del servidor
 app.get('/api/health', (req, res) => {

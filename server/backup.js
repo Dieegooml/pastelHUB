@@ -10,12 +10,13 @@ const SUBCOLLECTIONS = {
   orders: ['items'],
   customers: ['addresses'],
   users: ['addresses'],
+  supportTickets: ['messages'],
 };
 
 const ALL_COLLECTIONS = [
   'users', 'customers', 'pastryShops', 'products',
   'orders', 'payments', 'reviews', 'notifications',
-  'reports', 'promotions', 'chatSessions',
+  'reports', 'promotions', 'chatSessions', 'supportTickets',
 ];
 
 async function exportCollection(collectionName, dir) {
