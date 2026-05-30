@@ -77,7 +77,7 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
 |-----------|-------|---------|
 | `verifyToken` | Verifies Firebase ID token, sets `req.user` | All protected routes |
 | `requireAdmin` | `roles.includes('admin')` | Admin-only endpoints |
-| `requireOwner` | `admin` or `owner` roles | Available but prefer `requireOwnerOrAdmin` |
+| `requireOwner` | `roles.includes('admin')` or `roles.includes('owner')` | Simple role gate — prefer `requireOwnerOrAdmin` for resource ownership |
 | `requireModerator` | `admin` or `moderator` roles | Reviews (status), Reports (list/assign) |
 | `requireCustomer` | `customer` or `admin` roles | Orders (create, my), Customers (create), Payments (create), Reviews (create) |
 | `requireOwnerOrAdmin(fn)` | Dynamic — calls `fn(req)` to get owner ID, allows if admin or matching owner | Shops, Products, Orders, Promotions CRUD |
@@ -135,7 +135,7 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
 - AdminNav — Sidebar navigation component
 
 ## Test Infrastructure
-- **Command (server):** `npm test` — 254 tests, 13 suites
+- **Command (server):** `npm test` — 275 tests, 13 suites
 - **Command (load):** `npm run load-test` (Node.js) / `npm run load-test:k6` (k6)
 - **Command (client):** `npm test` (Vitest) / `npm run test:watch`
 - **Config (server):** `jest.config.js` — node env, setup file, clearMocks: true
@@ -182,7 +182,7 @@ de50343 feat: agregar endpoint GET /unread/count para conteo de notificaciones n
 ```
 
 ## Known Gaps
-- `PATCH /api/orders/:id/cancel` uses manual uid check instead of `requireCustomer`
 - No image upload (Firebase Storage)
 - No real payment gateway integration
 - No CI/CD or deployment config
+- `framer-motion` used in frontend despite "no external UI libs" convention (25 files)
