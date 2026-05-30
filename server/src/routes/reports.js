@@ -4,7 +4,7 @@ const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireModerator } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { createReportSchema, assignReportSchema, updateReportStatusSchema, editReportSchema } = require('../validators/reportValidator');
-const { paginate } = require('../utils/paginate');
+const { paginate, tryPaginate } = require('../utils/paginate');
 
 const col = db.collection('reports');
 
@@ -13,74 +13,49 @@ const VALID_STATUSES     = ['open', 'resolved', 'dismissed'];
 
 // GET todos los reportes (admin/moderator)
 router.get('/', verifyToken, requireModerator, async (req, res) => {
-  try {
-    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener reportes' });
-  }
+  await tryPaginate(res, col, req.query, { orderBy: 'createdAt' }, 'Error al obtener reportes');
 });
 
 // GET reportes por estado (admin/moderator)
 router.get('/status/:status', verifyToken, requireModerator, async (req, res) => {
-  try {
-    if (!VALID_STATUSES.includes(req.params.status)) {
-      return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
-    }
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt', filters: [{ field: 'status', value: req.params.status }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al filtrar reportes por estado' });
+  if (!VALID_STATUSES.includes(req.params.status)) {
+    return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
   }
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', filters: [{ field: 'status', value: req.params.status }],
+  }, 'Error al filtrar reportes por estado');
 });
 
 // GET reportes por tipo de objetivo (admin/moderator)
 router.get('/target/:targetType', verifyToken, requireModerator, async (req, res) => {
-  try {
-    if (!VALID_TARGET_TYPES.includes(req.params.targetType)) {
-      return res.status(400).json({ error: `Tipo inválido. Válidos: ${VALID_TARGET_TYPES.join(', ')}` });
-    }
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt', filters: [{ field: 'targetType', value: req.params.targetType }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al filtrar reportes por tipo' });
+  if (!VALID_TARGET_TYPES.includes(req.params.targetType)) {
+    return res.status(400).json({ error: `Tipo inválido. Válidos: ${VALID_TARGET_TYPES.join(', ')}` });
   }
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', filters: [{ field: 'targetType', value: req.params.targetType }],
+  }, 'Error al filtrar reportes por tipo');
 });
 
 // GET reportes asignados a un moderador (propio moderador o admin)
 router.get('/moderator/:moderatorId', verifyToken, async (req, res) => {
-  try {
-    const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && !roles.includes('moderator') && req.user.uid !== req.params.moderatorId) {
-      return res.status(403).json({ error: 'No tienes permiso' });
-    }
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt', filters: [{ field: 'assignedTo', value: req.params.moderatorId }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener reportes del moderador' });
+  const roles = req.user?.roles || [];
+  if (!roles.includes('admin') && !roles.includes('moderator') && req.user.uid !== req.params.moderatorId) {
+    return res.status(403).json({ error: 'No tienes permiso' });
   }
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', filters: [{ field: 'assignedTo', value: req.params.moderatorId }],
+  }, 'Error al obtener reportes del moderador');
 });
 
 // GET reportes hechos por un usuario (propio usuario o admin/moderator)
 router.get('/user/:userId', verifyToken, async (req, res) => {
-  try {
-    const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && !roles.includes('moderator') && req.user.uid !== req.params.userId) {
-      return res.status(403).json({ error: 'Solo puedes ver tus propios reportes' });
-    }
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt', filters: [{ field: 'reportedBy', value: req.params.userId }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener reportes del usuario' });
+  const roles = req.user?.roles || [];
+  if (!roles.includes('admin') && !roles.includes('moderator') && req.user.uid !== req.params.userId) {
+    return res.status(403).json({ error: 'Solo puedes ver tus propios reportes' });
   }
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', filters: [{ field: 'reportedBy', value: req.params.userId }],
+  }, 'Error al obtener reportes del usuario');
 });
 
 // GET un reporte (reporter/moderator/admin)

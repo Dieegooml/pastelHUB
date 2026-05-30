@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
-const { verifyToken, requireAdmin } = require('../middlewares/auth');
+const { verifyToken, requireAdmin, requireSelfOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { createNotificationSchema, bulkNotificationSchema } = require('../validators/notificationValidator');
-const { paginate } = require('../utils/paginate');
+const { paginate, tryPaginate } = require('../utils/paginate');
 
 const col = db.collection('notifications');
 
@@ -21,37 +21,19 @@ const VALID_TYPES = [
 
 // GET todas las notificaciones
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener notificaciones' });
-  }
+  await tryPaginate(res, col, req.query, { orderBy: 'createdAt' }, 'Error al obtener notificaciones');
 });
 
 // GET notificaciones por usuario (propio usuario o admin)
-router.get('/user/:userId', verifyToken, async (req, res) => {
-  try {
-    const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && req.user.uid !== req.params.userId) {
-      return res.status(403).json({ error: 'Solo puedes ver tus propias notificaciones' });
-    }
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt', filters: [{ field: 'userId', value: req.params.userId }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener notificaciones del usuario' });
-  }
+router.get('/user/:userId', verifyToken, requireSelfOrAdmin('userId'), async (req, res) => {
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', filters: [{ field: 'userId', value: req.params.userId }],
+  }, 'Error al obtener notificaciones del usuario');
 });
 
 // GET conteo de no leídas por usuario (propio usuario o admin)
-router.get('/user/:userId/unread/count', verifyToken, async (req, res) => {
+router.get('/user/:userId/unread/count', verifyToken, requireSelfOrAdmin('userId'), async (req, res) => {
   try {
-    const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && req.user.uid !== req.params.userId) {
-      return res.status(403).json({ error: 'Solo puedes ver tus propias notificaciones' });
-    }
     const snap = await col
       .where('userId', '==', req.params.userId)
       .where('isRead', '==', false)
@@ -64,23 +46,14 @@ router.get('/user/:userId/unread/count', verifyToken, async (req, res) => {
 });
 
 // GET notificaciones no leídas por usuario (propio usuario o admin)
-router.get('/user/:userId/unread', verifyToken, async (req, res) => {
-  try {
-    const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && req.user.uid !== req.params.userId) {
-      return res.status(403).json({ error: 'Solo puedes ver tus propias notificaciones' });
-    }
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt',
-      filters: [
-        { field: 'userId', value: req.params.userId },
-        { field: 'isRead', value: false },
-      ],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener notificaciones no leídas' });
-  }
+router.get('/user/:userId/unread', verifyToken, requireSelfOrAdmin('userId'), async (req, res) => {
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt',
+    filters: [
+      { field: 'userId', value: req.params.userId },
+      { field: 'isRead', value: false },
+    ],
+  }, 'Error al obtener notificaciones no leídas');
 });
 
 // GET una notificación (propietario o admin)
@@ -167,13 +140,8 @@ router.patch('/:id/read', verifyToken, async (req, res) => {
 });
 
 // PATCH marcar todas como leídas por usuario (propio usuario o admin)
-router.patch('/user/:userId/read-all', verifyToken, async (req, res) => {
+router.patch('/user/:userId/read-all', verifyToken, requireSelfOrAdmin('userId'), async (req, res) => {
   try {
-    const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && req.user.uid !== req.params.userId) {
-      return res.status(403).json({ error: 'Solo puedes marcar tus propias notificaciones' });
-    }
-
     const snap = await col
       .where('userId', '==', req.params.userId)
       .where('isRead', '==', false)
@@ -212,13 +180,8 @@ router.delete('/:id', verifyToken, async (req, res) => {
 });
 
 // DELETE eliminar todas las notificaciones de un usuario (propio usuario o admin)
-router.delete('/user/:userId', verifyToken, async (req, res) => {
+router.delete('/user/:userId', verifyToken, requireSelfOrAdmin('userId'), async (req, res) => {
   try {
-    const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && req.user.uid !== req.params.userId) {
-      return res.status(403).json({ error: 'Solo puedes eliminar tus propias notificaciones' });
-    }
-
     const snap = await col.where('userId', '==', req.params.userId).get();
 
     if (snap.empty) {

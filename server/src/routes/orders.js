@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
-const { verifyToken, requireAdmin, requireCustomer, requireOwnerOrAdmin } = require('../middlewares/auth');
+const { verifyToken, requireAdmin, requireCustomer, requireOwnerOrAdmin, requireSelfOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { createOrderSchema } = require('../validators/orderValidator');
-const { paginate } = require('../utils/paginate');
+const { paginate, tryPaginate } = require('../utils/paginate');
 
 const col = db.collection('orders');
 
@@ -14,12 +14,7 @@ const VALID_PAYMENT_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
 
 // GET todas las órdenes
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener órdenes' });
-  }
+  await tryPaginate(res, col, req.query, { orderBy: 'createdAt' }, 'Error al obtener órdenes');
 });
 
 // GET órdenes por pastelería
@@ -28,14 +23,9 @@ router.get('/shop/:shopId', verifyToken, requireOwnerOrAdmin(async (req) => {
   if (!shopDoc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   return shopDoc.data().owner_id;
 }), async (req, res) => {
-  try {
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt', filters: [{ field: 'shop.shop_id', value: req.params.shopId }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener órdenes de la pastelería' });
-  }
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', filters: [{ field: 'shop.shop_id', value: req.params.shopId }],
+  }, 'Error al obtener órdenes de la pastelería');
 });
 
 // GET resumen / estadísticas de una pastelería
@@ -132,7 +122,7 @@ router.get('/shop/:shopId/summary', verifyToken, requireOwnerOrAdmin(async (req)
     res.json({
       totalOrders,
       totalRevenue: parseFloat(totalRevenue.toFixed(2)),
-      avgOrderValue: totalOrders > 0 ? parseFloat((totalRevenue / totalOrders).toFixed(2)) : 0,
+      avgOrderValue: delivered.length > 0 ? parseFloat((totalRevenue / delivered.length).toFixed(2)) : 0,
       revenueToday: parseFloat(revenueToday.toFixed(2)),
       revenueThisWeek: parseFloat(revenueThisWeek.toFixed(2)),
       revenueThisMonth: parseFloat(revenueThisMonth.toFixed(2)),
@@ -148,46 +138,27 @@ router.get('/shop/:shopId/summary', verifyToken, requireOwnerOrAdmin(async (req)
 });
 
 // GET órdenes por cliente (propio usuario o admin)
-router.get('/customer/:userId', verifyToken, async (req, res) => {
-  try {
-    const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && req.user.uid !== req.params.userId) {
-      return res.status(403).json({ error: 'Solo puedes ver tus propias órdenes' });
-    }
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt', filters: [{ field: 'customer.user_id', value: req.params.userId }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener órdenes del cliente' });
-  }
+router.get('/customer/:userId', verifyToken, requireSelfOrAdmin('userId'), async (req, res) => {
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', filters: [{ field: 'customer.user_id', value: req.params.userId }],
+  }, 'Error al obtener órdenes del cliente');
 });
 
 // GET órdenes por estado
 router.get('/status/:status', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    if (!VALID_STATUSES.includes(req.params.status)) {
-      return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
-    }
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt', filters: [{ field: 'status', value: req.params.status }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al filtrar órdenes por estado' });
+  if (!VALID_STATUSES.includes(req.params.status)) {
+    return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
   }
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', filters: [{ field: 'status', value: req.params.status }],
+  }, 'Error al filtrar órdenes por estado');
 });
 
 // GET órdenes del usuario autenticado
 router.get('/my', verifyToken, requireCustomer, async (req, res) => {
-  try {
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt', filters: [{ field: 'customer.user_id', value: req.user.uid }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener tus órdenes' });
-  }
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', filters: [{ field: 'customer.user_id', value: req.user.uid }],
+  }, 'Error al obtener tus órdenes');
 });
 
 // GET una orden (admin, dueño de la orden, o dueño de la pastelería)
@@ -237,6 +208,11 @@ router.post('/', verifyToken, validate(createOrderSchema), requireCustomer, asyn
 
     if (!VALID_PAYMENT_METHODS.includes(payment.method)) {
       return res.status(400).json({ error: `Método de pago inválido. Válidos: ${VALID_PAYMENT_METHODS.join(', ')}` });
+    }
+
+    // Verificar que el usuario autenticado es el dueño de la orden
+    if (customer.user_id !== req.user.uid) {
+      return res.status(403).json({ error: 'No puedes crear órdenes para otro usuario' });
     }
 
     // Verificar que el usuario existe
@@ -327,6 +303,7 @@ router.patch('/:id/cancel', verifyToken, requireCustomer, async (req, res) => {
 router.patch('/:id/status', verifyToken, requireOwnerOrAdmin(async (req) => {
   const orderDoc = await col.doc(req.params.id).get();
   if (!orderDoc.exists) throw Object.assign(new Error('Orden no encontrada'), { status: 404 });
+  req.resourceDoc = orderDoc;
   const shopId = orderDoc.data().shop?.shop_id;
   if (!shopId) throw Object.assign(new Error('La orden no tiene pastelería asociada'), { status: 400 });
   const shopDoc = await db.collection('pastryShops').doc(shopId).get();
@@ -334,7 +311,7 @@ router.patch('/:id/status', verifyToken, requireOwnerOrAdmin(async (req) => {
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
 
     const { status } = req.body;

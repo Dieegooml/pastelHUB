@@ -23,4 +23,13 @@ async function paginate(collectionRef, queryParams, opts = {}) {
   return { data, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
 }
 
-module.exports = { paginate, parsePagination };
+async function tryPaginate(res, collectionRef, queryParams, opts, errorMessage) {
+  try {
+    const result = await paginate(collectionRef, queryParams, opts);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: errorMessage });
+  }
+}
+
+module.exports = { paginate, parsePagination, tryPaginate };

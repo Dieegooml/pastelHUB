@@ -4,7 +4,7 @@ const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireCustomer } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { createPaymentSchema, updatePaymentSchema } = require('../validators/paymentValidator');
-const { paginate } = require('../utils/paginate');
+const { paginate, tryPaginate } = require('../utils/paginate');
 
 const col = db.collection('payments');
 
@@ -13,27 +13,17 @@ const VALID_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
 
 // GET todos los pagos
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener pagos' });
-  }
+  await tryPaginate(res, col, req.query, { orderBy: 'createdAt' }, 'Error al obtener pagos');
 });
 
 // GET pagos por estado
 router.get('/status/:status', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    if (!VALID_STATUSES.includes(req.params.status)) {
-      return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
-    }
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt', filters: [{ field: 'paymentStatus', value: req.params.status }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al filtrar pagos por estado' });
+  if (!VALID_STATUSES.includes(req.params.status)) {
+    return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
   }
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', filters: [{ field: 'paymentStatus', value: req.params.status }],
+  }, 'Error al filtrar pagos por estado');
 });
 
 // GET pago por orden (cliente de la orden, dueño de la shop o admin)
@@ -44,9 +34,9 @@ router.get('/order/:orderId', verifyToken, async (req, res) => {
       const orderDoc = await db.collection('orders').doc(req.params.orderId).get();
       if (!orderDoc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
       const order = orderDoc.data();
-      const isCustomer = order.customer_id === req.user.uid;
-      const isOwner = order.shopId
-        ? await db.collection('pastryShops').doc(order.shopId).get().then(s => s.exists && s.data().owner_id === req.user.uid)
+      const isCustomer = order.customer?.user_id === req.user.uid;
+      const isOwner = order.shop?.shop_id
+        ? await db.collection('pastryShops').doc(order.shop.shop_id).get().then(s => s.exists && s.data().owner_id === req.user.uid)
         : false;
       if (!isCustomer && !isOwner) {
         return res.status(403).json({ error: 'No tienes permiso para ver este pago' });
@@ -75,9 +65,9 @@ router.get('/:id', verifyToken, async (req, res) => {
       const orderDoc = await db.collection('orders').doc(data.orderId).get();
       if (!orderDoc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
       const order = orderDoc.data();
-      const isCustomer = order.customer_id === req.user.uid;
-      const isOwner = order.shopId
-        ? await db.collection('pastryShops').doc(order.shopId).get().then(s => s.exists && s.data().owner_id === req.user.uid)
+      const isCustomer = order.customer?.user_id === req.user.uid;
+      const isOwner = order.shop?.shop_id
+        ? await db.collection('pastryShops').doc(order.shop.shop_id).get().then(s => s.exists && s.data().owner_id === req.user.uid)
         : false;
       if (!isCustomer && !isOwner) {
         return res.status(403).json({ error: 'No tienes permiso para ver este pago' });
@@ -98,6 +88,11 @@ router.post('/', verifyToken, requireCustomer, validate(createPaymentSchema), as
     const orderDoc = await db.collection('orders').doc(orderId).get();
     if (!orderDoc.exists) {
       return res.status(404).json({ error: 'La orden no existe' });
+    }
+
+    // Verificar que la orden pertenece al usuario autenticado
+    if (orderDoc.data().customer?.user_id !== req.user.uid) {
+      return res.status(403).json({ error: 'Solo puedes pagar tus propias órdenes' });
     }
 
     // Verificar que la orden no tenga ya un pago

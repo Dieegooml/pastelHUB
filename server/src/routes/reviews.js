@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
-const { verifyToken, requireAdmin, requireModerator, requireCustomer } = require('../middlewares/auth');
+const { verifyToken, requireAdmin, requireModerator, requireCustomer, requireSelfOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { createReviewSchema, updateReviewSchema, replySchema } = require('../validators/reviewValidator');
-const { paginate } = require('../utils/paginate');
+const { paginate, tryPaginate } = require('../utils/paginate');
 
 const col = db.collection('reviews');
 
@@ -12,59 +12,35 @@ const VALID_STATUSES = ['pending', 'approved', 'rejected'];
 
 // GET todas las reseñas
 router.get('/', verifyToken, requireModerator, async (req, res) => {
-  try {
-    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener reseñas' });
-  }
+  await tryPaginate(res, col, req.query, { orderBy: 'createdAt' }, 'Error al obtener reseñas');
 });
 
 // GET reseñas por pastelería (público)
 router.get('/shop/:shopId', async (req, res) => {
-  try {
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt',
-      filters: [
-        { field: 'shopId', value: req.params.shopId },
-        { field: 'status', value: 'approved' },
-      ],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener reseñas de la pastelería' });
-  }
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt',
+    filters: [
+      { field: 'shopId', value: req.params.shopId },
+      { field: 'status', value: 'approved' },
+    ],
+  }, 'Error al obtener reseñas de la pastelería');
 });
 
 // GET reseñas por cliente (propio usuario o admin)
-router.get('/customer/:customerId', verifyToken, async (req, res) => {
-  try {
-    const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && req.user.uid !== req.params.customerId) {
-      return res.status(403).json({ error: 'Solo puedes ver tus propias reseñas' });
-    }
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt', filters: [{ field: 'customerId', value: req.params.customerId }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener reseñas del cliente' });
-  }
+router.get('/customer/:customerId', verifyToken, requireSelfOrAdmin('customerId'), async (req, res) => {
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', filters: [{ field: 'customerId', value: req.params.customerId }],
+  }, 'Error al obtener reseñas del cliente');
 });
 
 // GET reseñas por estado (para moderación)
 router.get('/status/:status', verifyToken, requireModerator, async (req, res) => {
-  try {
-    if (!VALID_STATUSES.includes(req.params.status)) {
-      return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
-    }
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt', filters: [{ field: 'status', value: req.params.status }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al filtrar reseñas por estado' });
+  if (!VALID_STATUSES.includes(req.params.status)) {
+    return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
   }
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', filters: [{ field: 'status', value: req.params.status }],
+  }, 'Error al filtrar reseñas por estado');
 });
 
 // GET reseña por ID de orden
@@ -136,7 +112,7 @@ router.post('/', verifyToken, requireCustomer, validate(createReviewSchema), asy
       comment:     comment || '',
       ownerReply:  '',
       repliedAt:   '',
-      status:      'approved',
+      status:      'pending',
       createdAt:   new Date().toISOString(),
     };
 
@@ -231,7 +207,12 @@ router.put('/:id', verifyToken, validate(updateReviewSchema), async (req, res) =
       ...(comment !== undefined && { comment }),
     };
 
+    const shopId = doc.data().shopId;
     await col.doc(req.params.id).update(updates);
+
+    // Recalcular rating de la pastelería tras editar la reseña
+    await recalcShopRating(shopId);
+
     res.json({ id: req.params.id, ...updates });
   } catch (e) {
     res.status(500).json({ error: 'Error al editar la reseña' });

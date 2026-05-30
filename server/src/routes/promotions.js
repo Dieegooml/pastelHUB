@@ -4,18 +4,13 @@ const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireOwnerOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { createPromotionSchema, updatePromotionSchema } = require('../validators/promotionValidator');
-const { paginate } = require('../utils/paginate');
+const { paginate, tryPaginate } = require('../utils/paginate');
 
 const col = db.collection('promotions');
 
 // GET todas las promociones (admin — todas las pastelerías)
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await paginate(col, req.query, { orderBy: 'createdAt' });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener promociones' });
-  }
+  await tryPaginate(res, col, req.query, { orderBy: 'createdAt' }, 'Error al obtener promociones');
 });
 
 // GET todas las promociones de una pastelería (público)
@@ -40,15 +35,10 @@ router.get('/shop/:shopId/all', verifyToken, requireOwnerOrAdmin(async (req) => 
   if (!doc.exists) throw new Error('not found');
   return doc.data().owner_id;
 }), async (req, res) => {
-  try {
-    const result = await paginate(col, req.query, {
-      orderBy: 'createdAt',
-      filters: [{ field: 'shop_id', value: req.params.shopId }],
-    });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener promociones' });
-  }
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt',
+    filters: [{ field: 'shop_id', value: req.params.shopId }],
+  }, 'Error al obtener promociones');
 });
 
 // GET una promoción
@@ -104,12 +94,13 @@ router.post('/', verifyToken, validate(createPromotionSchema), requireOwnerOrAdm
 router.put('/:id', verifyToken, validate(updatePromotionSchema), requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw new Error('not found');
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Promoción no encontrada' });
 
     const { shop_id, createdAt, ...rest } = req.body;
@@ -130,12 +121,13 @@ router.put('/:id', verifyToken, validate(updatePromotionSchema), requireOwnerOrA
 router.patch('/:id/toggle', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw new Error('not found');
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Promoción no encontrada' });
 
     const current = doc.data();
@@ -155,12 +147,13 @@ router.patch('/:id/toggle', verifyToken, requireOwnerOrAdmin(async (req) => {
 router.delete('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw new Error('not found');
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Promoción no encontrada' });
 
     await col.doc(req.params.id).delete();
