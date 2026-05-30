@@ -46,11 +46,11 @@ app.use(helmet());
 // CORS configurado
 app.use(cors(corsOptions));
 
+// Limiter general para todas las rutas (antes del body parser para evitar DoS)
+app.use(limiter);
+
 // Parseo de JSON
 app.use(express.json());
-
-// Limiter general para todas las rutas
-app.use(limiter);
 
 // Rutas API
 app.use('/api/auth', authLimiter, require('./routes/auth'));
