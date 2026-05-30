@@ -48,6 +48,23 @@ const requireCustomer = (req, res, next) => {
   next();
 };
 
+const requireOwner = (req, res, next) => {
+  const roles = req.user?.roles || [];
+  if (roles.includes('admin') || roles.includes('owner')) {
+    return next();
+  }
+  res.status(403).json({ error: 'Solo owners o admins' });
+};
+
+const requireSelfOrAdmin = (paramName = 'id') => {
+  return (req, res, next) => {
+    const roles = req.user?.roles || [];
+    if (roles.includes('admin')) return next();
+    if (req.user?.uid === req.params[paramName]) return next();
+    return res.status(403).json({ error: 'No tienes permiso' });
+  };
+};
+
 const requireOwnerOrAdmin = (getResourceOwnerId) => {
   return async (req, res, next) => {
     const roles = req.user?.roles || [];
@@ -65,4 +82,4 @@ const requireOwnerOrAdmin = (getResourceOwnerId) => {
   };
 };
 
-module.exports = { verifyToken, requireAdmin, requireModerator, requireCustomer, requireOwnerOrAdmin };
+module.exports = { verifyToken, requireAdmin, requireOwner, requireModerator, requireCustomer, requireOwnerOrAdmin, requireSelfOrAdmin };
