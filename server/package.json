@@ -35,6 +35,8 @@
     "backup": "node backup.js",
     "backup:users": "node backup.js users",
     "backup:shops": "node backup.js pastryShops",
-    "backup:orders": "node backup.js orders,payments,reviews"
+    "backup:orders": "node backup.js orders,payments,reviews",
+    "restore": "node restore.js",
+    "restore:latest": "node restore.js"
   }
 }

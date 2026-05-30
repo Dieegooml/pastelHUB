@@ -4,6 +4,42 @@ Todos los comandos se ejecutan desde `cd server`.
 
 ---
 
+## Backup y Restauración de Firestore
+
+### Backup manual
+
+```bash
+# Backup completo (todas las colecciones)
+npm run backup
+
+# Backup de colecciones específicas
+npm run backup:users          # solo users
+npm run backup:shops          # solo pastryShops
+npm run backup:orders         # orders, payments, reviews
+
+# Backup personalizado
+node backup.js users,products,promotions
+```
+
+Los backups se guardan en `server/backups/<timestamp>/`:
+- Un archivo `.json` por colección (con subcolecciones incluidas)
+- `_meta.json` con resumen del backup
+- Archivo `.zip` comprimido del backup
+
+### Restauración
+
+```bash
+# Restaurar el backup más reciente
+npm run restore
+
+# Restaurar un backup específico
+node restore.js backups/2026-05-30T12-00-00
+```
+
+**Advertencia:** La restauración sobrescribe documentos existentes. No hay confirmación interactiva.
+
+---
+
 ## Tests Unitarios
 
 | Comando | Qué hace |
