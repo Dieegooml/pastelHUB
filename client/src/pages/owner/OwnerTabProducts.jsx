@@ -14,7 +14,7 @@ export default function OwnerTabProducts({ selectedShop, setError, setSuccess })
 
   useEffect(() => {
     if (!selectedShop?.id) return;
-    productsService.getByShop(selectedShop.id).then((data) => setProducts(data?.data || [])).catch(() => {});
+    productsService.getByShop(selectedShop.id).then((data) => setProducts(data?.data || [])).catch((e) => console.error(e));
   }, [selectedShop]);
 
   const resetProductForm = () => {
@@ -28,7 +28,7 @@ export default function OwnerTabProducts({ selectedShop, setError, setSuccess })
     setError('');
     setSuccess('');
     try {
-      const payload = { ...productForm, shopId: selectedShop.id, price: Number(productForm.price), stock: productForm.stock ? Number(productForm.stock) : 0 };
+      const payload = { ...productForm, shop_id: selectedShop.id, price: Number(productForm.price), stock: productForm.stock ? Number(productForm.stock) : 0 };
       if (editProductId) {
         await productsService.update(editProductId, payload);
         setSuccess('Producto actualizado');
@@ -39,7 +39,7 @@ export default function OwnerTabProducts({ selectedShop, setError, setSuccess })
       resetProductForm();
       const data = await productsService.getByShop(selectedShop.id);
       setProducts(data?.data || []);
-    } catch { setError('Error al guardar producto'); }
+    } catch (e) { console.error(e); setError('Error al guardar producto'); }
   };
 
   const handleProductDelete = async (id) => {
@@ -49,7 +49,7 @@ export default function OwnerTabProducts({ selectedShop, setError, setSuccess })
       setSuccess('Producto eliminado');
       const data = await productsService.getByShop(selectedShop.id);
       setProducts(data?.data || []);
-    } catch { setError('Error al eliminar'); }
+    } catch (e) { console.error(e); setError('Error al eliminar'); }
   };
 
   const handleEditProduct = (p) => {

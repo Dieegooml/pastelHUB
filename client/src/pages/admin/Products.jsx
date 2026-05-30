@@ -66,7 +66,8 @@ export default function Products() {
     try {
       const data = await shopsService.getById(shopId);
       setShop(data);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al cargar la pastelería');
     }
   };
@@ -76,7 +77,8 @@ export default function Products() {
       setLoading(true);
       const data = await productsService.getByShop(shopId);
       setProducts(data?.data || []);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al cargar productos');
     } finally {
       setLoading(false);
@@ -103,7 +105,8 @@ export default function Products() {
       setVariants([]);
       setSuccess(editingId ? 'Producto actualizado correctamente' : 'Producto creado correctamente');
       loadProducts();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al guardar el producto');
     }
   };
@@ -123,7 +126,8 @@ export default function Products() {
     try {
       const data = await productsService.getVariants(product.id);
       setVariants(Array.isArray(data) ? data : []);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setVariants([]);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -137,7 +141,8 @@ export default function Products() {
       await productsService.delete(id);
       setSuccess('Producto eliminado correctamente');
       loadProducts();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al eliminar el producto');
     }
   };
@@ -155,7 +160,8 @@ export default function Products() {
     try {
       await productsService.updateAvailability(id, !current);
       loadProducts();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al cambiar disponibilidad');
     }
   };
@@ -174,7 +180,8 @@ export default function Products() {
       setEditingVariantId(null);
       const data = await productsService.getVariants(editingId);
       setVariants(Array.isArray(data) ? data : []);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al guardar variante');
     }
   };
@@ -190,7 +197,8 @@ export default function Products() {
       await productsService.deleteVariant(editingId, variantId);
       const data = await productsService.getVariants(editingId);
       setVariants(Array.isArray(data) ? data : []);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al eliminar variante');
     }
   };
@@ -387,7 +395,7 @@ export default function Products() {
                       }}>
                         <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{v.type}</td>
                         <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{v.value}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>S/ {v.extra_price}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>S/ {(v.extra_price || 0).toFixed(2)}</td>
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button onClick={() => handleEditVariant(v)} style={btnGhost}>Editar</button>
@@ -455,7 +463,7 @@ export default function Products() {
                             <div style={{ fontWeight: 500, fontFamily: font.body }}>{p.name}</div>
                             {p.description && <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '2px', fontFamily: font.body }}>{p.description.slice(0, 40)}{p.description.length > 40 ? '…' : ''}</div>}
                           </td>
-                          <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: 500, fontFamily: font.body }}>S/ {p.price}</td>
+                          <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: 500, fontFamily: font.body }}>S/ {(p.price || 0).toFixed(2)}</td>
                           {!isMobile && <td style={{ padding: '12px 16px', fontSize: '14px', fontFamily: font.body }}>{p.stock ?? '—'}</td>}
                           {!isMobile && (
                             <td style={{ padding: '12px 16px' }}>

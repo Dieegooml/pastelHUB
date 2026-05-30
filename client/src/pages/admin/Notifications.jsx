@@ -4,6 +4,7 @@ import Navbar from '../../components/Navbar';
 import AdminNav from './AdminNav';
 import { colors, font, inputStyle, textareaStyle, tableHeaderStyle, btnSmallPrimary, btnDanger, badge as badgeStyle } from '../../styles/theme';
 import { notificationsService } from '../../services/notificationsService';
+import { usersService } from '../../services/usersService';
 
 const stagger = {
   hidden: { opacity: 0, y: 20 },
@@ -22,7 +23,7 @@ export default function Notifications() {
       setLoading(true);
       const data = await notificationsService.getAll();
       setNotifs(data?.data || []);
-    } catch { setError('Error al cargar notificaciones'); } finally { setLoading(false); }
+    } catch (e) { console.error(e); setError('Error al cargar notificaciones'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -33,26 +34,26 @@ export default function Notifications() {
       if (form.userId) {
         await notificationsService.create({ userId: form.userId, title: form.title, message: form.message, type: form.type });
       } else {
-        const allNotifs = await notificationsService.getAll().catch(() => []);
-        const userIds = [...new Set((allNotifs?.data || []).map((n) => n.user_id).filter(Boolean))];
+        const allUsers = await usersService.getAll().catch(() => ({}));
+        const userIds = (allUsers?.data || []).map((u) => u.id).filter(Boolean);
         if (userIds.length === 0) { setError('No hay usuarios para notificar'); return; }
         await notificationsService.createBulk({ user_ids: userIds, title: form.title, message: form.message, type: form.type });
       }
       setForm({ userId: '', title: '', message: '', type: 'info' });
       setSuccess('Notificación creada');
       load();
-    } catch { setError('Error al crear notificación'); }
+    } catch (e) { console.error(e); setError('Error al crear notificación'); }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar esta notificación?')) return;
     try { await notificationsService.delete(id); setSuccess('Notificación eliminada'); load(); }
-    catch { setError('Error al eliminar'); }
+    catch (e) { console.error(e); setError('Error al eliminar'); }
   };
 
   const handleMarkRead = async (id) => {
     try { await notificationsService.markAsRead(id); load(); }
-    catch { setError('Error al marcar'); }
+    catch (e) { console.error(e); setError('Error al marcar'); }
   };
 
   return (

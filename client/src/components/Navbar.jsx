@@ -46,8 +46,8 @@ export default function Navbar() {
     try {
       const res = await notificationsService.getUnreadCount(user.uid);
       setUnreadCount(res?.count ?? 0);
-    } catch {}
-  }, [user]);
+    } catch (e) { console.error(e); }
+  }, [user?.uid]);
 
   const loadRecent = useCallback(async () => {
     if (!user?.uid) return;
@@ -55,8 +55,8 @@ export default function Navbar() {
       const res = await notificationsService.getUnreadByUser(user.uid);
       const list = Array.isArray(res) ? res : res?.data || [];
       setRecentNotifs(list.slice(0, 5));
-    } catch {}
-  }, [user]);
+    } catch (e) { console.error(e); }
+  }, [user?.uid]);
 
   useEffect(() => {
     loadUnread();
@@ -85,7 +85,7 @@ export default function Navbar() {
 
   const handleNotifClick = async (n) => {
     if (!n.isRead) {
-      try { await notificationsService.markAsRead(n.id); } catch {}
+      try { await notificationsService.markAsRead(n.id); } catch (e) { console.error(e); }
     }
     setShowDropdown(false);
     loadUnread();

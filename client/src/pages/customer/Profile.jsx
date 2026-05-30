@@ -70,7 +70,7 @@ export default function Profile() {
         setPhone(u.phone || '');
         setAddresses(u.addresses || []);
       }
-    } catch { }
+    } catch (e) { console.error(e); }
   }, [user]);
 
   useEffect(() => { loadProfile(); }, [loadProfile]);
@@ -113,7 +113,7 @@ export default function Profile() {
       await updatePassword(auth.currentUser, newPassword);
       setNewPassword('');
       setSuccess('Contraseña actualizada');
-    } catch {
+    } catch (e) { console.error(e);
       setError('Error al actualizar contraseña. Puede que necesites volver a iniciar sesión.');
     }
   };

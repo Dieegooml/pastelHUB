@@ -42,7 +42,7 @@ export default function MyOrders() {
         const res = await ordersService.getMy();
         const list = Array.isArray(res) ? res : res?.data || [];
         setOrders(list);
-      } catch {} finally { setLoading(false); }
+      } catch (e) { console.error(e); } finally { setLoading(false); }
     };
     load();
   }, []);
@@ -54,7 +54,7 @@ export default function MyOrders() {
     try {
       await ordersService.cancelOrder(orderId);
       setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'cancelled' } : o));
-    } catch {} finally { setCancellingId(null); }
+      } catch (e) { console.error(e); } finally { setCancellingId(null); }
   }, []);
 
   const filtered = useMemo(() => {

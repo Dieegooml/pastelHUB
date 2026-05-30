@@ -48,7 +48,8 @@ export default function Users() {
       setLoading(true);
       const data = await usersService.getAll();
       setUsers(data?.data || []);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al cargar usuarios');
     } finally {
       setLoading(false);
@@ -84,7 +85,8 @@ export default function Users() {
       setForm(emptyForm);
       setSuccess(editingId ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
       loadUsers();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al guardar el usuario');
     }
   };
@@ -109,7 +111,8 @@ export default function Users() {
       await usersService.delete(id);
       setSuccess('Usuario eliminado correctamente');
       loadUsers();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al eliminar el usuario');
     }
   };
@@ -121,7 +124,8 @@ export default function Users() {
       await usersService.updateStatus(id, !current);
       setSuccess(`Usuario ${current ? 'desactivado' : 'activado'}`);
       loadUsers();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al cambiar estado');
     }
   };
@@ -135,7 +139,8 @@ export default function Users() {
     try {
       const data = await usersService.getAddresses(user.id);
       setAddresses(Array.isArray(data) ? data : []);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setAddresses([]);
     }
   };
@@ -154,7 +159,8 @@ export default function Users() {
       setEditingAddrId(null);
       const data = await usersService.getAddresses(expandedUser);
       setAddresses(Array.isArray(data) ? data : []);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al guardar dirección');
     }
   };
@@ -170,7 +176,8 @@ export default function Users() {
       await usersService.deleteAddress(expandedUser, addrId);
       const data = await usersService.getAddresses(expandedUser);
       setAddresses(Array.isArray(data) ? data : []);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al eliminar dirección');
     }
   };

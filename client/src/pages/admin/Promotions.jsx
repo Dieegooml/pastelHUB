@@ -36,20 +36,20 @@ export default function Promotions() {
       setLoading(true);
       const data = await promotionsService.getAll();
       setPromotions(data?.data || []);
-    } catch { setError('Error al cargar promociones'); } finally { setLoading(false); }
+    } catch (e) { console.error(e); setError('Error al cargar promociones'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
 
   const handleToggle = async (id) => {
     try { await promotionsService.toggle(id); setSuccess('Estado cambiado'); load(); }
-    catch { setError('Error al cambiar estado'); }
+    catch (e) { console.error(e); setError('Error al cambiar estado'); }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar esta promoción?')) return;
     try { await promotionsService.delete(id); setSuccess('Promoción eliminada'); load(); }
-    catch { setError('Error al eliminar'); }
+    catch (e) { console.error(e); setError('Error al eliminar'); }
   };
 
   const typeBadge = (type) => {

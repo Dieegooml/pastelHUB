@@ -73,7 +73,8 @@ export default function Reviews() {
         ? await reviewsService.getAll()
         : await reviewsService.getByStatus(filter);
       setReviews(data?.data || []);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al cargar reseñas');
     } finally {
       setLoading(false);
@@ -87,7 +88,8 @@ export default function Reviews() {
       await reviewsService.moderate(id, status);
       setSuccess(`Reseña ${status === 'approved' ? 'aprobada' : 'rechazada'}`);
       loadReviews();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al moderar la reseña');
     }
   };
@@ -99,7 +101,8 @@ export default function Reviews() {
       setReplyText('');
       setSuccess('Respuesta enviada');
       loadReviews();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al responder la reseña');
     }
   };
@@ -110,7 +113,8 @@ export default function Reviews() {
       await reviewsService.delete(id);
       setSuccess('Reseña eliminada');
       loadReviews();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al eliminar la reseña');
     }
   };

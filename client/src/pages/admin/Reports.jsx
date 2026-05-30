@@ -42,20 +42,20 @@ export default function Reports() {
         data = await reportsService.getAll();
       }
       setReports(data?.data || []);
-    } catch { setError('Error al cargar reportes'); } finally { setLoading(false); }
+    } catch (e) { console.error(e); setError('Error al cargar reportes'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, [statusFilter, targetFilter]);
 
   const handleStatus = async (id, status) => {
     try { await reportsService.updateStatus(id, status); setSuccess(`Reporte ${STATUS_TRANSLATIONS[status]?.toLowerCase() || status}`); load(); }
-    catch { setError('Error al actualizar'); }
+    catch (e) { console.error(e); setError('Error al actualizar'); }
   };
 
   const handleAssign = async (id) => {
     if (!moderatorId[id]) return;
     try { await reportsService.assignModerator(id, moderatorId[id]); setSuccess('Moderador asignado'); setModeratorId((p) => ({ ...p, [id]: '' })); load(); }
-    catch { setError('Error al asignar moderador'); }
+    catch (e) { console.error(e); setError('Error al asignar moderador'); }
   };
 
   const badge = (statusKey) => {

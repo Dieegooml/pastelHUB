@@ -10,7 +10,7 @@ export default function OwnerTabOrders({ selectedShop, setError, setSuccess }) {
 
   useEffect(() => {
     if (!selectedShop?.id) return;
-    ordersService.getByShop(selectedShop.id).then((data) => setOrders(data?.data || [])).catch(() => {});
+    ordersService.getByShop(selectedShop.id).then((data) => setOrders(data?.data || [])).catch((e) => console.error(e));
   }, [selectedShop]);
 
   const handleOrderStatus = async (id) => {
@@ -21,7 +21,7 @@ export default function OwnerTabOrders({ selectedShop, setError, setSuccess }) {
       setSuccess('Estado actualizado');
       const data = await ordersService.getByShop(selectedShop.id);
       setOrders(data?.data || []);
-    } catch { setError('Error al actualizar estado'); }
+    } catch (e) { console.error(e); setError('Error al actualizar estado'); }
   };
 
   const statusBadge = (key) => {

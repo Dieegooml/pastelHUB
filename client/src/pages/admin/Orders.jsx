@@ -103,7 +103,8 @@ export default function Orders() {
         ? await ordersService.getAll()
         : await ordersService.getByStatus(filter);
       setOrders(data?.data || []);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al cargar órdenes');
     } finally {
       setLoading(false);
@@ -119,7 +120,8 @@ export default function Orders() {
       setNewStatus((p) => ({ ...p, [id]: '' }));
       setSuccess('Estado actualizado');
       loadOrders();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al actualizar estado');
     }
   };
@@ -131,7 +133,8 @@ export default function Orders() {
       setNewPaymentStatus((p) => ({ ...p, [id]: '' }));
       setSuccess('Estado de pago actualizado');
       loadOrders();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al actualizar estado de pago');
     }
   };
@@ -139,11 +142,12 @@ export default function Orders() {
   const handleAddReview = async (id) => {
     const order = orders.find((o) => o.id === id);
     try {
-      const created = await reviewsService.create({ orderId: id, shopId: order?.shop?.shop_id || '', rating: reviewForm.rating, comment: reviewForm.comment });
+      const created = await reviewsService.create({ order_id: id, shop_id: order?.shop?.shop_id || '', rating: reviewForm.rating, comment: reviewForm.comment });
       setReviewForm({ rating: 5, comment: '' });
       setReviewMap((p) => ({ ...p, [id]: created }));
       setSuccess('Reseña agregada');
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al agregar reseña');
     }
   };
@@ -160,7 +164,8 @@ export default function Orders() {
       setReplyForm((p) => ({ ...p, [id]: '' }));
       setReviewMap((p) => ({ ...p, [id]: { ...review, ...updated } }));
       setSuccess('Respuesta agregada');
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al responder reseña');
     }
   };
@@ -171,7 +176,8 @@ export default function Orders() {
       await ordersService.delete(id);
       setSuccess('Orden eliminada');
       loadOrders();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al eliminar la orden');
     }
   };
@@ -183,7 +189,7 @@ export default function Orders() {
       try {
         const review = await reviewsService.getByOrder(id);
         setReviewMap((p) => ({ ...p, [id]: review }));
-      } catch {} // no review yet
+      } catch (e) { console.error(e); } // no review yet
     }
   };
 
@@ -415,7 +421,7 @@ export default function Orders() {
                                             background: colors.white, padding: '6px 12px', borderRadius: '8px',
                                             fontSize: '12px', fontFamily: font.body, border: `1px solid ${colors.border}`,
                                           }}>
-                                            <strong>{item.quantity}x</strong> {item.name} — S/ {item.price_at_purchase}
+                                            <strong>{item.quantity}x</strong> {item.name} — S/ {(item.price_at_purchase || 0).toFixed(2)}
                                           </span>
                                         ))}
                                       </div>

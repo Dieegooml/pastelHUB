@@ -13,7 +13,7 @@ import {
 } from '../../styles/theme';
 
 const emptyForm = {
-  shopName: '', description: '', ownerId: '',
+  shopName: '', description: '', owner_id: '',
   address: '', city: '', phone: '', email: '',
   logoUrl: '', bannerUrl: '',
   approvalStatus: 'pending',
@@ -70,7 +70,7 @@ export default function Shops() {
       try {
         const data = await usersService.getAll();
         setUsers(data?.data || []);
-      } catch {} finally { setLoadingUsers(false); }
+      } catch (e) { console.error(e); } finally { setLoadingUsers(false); }
     };
     load();
   }, []);
@@ -80,7 +80,8 @@ export default function Shops() {
       setLoading(true);
       const data = await shopsService.getAll();
       setShops(data?.data || []);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al cargar pastelerías');
     } finally {
       setLoading(false);
@@ -104,7 +105,8 @@ export default function Shops() {
       setForm(emptyForm);
       setSuccess(editingId ? 'Pastelería actualizada correctamente' : 'Pastelería creada correctamente');
       loadShops();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al guardar la pastelería');
     }
   };
@@ -112,16 +114,16 @@ export default function Shops() {
   const handleEdit = (shop) => {
     setEditingId(shop.id);
     setForm({
-      shopName:       shop.shopName          || '',
+      shopName:       shop.shopName          || shop.shop_name || '',
       description:    shop.shopDescription   || shop.description || '',
-      ownerId:        shop.ownerId           || '',
+      owner_id:       shop.owner_id           || '',
       address:        shop.address        || '',
       city:           shop.city           || '',
       phone:          shop.phone          || '',
       email:          shop.email          || '',
-      logoUrl:        shop.logoUrl        || '',
-      bannerUrl:      shop.bannerUrl      || '',
-      approvalStatus: shop.approvalStatus || 'pending',
+      logoUrl:        shop.logoUrl        || shop.logo_url || '',
+      bannerUrl:      shop.bannerUrl      || shop.banner_url || '',
+      approvalStatus: shop.approvalStatus || shop.approval_status || 'pending',
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -134,7 +136,8 @@ export default function Shops() {
       await shopsService.delete(id);
       setSuccess('Pastelería eliminada correctamente');
       loadShops();
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al eliminar la pastelería');
     }
   };
@@ -210,8 +213,8 @@ export default function Shops() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={labelStyle}>Propietario *</label>
                 <select
-                  style={{ ...selectStyle, color: form.ownerId ? colors.text : '#aaa' }}
-                  name="ownerId" value={form.ownerId} onChange={handleChange} required
+                  style={{ ...selectStyle, color: form.owner_id ? colors.text : '#aaa' }}
+                  name="owner_id" value={form.owner_id} onChange={handleChange} required
                 >
                   <option value="">{loadingUsers ? 'Cargando usuarios...' : 'Selecciona un dueño'}</option>
                   {ownerOptions.map((u) => (

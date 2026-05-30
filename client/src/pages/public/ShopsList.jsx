@@ -68,7 +68,8 @@ export default function ShopsList() {
       try {
         const data = await shopsService.getAll();
         setShops(data?.data || []);
-      } catch {
+      } catch (e) {
+        console.error(e);
         setError('Error al cargar las pastelerías');
       } finally {
         setLoading(false);

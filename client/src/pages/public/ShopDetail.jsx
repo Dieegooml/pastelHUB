@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '../../components/Navbar';
@@ -30,6 +30,7 @@ export default function ShopDetail() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [toast, setToast] = useState('');
   const [addedIds, setAddedIds] = useState({});
+  const timeoutsRef = useRef([]);
 
   useEffect(() => {
     const load = async () => {
@@ -42,7 +43,7 @@ export default function ShopDetail() {
         setShop(shopData);
         setProducts(productsData?.data || []);
         setReviews(reviewsData?.data || []);
-      } catch {} finally { setLoading(false); }
+      } catch (e) { console.error(e); } finally { setLoading(false); }
     };
     load();
   }, [id]);
@@ -57,8 +58,13 @@ export default function ShopDetail() {
     return products.filter((p) => p.category_id === categoryFilter && p.is_available !== false);
   }, [products, categoryFilter]);
 
+  useEffect(() => {
+    return () => timeoutsRef.current.forEach(clearTimeout);
+  }, []);
+
   const addToCart = (product) => {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let cart;
+    try { cart = JSON.parse(localStorage.getItem('cart') || '[]'); } catch { cart = []; }
     const existing = cart.find((item) => item.id === product.id);
     if (existing) {
       existing.quantity += 1;
@@ -68,8 +74,8 @@ export default function ShopDetail() {
     localStorage.setItem('cart', JSON.stringify(cart));
     setAddedIds((p) => ({ ...p, [product.id]: true }));
     setToast(`${product.name} agregado al carrito`);
-    setTimeout(() => setToast(''), 2500);
-    setTimeout(() => setAddedIds((p) => ({ ...p, [product.id]: false })), 1200);
+    timeoutsRef.current.push(setTimeout(() => setToast(''), 2500));
+    timeoutsRef.current.push(setTimeout(() => setAddedIds((p) => ({ ...p, [product.id]: false })), 1200));
   };
 
   if (loading) {

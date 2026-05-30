@@ -24,7 +24,8 @@ export default function Checkout() {
   const update = (field, value) => setForm((p) => ({ ...p, [field]: value }));
 
   useEffect(() => {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let cart;
+    try { cart = JSON.parse(localStorage.getItem('cart') || '[]'); } catch { cart = []; }
     if (cart.length === 0) { navigate('/cart'); return; }
     setItems(cart);
   }, [navigate]);
@@ -41,32 +42,32 @@ export default function Checkout() {
     setLoading(true);
     setError('');
     try {
-      const shopId = items[0]?.shopId;
-      if (!shopId) { setError('Error con el carrito'); setLoading(false); return; }
+      const shopIds = [...new Set(items.map((i) => i.shopId).filter(Boolean))];
+      if (shopIds.length === 0) { setError('Error con el carrito'); setLoading(false); return; }
 
-      const orderData = {
-        customer: { user_id: user?.uid || '' },
-        shop: { shop_id: shopId },
-        items: items.map((item) => ({
-          product_id: item.id,
-          quantity: item.quantity,
-          price_at_purchase: item.price,
-          name: item.name,
-        })),
-        totals: {
-          subtotal: total,
-          delivery_fee: deliveryFee,
-        },
-        payment: {
-          method: form.paymentMethod,
-        },
-      };
+      for (const shopId of shopIds) {
+        const shopItems = items.filter((i) => i.shopId === shopId);
+        const shopTotal = shopItems.reduce((s, i) => s + (i.price || 0) * i.quantity, 0);
+        const orderData = {
+          customer: { user_id: user?.uid || '' },
+          shop: { shop_id: shopId },
+          items: shopItems.map((item) => ({
+            product_id: item.id,
+            quantity: item.quantity,
+            price_at_purchase: item.price,
+            name: item.name,
+          })),
+          totals: { subtotal: shopTotal, delivery_fee: 5 },
+          payment: { method: form.paymentMethod },
+        };
+        await ordersService.create(orderData);
+      }
 
-      await ordersService.create(orderData);
       localStorage.setItem('cart', '[]');
-      setSuccess('¡Orden creada exitosamente!');
+      setSuccess('¡Órdenes creadas exitosamente!');
       setTimeout(() => navigate('/my-orders'), 1500);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al crear la orden. Intenta de nuevo.');
     } finally { setLoading(false); }
   };

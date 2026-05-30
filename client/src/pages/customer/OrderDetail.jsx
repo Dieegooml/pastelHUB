@@ -47,7 +47,7 @@ export default function OrderDetail() {
         setOrder(data);
         const rev = await reviewsService.getByOrder(id).catch(() => null);
         if (rev) setReview(rev);
-      } catch {} finally { setLoading(false); }
+      } catch (e) { console.error(e); } finally { setLoading(false); }
     };
     load();
   }, [id]);
@@ -56,10 +56,12 @@ export default function OrderDetail() {
     setSubmitting(true);
     setReviewError('');
     try {
-      await reviewsService.create({ orderId: id, shopId: order.shop?.shop_id, rating: reviewRating, comment: reviewComment });
+      const created = await reviewsService.create({ order_id: id, shop_id: order.shop?.shop_id, rating: reviewRating, comment: reviewComment });
       setReviewSuccess('¡Reseña enviada!');
       setReviewComment('');
-    } catch {
+      if (created?.id) setReview(created);
+    } catch (e) {
+      console.error(e);
       setReviewError('Error al enviar la reseña');
     } finally { setSubmitting(false); }
   };
@@ -71,7 +73,8 @@ export default function OrderDetail() {
       await ordersService.cancelOrder(id);
       const data = await ordersService.getById(id);
       setOrder(data);
-    } catch {
+    } catch (e) {
+      console.error(e);
       setReviewError('Error al cancelar la orden');
     } finally { setCancelling(false); }
   };

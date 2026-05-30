@@ -22,7 +22,7 @@ export default function OwnerTabPromotions({ selectedShop, setError, setSuccess 
     if (!selectedShop?.id) return;
     promotionsService.getByShopAll(selectedShop.id)
       .then((res) => setPromotions(Array.isArray(res) ? res : res?.data || []))
-      .catch(() => {});
+      .catch((e) => console.error(e));
   }, [selectedShop]);
 
   const resetPromoForm = () => {
@@ -61,7 +61,7 @@ export default function OwnerTabPromotions({ selectedShop, setError, setSuccess 
       resetPromoForm();
       const res = await promotionsService.getByShopAll(selectedShop.id);
       setPromotions(Array.isArray(res) ? res : res?.data || []);
-    } catch { setError('Error al guardar promoción'); } finally { setPromoLoading(false); }
+    } catch (e) { console.error(e); setError('Error al guardar promoción'); } finally { setPromoLoading(false); }
   };
 
   const handlePromoDelete = async (id) => {
@@ -71,7 +71,7 @@ export default function OwnerTabPromotions({ selectedShop, setError, setSuccess 
       setSuccess('Promoción eliminada');
       const res = await promotionsService.getByShopAll(selectedShop.id);
       setPromotions(Array.isArray(res) ? res : res?.data || []);
-    } catch { setError('Error al eliminar'); }
+    } catch (e) { console.error(e); setError('Error al eliminar'); }
   };
 
   const handlePromoToggle = async (id) => {
@@ -79,7 +79,7 @@ export default function OwnerTabPromotions({ selectedShop, setError, setSuccess 
       await promotionsService.toggle(id);
       const res = await promotionsService.getByShopAll(selectedShop.id);
       setPromotions(Array.isArray(res) ? res : res?.data || []);
-    } catch { setError('Error al cambiar estado'); }
+    } catch (e) { console.error(e); setError('Error al cambiar estado'); }
   };
 
   const handleEditPromo = (p) => {

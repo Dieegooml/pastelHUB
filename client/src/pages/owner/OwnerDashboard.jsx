@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
@@ -28,17 +28,19 @@ export default function OwnerDashboard() {
     const load = async () => {
       try {
         const all = await shopsService.getAll();
-        const owned = (all?.data || []).filter((s) => s.ownerId === user?.uid);
+        const owned = (all?.data || []).filter((s) => s.owner_id === user?.uid);
         setShops(owned);
-      } catch (e) { setError(e.message || 'Error al cargar pastelerías'); } finally { setLoading(false); }
+      } catch (e) { console.error(e); setError(e.message || 'Error al cargar pastelerías'); } finally { setLoading(false); }
     };
     load();
   }, [user]);
 
-  const refreshShops = async () => {
-    const all = await shopsService.getAll();
-    setShops((all?.data || []).filter((s) => s.ownerId === user?.uid));
-  };
+  const refreshShops = useCallback(async () => {
+    try {
+      const all = await shopsService.getAll();
+      setShops((all?.data || []).filter((s) => s.owner_id === user?.uid));
+    } catch (e) { console.error(e); setError(e.message || 'Error al recargar'); }
+  }, [user?.uid]);
 
   if (loading) {
     return (

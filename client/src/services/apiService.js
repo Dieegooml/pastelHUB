@@ -1,7 +1,7 @@
 import { auth } from '../config/firebase';
 import { signOut } from 'firebase/auth';
 
-const BASE = import.meta.env.VITE_API_URL;
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 async function getHeaders() {
   const token = await auth.currentUser?.getIdToken();
@@ -12,7 +12,8 @@ async function getHeaders() {
 }
 
 async function handleResponse(res) {
-  const data = await res.json();
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : {};
   if (!res.ok) {
     const err = new Error(data.error || data.message || `HTTP ${res.status}`);
     err.status = res.status;
@@ -40,17 +41,20 @@ async function apiFetch(path, options = {}) {
         ...options.headers,
       },
     });
-    if (retryRes.ok) return retryRes.json();
+    if (retryRes.ok) return handleResponse(retryRes);
     if (retryRes.status === 401) {
-      const data = await retryRes.json().catch(() => ({}));
-      const err = new Error(data.error || `HTTP ${retryRes.status}`);
+      try { await signOut(auth); } catch {}
+      const text2 = await retryRes.text().catch(() => '');
+      const data2 = text2 ? JSON.parse(text2) : {};
+      const err = new Error(data2.error || `HTTP ${retryRes.status}`);
       err.status = retryRes.status;
       throw err;
     }
     return handleResponse(retryRes);
   }
 
-  const data = await res.json().catch(() => ({}));
+  const text = await res.text().catch(() => '');
+  const data = text ? JSON.parse(text) : {};
   const err = new Error(data.error || `HTTP ${res.status}`);
   err.status = res.status;
   throw err;

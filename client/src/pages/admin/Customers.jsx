@@ -24,7 +24,7 @@ export default function Customers() {
       setLoading(true);
       const data = await customersService.getAll();
       setCustomers(data?.data || []);
-    } catch { setError('Error al cargar clientes'); } finally { setLoading(false); }
+    } catch (e) { console.error(e); setError('Error al cargar clientes'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -41,14 +41,14 @@ export default function Customers() {
         const data = await customersService.getById(id);
         const addr = await customersService.getAddresses(id).catch(() => []);
         setAddresses((p) => ({ ...p, [id]: { customer: data, addresses: Array.isArray(addr) ? addr : [] } }));
-      } catch {} finally { setAddrLoading((p) => ({ ...p, [id]: false })); }
+      } catch (e) { console.error(e); } finally { setAddrLoading((p) => ({ ...p, [id]: false })); }
     }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este cliente?')) return;
     try { await customersService.delete(id); setSuccess('Cliente eliminado'); load(); }
-    catch { setError('Error al eliminar'); }
+    catch (e) { console.error(e); setError('Error al eliminar'); }
   };
 
   return (

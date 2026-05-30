@@ -38,7 +38,7 @@ export default function Payments() {
       setLoading(true);
       const data = await paymentsService.getAll();
       setPayments(data?.data || []);
-    } catch { setError('Error al cargar pagos'); } finally { setLoading(false); }
+    } catch (e) { console.error(e); setError('Error al cargar pagos'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -50,7 +50,7 @@ export default function Payments() {
       setStatusUpdate((p) => ({ ...p, [id]: '' }));
       setSuccess('Estado de pago actualizado');
       load();
-    } catch { setError('Error al actualizar'); }
+    } catch (e) { console.error(e); setError('Error al actualizar'); }
   };
 
   const badge = (statusKey) => {

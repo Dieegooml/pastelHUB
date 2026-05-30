@@ -46,7 +46,7 @@ export default function AdminDashboard() {
           payments: payments?.data?.length || 0,
         });
         if (orders?.data) setRecentOrders(orders.data.slice(0, 5));
-      } catch {} finally { setLoading(false); }
+      } catch (e) { console.error(e); } finally { setLoading(false); }
     };
     load();
   }, []);

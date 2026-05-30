@@ -31,7 +31,8 @@ export default function OwnerTabInfo({ selectedShop, setError, setSuccess, onSho
       await shopsService.update(selectedShop.id, shopForm);
       if (onShopUpdate) await onShopUpdate();
       setSuccess('Información actualizada');
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError('Error al guardar');
     } finally {
       setSavingShop(false);

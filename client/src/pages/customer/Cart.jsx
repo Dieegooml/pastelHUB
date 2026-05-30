@@ -10,7 +10,8 @@ export default function Cart() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let cart;
+    try { cart = JSON.parse(localStorage.getItem('cart') || '[]'); } catch { cart = []; }
     setItems(cart);
     setLoaded(true);
   }, []);

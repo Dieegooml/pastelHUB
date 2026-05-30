@@ -28,7 +28,7 @@ export default function Notifications() {
       const res = await notificationsService.getByUser(user.uid);
       const list = Array.isArray(res) ? res : res?.data || [];
       setNotifs(list);
-    } catch {} finally { setLoading(false); }
+    } catch (e) { console.error(e); } finally { setLoading(false); }
   }, [user]);
 
   useEffect(() => { load(); }, [load]);
@@ -37,14 +37,14 @@ export default function Notifications() {
     try {
       await notificationsService.markAsRead(id);
       setNotifs((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
-    } catch {}
+    } catch (e) { console.error(e); }
   };
 
   const handleMarkAllRead = async () => {
     try {
       await notificationsService.markAllAsRead(user.uid);
       setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    } catch {}
+    } catch (e) { console.error(e); }
   };
 
   const handleDelete = async (id) => {
