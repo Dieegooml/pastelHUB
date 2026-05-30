@@ -51,6 +51,7 @@ router.post('/', verifyToken, (req, res, next) => {
 }, validate(createProductSchema), requireOwnerOrAdmin(async (req) => {
   const shopDoc = await db.collection('pastryShops').doc(req.body.shop_id).get();
   if (!shopDoc.exists) throw new Error('not found');
+  req.resourceDoc = shopDoc;
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
@@ -61,7 +62,7 @@ router.post('/', verifyToken, (req, res, next) => {
     } = req.body;
 
     // Verificar que la pastelería existe
-    const shopDoc = await db.collection('pastryShops').doc(shop_id).get();
+    const shopDoc = req.resourceDoc || await db.collection('pastryShops').doc(shop_id).get();
     if (!shopDoc.exists) {
       return res.status(404).json({ error: 'La pastelería no existe' });
     }
@@ -94,12 +95,13 @@ router.put('/:id', verifyToken, (req, res, next) => {
 }, validate(updateProductSchema), requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw new Error('not found');
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
     // No permitir cambiar shop_id ni variants por este endpoint
@@ -119,12 +121,13 @@ router.put('/:id', verifyToken, (req, res, next) => {
 router.patch('/:id/availability', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw new Error('not found');
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const { is_available } = req.body;
@@ -146,12 +149,13 @@ router.patch('/:id/availability', verifyToken, requireOwnerOrAdmin(async (req) =
 router.delete('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw new Error('not found');
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
     await col.doc(req.params.id).delete();
@@ -178,12 +182,13 @@ router.get('/:id/variants', async (req, res) => {
 router.post('/:id/variants', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw new Error('not found');
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const { type, value, extra_price } = req.body;
@@ -217,12 +222,13 @@ router.post('/:id/variants', verifyToken, requireOwnerOrAdmin(async (req) => {
 router.put('/:id/variants/:variantId', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw new Error('not found');
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const variants = doc.data().variants || [];
@@ -252,12 +258,13 @@ router.put('/:id/variants/:variantId', verifyToken, requireOwnerOrAdmin(async (r
 router.delete('/:id/variants/:variantId', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw new Error('not found');
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const variants = doc.data().variants || [];

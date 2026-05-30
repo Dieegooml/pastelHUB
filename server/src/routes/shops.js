@@ -76,13 +76,14 @@ router.put('/:id', verifyToken, (req, res, next) => {
 }, validate(updateShopSchema), requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
 
-    const { owner_id, schedules, categories, createdAt, ...rest } = req.body;
+    const { owner_id, schedules, categories, createdAt, status, ...rest } = req.body;
     const updates = { ...rest, updatedAt: new Date().toISOString() };
 
     await col.doc(req.params.id).update(updates);
@@ -115,10 +116,11 @@ router.patch('/:id/status', verifyToken, requireAdmin, async (req, res) => {
 router.delete('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
 
     await col.doc(req.params.id).delete();
@@ -158,10 +160,11 @@ router.get('/:id/schedules', async (req, res) => {
 router.post('/:id/schedules', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
 
     const { day, open_time, close_time } = req.body;
@@ -199,10 +202,11 @@ router.post('/:id/schedules', verifyToken, requireOwnerOrAdmin(async (req) => {
 router.put('/:id/schedules/:day', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
 
     const schedules = doc.data().schedules || [];
@@ -231,10 +235,11 @@ router.put('/:id/schedules/:day', verifyToken, requireOwnerOrAdmin(async (req) =
 router.delete('/:id/schedules/:day', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
 
     const schedules = doc.data().schedules || [];
@@ -272,10 +277,11 @@ router.get('/:id/categories', async (req, res) => {
 router.post('/:id/categories', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
 
     const { name, image_url } = req.body;
@@ -304,10 +310,11 @@ router.post('/:id/categories', verifyToken, requireOwnerOrAdmin(async (req) => {
 router.put('/:id/categories/:categoryId', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
 
     const categories = doc.data().categories || [];
@@ -336,10 +343,11 @@ router.put('/:id/categories/:categoryId', verifyToken, requireOwnerOrAdmin(async
 router.delete('/:id/categories/:categoryId', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw new Error('not found');
+  req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
   try {
-    const doc = await col.doc(req.params.id).get();
+    const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
 
     const categories = doc.data().categories || [];
