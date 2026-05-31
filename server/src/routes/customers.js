@@ -141,7 +141,7 @@ router.patch('/:id', verifyToken, requireSelfOrAdmin(), validate(updateCustomerS
 });
 
 // DELETE customer
-router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
+router.delete('/:id', verifyToken, requireSelfOrAdmin(), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Customer no encontrado' });
@@ -196,7 +196,7 @@ router.post('/:id/addresses', verifyToken, requireSelfOrAdmin(), validate(addres
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Customer no encontrado' });
 
-    const { street, city, district, reference } = req.body;
+    const { street, city, district, reference, isDefault } = req.body;
 
     const existingSnap = await col.doc(req.params.id).collection('addresses').get();
     const isFirst      = existingSnap.empty;
@@ -206,7 +206,7 @@ router.post('/:id/addresses', verifyToken, requireSelfOrAdmin(), validate(addres
       city,
       district:  district  || '',
       reference: reference || '',
-      isDefault: isFirst,
+      isDefault: isDefault !== undefined ? isDefault : isFirst,
     };
 
     const ref = await col.doc(req.params.id).collection('addresses').add(data);

@@ -27,7 +27,7 @@ router.get('/:id', verifyToken, requireSelfOrAdmin(), async (req, res) => {
 // POST crear usuario
 router.post('/', verifyToken, requireAdmin, validate(createUserSchema), async (req, res) => {
   try {
-    const { name, email, password, phone, roles } = req.body;
+    const { name, email, password, phone, roles, addresses, isActive } = req.body;
 
     const userRecord = await admin.auth().createUser({ email, password });
     const assignedRoles = roles || ['customer'];
@@ -39,7 +39,8 @@ router.post('/', verifyToken, requireAdmin, validate(createUserSchema), async (r
       phone:      phone || '',
       roles:      assignedRoles,
       password_hash: '',
-      addresses:  [],
+      addresses:  addresses || [],
+      isActive:   isActive !== undefined ? isActive : true,
       createdAt:  new Date().toISOString(),
       updatedAt:  new Date().toISOString(),
     };
@@ -67,7 +68,7 @@ router.put('/:id', verifyToken, requireSelfOrAdmin(), validate(updateUserSchema)
       return res.status(403).json({ error: 'Solo admins pueden cambiar roles' });
     }
 
-    if (newRoles) {
+    if (newRoles && newRoles.length > 0) {
       await admin.auth().setCustomUserClaims(req.params.id, { roles: newRoles });
     }
 

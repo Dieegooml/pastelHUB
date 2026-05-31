@@ -12,6 +12,15 @@ const VALID_STATUSES = ['pending', 'confirmed', 'preparing', 'on_the_way', 'deli
 const VALID_PAYMENT_METHODS  = ['card', 'cash', 'yape', 'plin'];
 const VALID_PAYMENT_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
 
+const VALID_TRANSITIONS = {
+  pending:    ['confirmed', 'cancelled'],
+  confirmed:  ['preparing', 'cancelled'],
+  preparing:  ['on_the_way', 'cancelled'],
+  on_the_way: ['delivered'],
+  delivered:  [],
+  cancelled:  [],
+};
+
 // GET todas las órdenes
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
   await tryPaginate(res, col, req.query, { orderBy: 'createdAt' }, 'Error al obtener órdenes');
@@ -312,10 +321,16 @@ router.patch('/:id/status', verifyToken, requireOwnerOrAdmin(async (req) => {
   return shopDoc.data().owner_id;
 }), validate(updateOrderStatusSchema), async (req, res) => {
   try {
-    const doc = req.resourceDoc || await col.doc(req.params.id).get();
+    const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
 
+    const currentStatus = doc.data().status || 'pending';
     const { status } = req.body;
+
+    const allowed = VALID_TRANSITIONS[currentStatus] || [];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ error: `Transición inválida de ${currentStatus} a ${status}` });
+    }
 
     // Agregar el nuevo estado al historial
     const status_history = doc.data().status_history || [];

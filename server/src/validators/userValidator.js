@@ -21,7 +21,7 @@ const updateUserSchema = z.object({
   name: z.string().optional(),
   email: z.string().email('email inválido').optional(),
   phone: z.string().optional(),
-  roles: z.array(z.enum(VALID_ROLES)).optional(),
+  roles: z.array(z.enum(VALID_ROLES)).min(1).optional(),
   isActive: z.boolean().optional(),
 }).refine(data => Object.keys(data).length > 0, {
   message: 'Debe enviar al menos un campo para actualizar',
