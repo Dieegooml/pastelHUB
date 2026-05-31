@@ -39,6 +39,7 @@ PastelHub es una plataforma web tipo Rappi, pero especializada exclusivamente en
 - ✅ **Flujo de aprobación** — las nuevas pastelerías requieren validación antes de publicarse
 - 🛡️ **Moderación de contenido** — revisión de reseñas, reportes y gestión de disputas
 - 🔄 **Recuperación de contraseña** — flujo completo con Firebase (sin backend propio)
+- 🤖 **Chatbot con IA** — asistente virtual impulsado por Gemini API para consultas sobre pedidos, productos y soporte (próximamente)
 
 ---
 
@@ -672,6 +673,43 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 5. Órdenes por estado con barras de progreso
 6. Top 10 productos más vendidos
 7. Ingresos por método de pago
+
+---
+
+## Próximamente
+
+### 🤖 Chatbot con IA (Gemini API)
+
+Chatbot conversacional con inteligencia artificial que permite a clientes y dueños resolver dudas sin salir de la plataforma.
+
+#### Endpoints planeados
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/api/chat/sessions` | Crear nueva sesión de chat |
+| `GET` | `/api/chat/sessions` | Listar sesiones del usuario |
+| `GET` | `/api/chat/sessions/:id` | Obtener sesión con mensajes |
+| `POST` | `/api/chat/sessions/:id/messages` | Enviar mensaje y recibir respuesta IA |
+| `DELETE` | `/api/chat/sessions/:id` | Eliminar sesión |
+
+#### Stack planeado
+
+| Capa | Tecnología |
+|------|-----------|
+| Backend | Router Express en `server/src/routes/chat.js` |
+| IA | Google Gemini API (`@google/generative-ai`) — 60 req/min gratis |
+| Contexto | Firestore: datos del usuario, pedidos activos, productos |
+| Frontend | Burbuja flotante + panel lateral en todas las páginas |
+| Almacenamiento | Colección `chatSessions/{id}/messages` en Firestore |
+
+#### Variables de entorno
+
+```env
+# server/.env
+GEMINI_API_KEY="api_key_de_Google_AI_Studio"
+```
+
+> La API key se obtiene gratis en [Google AI Studio](https://makersuite.google.com/app/apikey). Sin ella, el chatbot funcionará con respuestas predefinidas como fallback.
 
 ---
 
