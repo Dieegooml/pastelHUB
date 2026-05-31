@@ -21,4 +21,10 @@ const updatePaymentSchema = z.object({
   message: 'Debe enviar al menos un campo para actualizar',
 });
 
-module.exports = { createPaymentSchema, updatePaymentSchema };
+const updatePaymentStatusSchema = z.object({
+  paymentStatus: z.enum(['pending', 'paid', 'failed', 'refunded'], {
+    errorMap: () => ({ message: 'Estado inválido. Válidos: pending, paid, failed, refunded' }),
+  }),
+});
+
+module.exports = { createPaymentSchema, updatePaymentSchema, updatePaymentStatusSchema };

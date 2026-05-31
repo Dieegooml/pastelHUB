@@ -251,6 +251,10 @@ function makeDocRef(data, subcolSnapshot) {
     add: jest.fn().mockResolvedValue({ id: 'msg-new' }),
     orderBy: jest.fn().mockReturnThis(),
     get: jest.fn().mockResolvedValue(subcolSnapshot || { docs: [], empty: true }),
+    where: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    offset: jest.fn().mockReturnThis(),
+    count: jest.fn(() => ({ get: jest.fn().mockResolvedValue({ data: () => ({ count: subcolSnapshot?.docs?.length || 0 }) }) })),
   };
   return {
     exists: true,

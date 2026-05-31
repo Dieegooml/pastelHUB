@@ -3,7 +3,7 @@ const router = express.Router();
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireCustomer, requireOwnerOrAdmin, requireSelfOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
-const { createOrderSchema } = require('../validators/orderValidator');
+const { createOrderSchema, updateOrderStatusSchema, updateOrderPaymentStatusSchema } = require('../validators/orderValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
 
 const col = db.collection('orders');
@@ -310,15 +310,12 @@ router.patch('/:id/status', verifyToken, requireOwnerOrAdmin(async (req) => {
   const shopDoc = await db.collection('pastryShops').doc(shopId).get();
   if (!shopDoc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   return shopDoc.data().owner_id;
-}), async (req, res) => {
+}), validate(updateOrderStatusSchema), async (req, res) => {
   try {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
 
     const { status } = req.body;
-    if (!VALID_STATUSES.includes(status)) {
-      return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
-    }
 
     // Agregar el nuevo estado al historial
     const status_history = doc.data().status_history || [];
@@ -337,15 +334,12 @@ router.patch('/:id/status', verifyToken, requireOwnerOrAdmin(async (req) => {
 });
 
 // PATCH actualizar estado del pago
-router.patch('/:id/payment-status', verifyToken, requireAdmin, async (req, res) => {
+router.patch('/:id/payment-status', verifyToken, requireAdmin, validate(updateOrderPaymentStatusSchema), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
 
     const { status, transaction_ref } = req.body;
-    if (!VALID_PAYMENT_STATUSES.includes(status)) {
-      return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_PAYMENT_STATUSES.join(', ')}` });
-    }
 
     const payment = doc.data().payment || {};
     const updatedPayment = {

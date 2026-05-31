@@ -18,4 +18,10 @@ const replySchema = z.object({
   ownerReply: z.string().min(1, 'ownerReply es requerido'),
 });
 
-module.exports = { createReviewSchema, updateReviewSchema, replySchema };
+const reviewStatusSchema = z.object({
+  status: z.enum(['pending', 'approved', 'rejected'], {
+    errorMap: () => ({ message: 'Estado inválido. Válidos: pending, approved, rejected' }),
+  }),
+});
+
+module.exports = { createReviewSchema, updateReviewSchema, replySchema, reviewStatusSchema };

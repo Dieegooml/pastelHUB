@@ -3,7 +3,7 @@ const router = express.Router();
 const { db } = require('../config/firebase');
 const { verifyToken, requireOwnerOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
-const { createProductSchema, updateProductSchema } = require('../validators/productValidator');
+const { createProductSchema, updateProductSchema, updateProductAvailabilitySchema, variantSchema, updateVariantSchema } = require('../validators/productValidator');
 const { mapProductFromRequest, mapProductToResponse } = require('../utils/mappers');
 const { paginate } = require('../utils/paginate');
 
@@ -125,15 +125,12 @@ router.patch('/:id/availability', verifyToken, requireOwnerOrAdmin(async (req) =
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw Object.assign(new Error('La pastelería no existe'), { status: 404 });
   return shopDoc.data().owner_id;
-}), async (req, res) => {
+}), validate(updateProductAvailabilitySchema), async (req, res) => {
   try {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const { is_available } = req.body;
-    if (typeof is_available !== 'boolean') {
-      return res.status(400).json({ error: 'is_available debe ser true o false' });
-    }
 
     await col.doc(req.params.id).update({
       is_available,
@@ -186,16 +183,12 @@ router.post('/:id/variants', verifyToken, requireOwnerOrAdmin(async (req) => {
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw Object.assign(new Error('La pastelería no existe'), { status: 404 });
   return shopDoc.data().owner_id;
-}), async (req, res) => {
+}), validate(variantSchema), async (req, res) => {
   try {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const { type, value, extra_price } = req.body;
-    if (!type || !value) {
-      return res.status(400).json({ error: 'type y value son requeridos' });
-    }
-
     const variants   = doc.data().variants || [];
     const variant_id = `var_${Date.now()}`;
     const newVariant = {
@@ -226,7 +219,7 @@ router.put('/:id/variants/:variantId', verifyToken, requireOwnerOrAdmin(async (r
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw Object.assign(new Error('La pastelería no existe'), { status: 404 });
   return shopDoc.data().owner_id;
-}), async (req, res) => {
+}), validate(updateVariantSchema), async (req, res) => {
   try {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });

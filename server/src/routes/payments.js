@@ -3,7 +3,7 @@ const router = express.Router();
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireCustomer } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
-const { createPaymentSchema, updatePaymentSchema } = require('../validators/paymentValidator');
+const { createPaymentSchema, updatePaymentSchema, updatePaymentStatusSchema } = require('../validators/paymentValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
 const { generateInvoiceFromPayment } = require('./invoices');
 
@@ -120,15 +120,12 @@ router.post('/', verifyToken, requireCustomer, validate(createPaymentSchema), as
 });
 
 // PATCH actualizar estado del pago
-router.patch('/:id/status', verifyToken, requireAdmin, async (req, res) => {
+router.patch('/:id/status', verifyToken, requireAdmin, validate(updatePaymentStatusSchema), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pago no encontrado' });
 
     const { paymentStatus } = req.body;
-    if (!VALID_STATUSES.includes(paymentStatus)) {
-      return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
-    }
 
     const updates = {
       paymentStatus,

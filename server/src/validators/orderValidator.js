@@ -28,4 +28,20 @@ const createOrderSchema = z.object({
   }),
 });
 
-module.exports = { createOrderSchema };
+const VALID_STATUSES = ['pending', 'confirmed', 'preparing', 'on_the_way', 'delivered', 'cancelled'];
+const VALID_PAYMENT_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
+
+const updateOrderStatusSchema = z.object({
+  status: z.enum(VALID_STATUSES, {
+    errorMap: () => ({ message: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` }),
+  }),
+});
+
+const updateOrderPaymentStatusSchema = z.object({
+  status: z.enum(VALID_PAYMENT_STATUSES, {
+    errorMap: () => ({ message: `Estado inválido. Válidos: ${VALID_PAYMENT_STATUSES.join(', ')}` }),
+  }),
+  transaction_ref: z.string().optional(),
+});
+
+module.exports = { createOrderSchema, updateOrderStatusSchema, updateOrderPaymentStatusSchema };

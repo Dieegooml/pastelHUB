@@ -3,7 +3,7 @@ const router = express.Router();
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireModerator, requireCustomer, requireSelfOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
-const { createReviewSchema, updateReviewSchema, replySchema } = require('../validators/reviewValidator');
+const { createReviewSchema, updateReviewSchema, replySchema, reviewStatusSchema } = require('../validators/reviewValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
 const { createAuditLog } = require('../utils/auditLog');
 const { notifyUser } = require('../utils/autoNotify');
@@ -130,15 +130,12 @@ router.post('/', verifyToken, requireCustomer, validate(createReviewSchema), asy
 });
 
 // PATCH moderar reseña (aprobar o rechazar)
-router.patch('/:id/status', verifyToken, requireModerator, async (req, res) => {
+router.patch('/:id/status', verifyToken, requireModerator, validate(reviewStatusSchema), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Reseña no encontrada' });
 
     const { status } = req.body;
-    if (!VALID_STATUSES.includes(status)) {
-      return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
-    }
 
     await col.doc(req.params.id).update({ status });
 

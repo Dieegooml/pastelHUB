@@ -3,7 +3,7 @@ const router = express.Router();
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireOwnerOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
-const { createShopSchema, updateShopSchema } = require('../validators/shopValidator');
+const { createShopSchema, updateShopSchema, shopStatusSchema, scheduleSchema, updateScheduleSchema, categorySchema, updateCategorySchema } = require('../validators/shopValidator');
 const { mapShopToResponse, mapShopFromRequest } = require('../utils/mappers');
 const { paginate } = require('../utils/paginate');
 const { createAuditLog } = require('../utils/auditLog');
@@ -96,16 +96,12 @@ router.put('/:id', verifyToken, (req, res, next) => {
 });
 
 // PATCH cambiar estado de aprobación
-router.patch('/:id/status', verifyToken, requireAdmin, async (req, res) => {
+router.patch('/:id/status', verifyToken, requireAdmin, validate(shopStatusSchema), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
 
     const { status } = req.body;
-    const VALID = ['pending', 'approved', 'rejected', 'suspended'];
-    if (!VALID.includes(status)) {
-      return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID.join(', ')}` });
-    }
 
     await col.doc(req.params.id).update({ status, updatedAt: new Date().toISOString() });
 
@@ -194,21 +190,12 @@ router.post('/:id/schedules', verifyToken, requireOwnerOrAdmin(async (req) => {
   if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
-}), async (req, res) => {
+}), validate(scheduleSchema), async (req, res) => {
   try {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
 
     const { day, open_time, close_time } = req.body;
-    if (!day || !open_time || !close_time) {
-      return res.status(400).json({ error: 'day, open_time y close_time son requeridos' });
-    }
-
-    const VALID_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    if (!VALID_DAYS.includes(day)) {
-      return res.status(400).json({ error: `day inválido. Válidos: ${VALID_DAYS.join(', ')}` });
-    }
-
     const schedules = doc.data().schedules || [];
 
     // No permitir duplicar el mismo día
@@ -236,7 +223,7 @@ router.put('/:id/schedules/:day', verifyToken, requireOwnerOrAdmin(async (req) =
   if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
-}), async (req, res) => {
+}), validate(updateScheduleSchema), async (req, res) => {
   try {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
@@ -311,16 +298,12 @@ router.post('/:id/categories', verifyToken, requireOwnerOrAdmin(async (req) => {
   if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
-}), async (req, res) => {
+}), validate(categorySchema), async (req, res) => {
   try {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
 
     const { name, image_url } = req.body;
-    if (!name) {
-      return res.status(400).json({ error: 'name es requerido' });
-    }
-
     const categories   = doc.data().categories || [];
     const category_id  = `cat_${Date.now()}`;
     const newCategory  = { category_id, name, image_url: image_url || '' };
@@ -344,7 +327,7 @@ router.put('/:id/categories/:categoryId', verifyToken, requireOwnerOrAdmin(async
   if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
-}), async (req, res) => {
+}), validate(updateCategorySchema), async (req, res) => {
   try {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });

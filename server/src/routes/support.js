@@ -167,7 +167,7 @@ router.post('/tickets/:id/messages', verifyToken, validate(sendMessageSchema), a
   }
 });
 
-// GET — mensajes de un ticket
+// GET — mensajes de un ticket (paginados)
 router.get('/tickets/:id/messages', verifyToken, async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
@@ -178,12 +178,7 @@ router.get('/tickets/:id/messages', verifyToken, async (req, res) => {
       return res.status(403).json({ error: 'No tienes permiso' });
     }
 
-    const snap = await doc.ref.collection('messages')
-      .orderBy('createdAt', 'asc')
-      .get();
-
-    const messages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json({ data: messages });
+    await tryPaginate(res, doc.ref.collection('messages'), req.query, { orderBy: 'createdAt', orderDir: 'asc' }, 'Error al obtener mensajes');
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener mensajes' });
   }

@@ -34,4 +34,17 @@ const addressSchema = z.object({
   is_default: z.boolean().optional().default(false),
 });
 
-module.exports = { createUserSchema, updateUserSchema, addressSchema };
+const updateUserStatusSchema = z.object({
+  isActive: z.boolean('isActive debe ser true o false'),
+});
+
+const updateUserAddressSchema = z.object({
+  street: z.string().optional(),
+  city: z.string().optional(),
+  district: z.string().optional(),
+  is_default: z.boolean().optional(),
+}).refine(data => Object.keys(data).length > 0, {
+  message: 'Debe enviar al menos un campo',
+});
+
+module.exports = { createUserSchema, updateUserSchema, addressSchema, updateUserStatusSchema, updateUserAddressSchema };

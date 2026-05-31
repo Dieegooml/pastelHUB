@@ -3,7 +3,7 @@ const router = express.Router();
 const { db, admin } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireSelfOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
-const { createUserSchema, updateUserSchema, addressSchema } = require('../validators/userValidator');
+const { createUserSchema, updateUserSchema, addressSchema, updateUserStatusSchema, updateUserAddressSchema } = require('../validators/userValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
 
 const col = db.collection('users');
@@ -104,15 +104,12 @@ router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // PATCH activar / desactivar usuario
-router.patch('/:id/status', verifyToken, requireAdmin, async (req, res) => {
+router.patch('/:id/status', verifyToken, requireAdmin, validate(updateUserStatusSchema), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     const { isActive } = req.body;
-    if (typeof isActive !== 'boolean') {
-      return res.status(400).json({ error: 'isActive debe ser true o false' });
-    }
 
     await admin.auth().updateUser(req.params.id, { disabled: !isActive });
     await col.doc(req.params.id).update({ isActive, updatedAt: new Date().toISOString() });
@@ -173,7 +170,7 @@ router.post('/:id/addresses', verifyToken, requireSelfOrAdmin(), validate(addres
 });
 
 // PUT actualizar dirección (propio usuario o admin)
-router.put('/:id/addresses/:addressId', verifyToken, requireSelfOrAdmin(), async (req, res) => {
+router.put('/:id/addresses/:addressId', verifyToken, requireSelfOrAdmin(), validate(updateUserAddressSchema), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });

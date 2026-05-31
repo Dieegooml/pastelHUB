@@ -26,4 +26,22 @@ const updateProductSchema = z.object({
   message: 'Debe enviar al menos un campo para actualizar',
 });
 
-module.exports = { createProductSchema, updateProductSchema };
+const updateProductAvailabilitySchema = z.object({
+  is_available: z.boolean('is_available debe ser true o false'),
+});
+
+const variantSchema = z.object({
+  type: z.string().min(1, 'type es requerido'),
+  value: z.string().min(1, 'value es requerido'),
+  extra_price: z.union([z.number(), z.string()]).optional().default(0),
+});
+
+const updateVariantSchema = z.object({
+  type: z.string().optional(),
+  value: z.string().optional(),
+  extra_price: z.union([z.number(), z.string()]).optional(),
+}).refine(data => Object.keys(data).length > 0, {
+  message: 'Debe enviar al menos un campo',
+});
+
+module.exports = { createProductSchema, updateProductSchema, updateProductAvailabilitySchema, variantSchema, updateVariantSchema };
