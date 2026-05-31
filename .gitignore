@@ -72,6 +72,7 @@ server/serviceAccountKey.json
 
 # Production build
 server/dist/
+client/dist/
 
 # Firestore backup files
 server/backups/
