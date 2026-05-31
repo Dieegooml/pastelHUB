@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const PDFDocument = require('pdfkit');
 const { db } = require('../config/firebase');
-const { verifyToken, requireAdmin, requireModerator, requireOwnerOrAdmin, requireSelfOrAdmin } = require('../middlewares/auth');
+const { verifyToken, requireAdmin, requireOwnerOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { generateInvoiceSchema, updateInvoiceStatusSchema } = require('../validators/invoiceValidator');
 const { tryPaginate } = require('../utils/paginate');
@@ -21,10 +21,16 @@ async function getNextInvoiceNumber() {
   return `INV-${String(result).padStart(6, '0')}`;
 }
 
-function canViewInvoice(roles, uid, invoice) {
+async function canViewInvoice(req, invoice) {
+  const roles = req.user?.roles || [];
+  const uid = req.user.uid;
   if (roles.includes('admin')) return true;
   if (roles.includes('moderator')) return true;
   if (invoice.customerId === uid) return true;
+  if (roles.includes('owner') && invoice.shop_id) {
+    const shopDoc = await db.collection('pastryShops').doc(invoice.shop_id).get();
+    if (shopDoc.exists && shopDoc.data().owner_id === uid) return true;
+  }
   return false;
 }
 
@@ -116,8 +122,7 @@ router.get('/order/:orderId', verifyToken, async (req, res) => {
     const doc = snap.docs[0];
     const invoice = { id: doc.id, ...doc.data() };
 
-    const roles = req.user?.roles || [];
-    if (!canViewInvoice(roles, req.user.uid, invoice)) {
+    if (!(await canViewInvoice(req, invoice))) {
       return res.status(403).json({ error: 'No tienes permiso para ver esta factura' });
     }
 
@@ -134,9 +139,8 @@ router.get('/:id', verifyToken, async (req, res) => {
     if (!doc.exists) return res.status(404).json({ error: 'Factura no encontrada' });
 
     const invoice = { id: doc.id, ...doc.data() };
-    const roles = req.user?.roles || [];
 
-    if (!canViewInvoice(roles, req.user.uid, invoice)) {
+    if (!(await canViewInvoice(req, invoice))) {
       return res.status(403).json({ error: 'No tienes permiso para ver esta factura' });
     }
 
@@ -153,9 +157,8 @@ router.get('/:id/pdf', verifyToken, async (req, res) => {
     if (!doc.exists) return res.status(404).json({ error: 'Factura no encontrada' });
 
     const invoice = { id: doc.id, ...doc.data() };
-    const roles = req.user?.roles || [];
 
-    if (!canViewInvoice(roles, req.user.uid, invoice)) {
+    if (!(await canViewInvoice(req, invoice))) {
       return res.status(403).json({ error: 'No tienes permiso para descargar esta factura' });
     }
 

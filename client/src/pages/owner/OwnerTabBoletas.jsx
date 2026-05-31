@@ -18,6 +18,7 @@ export default function OwnerTabBoletas({ selectedShop, setError, setSuccess }) 
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [downloading, setDownloading] = useState(null);
 
   useEffect(() => {
     if (!selectedShop?.id) return;
@@ -37,10 +38,15 @@ export default function OwnerTabBoletas({ selectedShop, setError, setSuccess }) 
     return invoices.filter((i) => i.status === filter);
   }, [invoices, filter]);
 
-  const handleDownload = (id) => {
-    const token = localStorage.getItem('token');
-    const url = invoicesService.downloadPdf(id);
-    window.open(token ? `${url}?token=${token}` : url, '_blank');
+  const handleDownload = async (id) => {
+    setDownloading(id);
+    try {
+      await invoicesService.downloadPdf(id);
+    } catch (err) {
+      setError(err.message || 'Error al descargar PDF');
+    } finally {
+      setDownloading(null);
+    }
   };
 
   const badge = (status) => {
@@ -95,11 +101,12 @@ export default function OwnerTabBoletas({ selectedShop, setError, setSuccess }) 
                 </div>
               </div>
               {inv.status === 'issued' && (
-                <button onClick={() => handleDownload(inv.id)} style={{
+                <button onClick={() => handleDownload(inv.id)} disabled={downloading === inv.id} style={{
                   padding: '6px 14px', background: colors.accent, color: '#fff', border: 'none',
                   borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: font.body,
+                  opacity: downloading === inv.id ? 0.6 : 1,
                 }}>
-                  PDF
+                  {downloading === inv.id ? '...' : 'PDF'}
                 </button>
               )}
             </motion.div>

@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import { colors, font, badge as badgeStyle, cardStyle } from '../../styles/theme';
@@ -21,10 +20,10 @@ const formatDate = (ts) => {
 };
 
 export default function Invoices() {
-  const navigate = useNavigate();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [downloading, setDownloading] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -46,12 +45,16 @@ export default function Invoices() {
     return <span style={badgeStyle(c.bg, c.color)}>{STATUS_TRANS[status] || status}</span>;
   };
 
-  const handleDownload = (e, id) => {
+  const handleDownload = async (e, id) => {
     e.stopPropagation();
-    const token = localStorage.getItem('token');
-    const url = invoicesService.downloadPdf(id);
-    const fullUrl = token ? `${url}?token=${token}` : url;
-    window.open(fullUrl, '_blank');
+    setDownloading(id);
+    try {
+      await invoicesService.downloadPdf(id);
+    } catch (err) {
+      console.error('Error al descargar PDF:', err.message);
+    } finally {
+      setDownloading(null);
+    }
   };
 
   return (
@@ -115,11 +118,12 @@ export default function Invoices() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                   {inv.status === 'issued' && (
-                    <button onClick={(e) => handleDownload(e, inv.id)} style={{
+                    <button onClick={(e) => handleDownload(e, inv.id)} disabled={downloading === inv.id} style={{
                       padding: '6px 14px', background: colors.accent, color: '#fff', border: 'none',
                       borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: font.body,
+                      opacity: downloading === inv.id ? 0.6 : 1,
                     }}>
-                      Descargar PDF
+                      {downloading === inv.id ? 'Descargando...' : 'Descargar PDF'}
                     </button>
                   )}
                   <span style={{ color: colors.textMuted, fontSize: '18px' }}>→</span>

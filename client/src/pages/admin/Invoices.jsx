@@ -1,4 +1,4 @@
-import { useEffect, useState, Fragment, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import AdminNav from './AdminNav';
@@ -30,13 +30,14 @@ export default function Invoices() {
   const [newStatus, setNewStatus] = useState({});
   const [orderId, setOrderId] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [downloading, setDownloading] = useState(null);
 
   const HEADERS = ['Boleta', 'Fecha', 'Pastelería', 'Cliente', 'Total', 'Estado', 'Acciones'];
 
   const load = async () => {
     try {
       setLoading(true);
-      const res = filter === 'all' ? await invoicesService.getAll() : await invoicesService.getAll();
+      const res = await invoicesService.getAll();
       let list = res?.data || [];
       if (filter !== 'all') list = list.filter((i) => i.status === filter);
       setInvoices(list);
@@ -66,10 +67,15 @@ export default function Invoices() {
     } catch (e) { setError('Error al actualizar estado'); }
   };
 
-  const handleDownload = (id) => {
-    const token = localStorage.getItem('token');
-    const url = invoicesService.downloadPdf(id);
-    window.open(token ? `${url}?token=${token}` : url, '_blank');
+  const handleDownload = async (id) => {
+    setDownloading(id);
+    try {
+      await invoicesService.downloadPdf(id);
+    } catch (err) {
+      setError(err.message || 'Error al descargar PDF');
+    } finally {
+      setDownloading(null);
+    }
   };
 
   const statusBadge = (s) => {
@@ -151,14 +157,15 @@ export default function Invoices() {
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                             {inv.status === 'issued' && (
-                              <button onClick={() => handleDownload(inv.id)} style={{
+                              <button onClick={() => handleDownload(inv.id)} disabled={downloading === inv.id} style={{
                                 padding: '4px 12px', background: colors.accent, color: '#fff', border: 'none',
                                 borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body,
-                              }}>PDF</button>
+                                opacity: downloading === inv.id ? 0.6 : 1,
+                              }}>{downloading === inv.id ? '...' : 'PDF'}</button>
                             )}
                             <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                               <select style={{ ...smallSelect, height: '30px', fontSize: '11px' }} value={newStatus[inv.id] || ''} onChange={(e) => setNewStatus((p) => ({ ...p, [inv.id]: e.target.value }))}>
-                                <option value="">Anular</option>
+                                <option value="">—</option>
                                 <option value="cancelled">Anular</option>
                               </select>
                               <button onClick={() => handleUpdateStatus(inv.id)} disabled={!newStatus[inv.id]} style={{
