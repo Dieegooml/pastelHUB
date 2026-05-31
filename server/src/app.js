@@ -1,5 +1,4 @@
 require('dotenv').config();
-const path = require('path');
 const compression = require('compression');
 const express = require('express');
 const cors = require('cors');
@@ -7,13 +6,15 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 // Configuración de CORS
+const clientUrl = process.env.CLIENT_URL || 'http://localhost';
 const corsOptions = {
   origin: [
-    'http://localhost:5173',        // desarrollo React/Vite
-    'http://localhost:3000',        // alternativo desarrollo
-    'http://localhost:3001',        // backend
-    // agregar dominio de producción cuando se despliegue
-  ],
+    clientUrl,
+    'http://localhost',
+    'http://localhost:80',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ].filter(Boolean),
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -73,16 +74,6 @@ app.use('/api/support', require('./routes/support'));
 // Ruta para salud del servidor
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
-});
-
-// Servir frontend estático (producción)
-const distPath = path.join(__dirname, '../../client/dist');
-app.use(express.static(distPath));
-
-// SPA fallback: servir index.html para cualquier ruta que no sea API
-app.use((req, res, next) => {
-  if (req.path.startsWith('/api/') || req.path.startsWith('/.')) return next();
-  res.sendFile(path.join(distPath, 'index.html'), (err) => { if (err) next(); });
 });
 
 // Manejo de rutas inexistentes (solo API)
