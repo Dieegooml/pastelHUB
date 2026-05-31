@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { reviewsService } from '../../services/reviewsService';
 import Navbar from '../../components/Navbar';
 import AdminNav from './AdminNav';
+import ModeratorNav from '../moderator/ModeratorNav';
+import { useAuth } from '../../context/AuthContext';
 import {
   colors, font, inputStyle,
   btnSmallPrimary, btnDanger, btnGhost,
@@ -55,6 +57,8 @@ const cellStyle = { padding: '12px 16px' };
 const tdText = (size = '13px', extra = {}) => ({ ...cellStyle, fontSize: size, fontFamily: font.body, ...extra });
 
 export default function Reviews() {
+  const { user } = useAuth();
+  const isPureModerator = user?.roles?.includes('moderator') && !user?.roles?.includes('admin');
   const [reviews, setReviews] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -161,7 +165,7 @@ export default function Reviews() {
 
         <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '24px' }} />
 
-        <div style={{ marginBottom: '16px' }}><AdminNav /></div>
+        <div style={{ marginBottom: '16px' }}>{isPureModerator ? <ModeratorNav /> : <AdminNav />}</div>
 
         {success && (
           <motion.div
@@ -300,12 +304,16 @@ export default function Reviews() {
                                 <button onClick={() => handleModerate(r.id, 'rejected')} style={btnDanger}>
                                   Rechazar
                                 </button>
-                                <button onClick={() => handleDelete(r.id)} style={btnGhost}>
-                                  Eliminar
-                                </button>
-                                <button onClick={() => setExpandedId(expanded ? null : r.id)} style={{ ...btnGhost, fontSize: '11px' }}>
-                                  {expanded ? '▲' : '▼'} Responder
-                                </button>
+                                {!isPureModerator && (
+                                  <button onClick={() => handleDelete(r.id)} style={btnGhost}>
+                                    Eliminar
+                                  </button>
+                                )}
+                                {!isPureModerator && (
+                                  <button onClick={() => setExpandedId(expanded ? null : r.id)} style={{ ...btnGhost, fontSize: '11px' }}>
+                                    {expanded ? '▲' : '▼'} Responder
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </motion.tr>

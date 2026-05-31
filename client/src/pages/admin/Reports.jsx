@@ -2,6 +2,8 @@ import { useEffect, useState, Fragment } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import AdminNav from './AdminNav';
+import ModeratorNav from '../moderator/ModeratorNav';
+import { useAuth } from '../../context/AuthContext';
 import { colors, font, inputStyle, selectStyle, tableHeaderStyle, btnSmallPrimary, btnDanger, badge as badgeStyle, statusTab } from '../../styles/theme';
 import { reportsService } from '../../services/reportsService';
 
@@ -22,6 +24,8 @@ const stagger = {
 };
 
 export default function Reports() {
+  const { user } = useAuth();
+  const isPureModerator = user?.roles?.includes('moderator') && !user?.roles?.includes('admin');
   const [reports, setReports] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [targetFilter, setTargetFilter] = useState('all');
@@ -69,7 +73,7 @@ export default function Reports() {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
         <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '24px' }}>Reportes</h2>
         <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.2rem' }} />
-        <div style={{ marginBottom: '16px' }}><AdminNav /></div>
+        <div style={{ marginBottom: '16px' }}>{isPureModerator ? <ModeratorNav /> : <AdminNav />}</div>
 
         {success && <div style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
         {error && <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}

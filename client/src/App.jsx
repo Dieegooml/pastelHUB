@@ -55,9 +55,9 @@ export default function App() {
           <Route path="/admin/shops" element={<ProtectedRoute role="admin"><Shops /></ProtectedRoute>} />
           <Route path="/admin/shops/:shopId/products" element={<ProtectedRoute role="admin"><Products /></ProtectedRoute>} />
           <Route path="/admin/orders" element={<ProtectedRoute role="admin"><Orders /></ProtectedRoute>} />
-          <Route path="/admin/reviews" element={<ProtectedRoute role="admin"><Reviews /></ProtectedRoute>} />
+          <Route path="/admin/reviews" element={<ProtectedRoute role={['moderator', 'admin']}><Reviews /></ProtectedRoute>} />
           <Route path="/admin/customers" element={<ProtectedRoute role="admin"><Customers /></ProtectedRoute>} />
-          <Route path="/admin/reports" element={<ProtectedRoute role="admin"><Reports /></ProtectedRoute>} />
+          <Route path="/admin/reports" element={<ProtectedRoute role={['moderator', 'admin']}><Reports /></ProtectedRoute>} />
           <Route path="/admin/notifications" element={<ProtectedRoute role="admin"><Notifications /></ProtectedRoute>} />
           <Route path="/admin/payments" element={<ProtectedRoute role="admin"><Payments /></ProtectedRoute>} />
           <Route path="/admin/promotions" element={<ProtectedRoute role="admin"><Promotions /></ProtectedRoute>} />
