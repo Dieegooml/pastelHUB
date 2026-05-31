@@ -5,6 +5,8 @@ const { verifyToken, requireAdmin, requireModerator } = require('../middlewares/
 const { validate } = require('../middlewares/validate');
 const { createReportSchema, assignReportSchema, updateReportStatusSchema, editReportSchema } = require('../validators/reportValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
+const { createAuditLog } = require('../utils/auditLog');
+const { notifyUser } = require('../utils/autoNotify');
 
 const col = db.collection('reports');
 
@@ -153,6 +155,16 @@ router.patch('/:id/assign', verifyToken, validate(assignReportSchema), async (re
     }
 
     await col.doc(req.params.id).update({ assignedTo: moderatorId });
+
+    await createAuditLog({
+      action: 'report.assigned',
+      performedBy: req.user.uid,
+      targetType: 'report',
+      targetId: req.params.id,
+      previousState: '',
+      newState: moderatorId,
+    });
+
     res.json({ id: req.params.id, assignedTo: moderatorId });
   } catch (e) {
     res.status(500).json({ error: 'Error al asignar el reporte' });
@@ -182,6 +194,24 @@ router.patch('/:id/status', verifyToken, validate(updateReportStatusSchema), asy
     };
 
     await col.doc(req.params.id).update(updates);
+
+    const action = status === 'resolved' ? 'report.resolved' : 'report.dismissed';
+    await createAuditLog({
+      action,
+      performedBy: req.user.uid,
+      targetType: 'report',
+      targetId: req.params.id,
+      previousState: doc.data().status,
+      newState: status,
+    });
+
+    // Notificar al reporter
+    await notifyUser({
+      userId: doc.data().reportedBy,
+      type: 'report_resolved',
+      message: `Tu reporte ha sido ${status === 'resolved' ? 'resuelto' : 'desestimado'}`,
+    });
+
     res.json({ id: req.params.id, ...updates });
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar estado del reporte' });

@@ -7,15 +7,17 @@ import { useAuth } from '../../context/AuthContext';
 import { colors, font, inputStyle, selectStyle, tableHeaderStyle, btnSmallPrimary, btnDanger, badge as badgeStyle, statusTab } from '../../styles/theme';
 import { reportsService } from '../../services/reportsService';
 
-const STATUSES = ['all', 'pending', 'reviewed', 'resolved', 'dismissed'];
-const STATUS_TRANSLATIONS = { pending: 'Pendiente', reviewed: 'Revisado', resolved: 'Resuelto', dismissed: 'Descartado' };
+const STATUSES = ['all', 'open', 'resolved', 'dismissed'];
+const STATUS_TRANSLATIONS = {
+  open: 'Abierto',
+  resolved: 'Resuelto',
+  dismissed: 'Descartado',
+};
 const STATUS_COLORS = {
-  pending: { bg: '#fff8e1', color: '#f59e0b' },
-  reviewed: { bg: '#e3f2fd', color: '#2196f3' },
+  open: { bg: '#fff8e1', color: '#f59e0b' },
   resolved: { bg: '#e8f5e9', color: '#2e7d32' },
   dismissed: { bg: '#fce4ec', color: '#c62828' },
 };
-const TARGET_TYPES = ['all', 'review', 'shop', 'product'];
 const TARGET_TRANSLATIONS = { all: 'Todos', review: 'Reseña', shop: 'Pastelería', product: 'Producto' };
 
 const stagger = {
@@ -26,30 +28,26 @@ const stagger = {
 export default function Reports() {
   const { user } = useAuth();
   const isPureModerator = user?.roles?.includes('moderator') && !user?.roles?.includes('admin');
+  const isMod = user?.roles?.includes('moderator') || user?.roles?.includes('admin');
   const [reports, setReports] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [targetFilter, setTargetFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [moderatorId, setModeratorId] = useState({});
+  const [selected, setSelected] = useState({});
+  const [detail, setDetail] = useState(null);
 
   const load = async () => {
     try {
       setLoading(true);
-      let data;
-      if (targetFilter !== 'all') {
-        data = await reportsService.getByTarget(targetFilter);
-      } else if (statusFilter !== 'all') {
-        data = await reportsService.getByStatus(statusFilter);
-      } else {
-        data = await reportsService.getAll();
-      }
+      const data = statusFilter === 'all'
+        ? await reportsService.getAll()
+        : await reportsService.getByStatus(statusFilter);
       setReports(data?.data || []);
     } catch (e) { console.error(e); setError('Error al cargar reportes'); } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [statusFilter, targetFilter]);
+  useEffect(() => { load(); }, [statusFilter]);
 
   const handleStatus = async (id, status) => {
     try { await reportsService.updateStatus(id, status); setSuccess(`Reporte ${STATUS_TRANSLATIONS[status]?.toLowerCase() || status}`); load(); }
@@ -57,13 +55,19 @@ export default function Reports() {
   };
 
   const handleAssign = async (id) => {
-    if (!moderatorId[id]) return;
-    try { await reportsService.assignModerator(id, moderatorId[id]); setSuccess('Moderador asignado'); setModeratorId((p) => ({ ...p, [id]: '' })); load(); }
+    if (!selected[id]) return;
+    try { await reportsService.assignModerator(id, selected[id]); setSuccess('Moderador asignado'); setSelected((p) => ({ ...p, [id]: '' })); load(); }
     catch (e) { console.error(e); setError('Error al asignar moderador'); }
   };
 
+  const handleAssignSelf = async (id) => {
+    if (!user?.uid) return;
+    try { await reportsService.assignModerator(id, user.uid); setSuccess('Reporte asignado a ti'); load(); }
+    catch (e) { console.error(e); setError('Error al asignar'); }
+  };
+
   const badge = (statusKey) => {
-    const c = STATUS_COLORS[statusKey] || STATUS_COLORS.pending;
+    const c = STATUS_COLORS[statusKey] || STATUS_COLORS.open;
     return <span style={badgeStyle(c.bg, c.color)}>{STATUS_TRANSLATIONS[statusKey] || statusKey}</span>;
   };
 
@@ -78,17 +82,10 @@ export default function Reports() {
         {success && <div style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
         {error && <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
 
-        <motion.div variants={stagger} initial="hidden" animate="visible" custom={0} style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-          {STATUSES.map((s) => (
-            <button key={s} onClick={() => { setStatusFilter(s); setTargetFilter('all'); }} style={statusTab(statusFilter === s && targetFilter === 'all')}>
-              {s === 'all' ? 'Todos' : STATUS_TRANSLATIONS[s]}
-            </button>
-          ))}
-        </motion.div>
         <motion.div variants={stagger} initial="hidden" animate="visible" custom={0} style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          {TARGET_TYPES.map((t) => (
-            <button key={t} onClick={() => { setTargetFilter(t); setStatusFilter('all'); }} style={{ ...statusTab(targetFilter === t && statusFilter === 'all'), fontSize: '11px' }}>
-              {TARGET_TRANSLATIONS[t]}
+          {STATUSES.map((s) => (
+            <button key={s} onClick={() => setStatusFilter(s)} style={statusTab(statusFilter === s)}>
+              {s === 'all' ? 'Todos' : STATUS_TRANSLATIONS[s]}
             </button>
           ))}
         </motion.div>
@@ -119,39 +116,82 @@ export default function Reports() {
                       <Fragment key={r.id}>
                         <motion.tr
                           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                          style={{ borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, transition: 'background 0.15s ease' }}
+                          style={{ borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, transition: 'background 0.15s ease', cursor: 'pointer' }}
                           onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
+                          onClick={() => setDetail(detail === r.id ? null : r.id)}
                         >
                           <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{r.id?.slice(0, 8)}</td>
-                          <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{r.target_type || '—'}</td>
-                          <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, color: colors.textSecondary }}>{r.user_id?.slice(0, 8) || '—'}</td>
+                          <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{r.targetType || '—'}</td>
+                          <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, color: colors.textSecondary }}>{r.reportedBy?.slice(0, 8) || '—'}</td>
                           <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: colors.textSecondary }} title={r.reason || ''}>{r.reason || '—'}</td>
                           <td style={{ padding: '12px 16px' }}>{badge(r.status)}</td>
-                          <td style={{ padding: '12px 16px' }}>
+                          <td style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
                             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                              {r.status === 'pending' && (
-                                <>
-                                  <button onClick={() => handleStatus(r.id, 'reviewed')} style={{ padding: '4px 12px', background: '#e3f2fd', color: '#1565c0', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body }}>Revisar</button>
-                                  <button onClick={() => handleStatus(r.id, 'dismissed')} style={btnDanger}>Descartar</button>
-                                  <input
-                                    placeholder="Moderador ID"
-                                    value={moderatorId[r.id] || ''}
-                                    onChange={(e) => setModeratorId((p) => ({ ...p, [r.id]: e.target.value }))}
-                                    style={{ padding: '4px 8px', border: `1px solid ${colors.border}`, borderRadius: '6px', fontSize: '11px', fontFamily: font.body, width: '100px', outline: 'none' }}
-                                  />
-                                  <button onClick={() => handleAssign(r.id)} style={{ padding: '4px 10px', background: colors.primary, color: '#fff', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body }}>Asignar</button>
-                                </>
-                              )}
-                              {r.status === 'reviewed' && (
+                              {r.status === 'open' && (
                                 <>
                                   <button onClick={() => handleStatus(r.id, 'resolved')} style={{ padding: '4px 12px', background: '#e8f5e9', color: '#2e7d32', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body }}>Resolver</button>
-                                  <span style={{ fontSize: '11px', color: colors.textMuted, fontFamily: font.body }}>{r.moderator_id ? `Mod: ${r.moderator_id.slice(0, 8)}` : ''}</span>
+                                  <button onClick={() => handleStatus(r.id, 'dismissed')} style={btnDanger}>Descartar</button>
+                                  {isMod && (
+                                    <button onClick={() => handleAssignSelf(r.id)} style={{ padding: '4px 10px', background: colors.primary, color: '#fff', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body }}>Asignarme</button>
+                                  )}
                                 </>
+                              )}
+                              {r.status === 'resolved' && (
+                                <span style={{ fontSize: '11px', color: colors.textMuted, fontFamily: font.body }}>
+                                  {r.assignedTo ? `Mod: ${r.assignedTo.slice(0, 8)}` : 'Sin asignar'}
+                                </span>
                               )}
                             </div>
                           </td>
                         </motion.tr>
+                        {detail === r.id && (
+                          <tr key={`${r.id}-detail`}>
+                            <td colSpan={6} style={{ padding: '0 16px 16px', background: colors.tableStripe }}>
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                transition={{ duration: 0.25 }}
+                                style={{ borderTop: `1px solid ${colors.tableBorder}`, paddingTop: '12px' }}
+                              >
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '13px', fontFamily: font.body }}>
+                                  <div>
+                                    <strong style={{ color: colors.textSecondary }}>ID completo:</strong>
+                                    <div style={{ color: colors.text, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '12px', marginTop: 2 }}>{r.id}</div>
+                                  </div>
+                                  <div>
+                                    <strong style={{ color: colors.textSecondary }}>Reportado por:</strong>
+                                    <div style={{ color: colors.text, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '12px', marginTop: 2 }}>{r.reportedBy}</div>
+                                  </div>
+                                  <div>
+                                    <strong style={{ color: colors.textSecondary }}>Target ID:</strong>
+                                    <div style={{ color: colors.text, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '12px', marginTop: 2 }}>{r.targetId}</div>
+                                  </div>
+                                  <div>
+                                    <strong style={{ color: colors.textSecondary }}>Creado:</strong>
+                                    <div style={{ color: colors.text, marginTop: 2 }}>{r.createdAt ? new Date(r.createdAt).toLocaleString() : '—'}</div>
+                                  </div>
+                                  {r.assignedTo && (
+                                    <div>
+                                      <strong style={{ color: colors.textSecondary }}>Moderador asignado:</strong>
+                                      <div style={{ color: colors.text, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '12px', marginTop: 2 }}>{r.assignedTo}</div>
+                                    </div>
+                                  )}
+                                  {r.resolvedAt && (
+                                    <div>
+                                      <strong style={{ color: colors.textSecondary }}>Resuelto en:</strong>
+                                      <div style={{ color: colors.text, marginTop: 2 }}>{new Date(r.resolvedAt).toLocaleString()}</div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div style={{ marginTop: 12, fontSize: '13px', fontFamily: font.body }}>
+                                  <strong style={{ color: colors.textSecondary }}>Motivo completo:</strong>
+                                  <div style={{ color: colors.text, marginTop: 4, padding: '8px 12px', background: colors.white, borderRadius: '8px', border: `1px solid ${colors.border}`, lineHeight: 1.6 }}>{r.reason}</div>
+                                </div>
+                              </motion.div>
+                            </td>
+                          </tr>
+                        )}
                       </Fragment>
                     ))}
                   </tbody>

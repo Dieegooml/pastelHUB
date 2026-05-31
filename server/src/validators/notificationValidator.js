@@ -1,6 +1,6 @@
 const { z } = require('zod');
 
-const VALID_TYPES = ['order_update', 'new_review', 'shop_approved', 'shop_rejected', 'shop_suspended', 'report_resolved', 'new_order', 'payment_confirmed'];
+const VALID_TYPES = ['order_update', 'new_review', 'shop_approved', 'shop_rejected', 'shop_suspended', 'report_resolved', 'new_order', 'payment_confirmed', 'review_approved', 'review_rejected'];
 
 const createNotificationSchema = z.object({
   userId: z.string().min(1, 'userId es requerido'),

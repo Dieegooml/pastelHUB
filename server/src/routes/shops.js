@@ -6,6 +6,8 @@ const { validate } = require('../middlewares/validate');
 const { createShopSchema, updateShopSchema } = require('../validators/shopValidator');
 const { mapShopToResponse, mapShopFromRequest } = require('../utils/mappers');
 const { paginate } = require('../utils/paginate');
+const { createAuditLog } = require('../utils/auditLog');
+const { notifyUser } = require('../utils/autoNotify');
 
 const col = db.collection('pastryShops');
 
@@ -106,6 +108,36 @@ router.patch('/:id/status', verifyToken, requireAdmin, async (req, res) => {
     }
 
     await col.doc(req.params.id).update({ status, updatedAt: new Date().toISOString() });
+
+    const actionMap = {
+      approved: 'shop.approved',
+      rejected: 'shop.rejected',
+      suspended: 'shop.suspended',
+    };
+    if (actionMap[status]) {
+      await createAuditLog({
+        action: actionMap[status],
+        performedBy: req.user.uid,
+        targetType: 'shop',
+        targetId: req.params.id,
+        previousState: doc.data().status,
+        newState: status,
+      });
+
+      const notifTypeMap = {
+        suspended: 'shop_suspended',
+        approved: 'shop_approved',
+        rejected: 'shop_rejected',
+      };
+      if (notifTypeMap[status]) {
+        await notifyUser({
+          userId: doc.data().owner_id,
+          type: notifTypeMap[status],
+          message: `Tu pastelería "${doc.data().name}" ha sido ${status === 'approved' ? 'aprobada' : status === 'rejected' ? 'rechazada' : 'suspendida'}`,
+        });
+      }
+    }
+
     res.json({ id: req.params.id, status });
   } catch (e) {
     res.status(500).json({ error: 'Error al cambiar estado' });

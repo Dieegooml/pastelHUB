@@ -5,6 +5,8 @@ const { verifyToken, requireAdmin, requireModerator, requireCustomer, requireSel
 const { validate } = require('../middlewares/validate');
 const { createReviewSchema, updateReviewSchema, replySchema } = require('../validators/reviewValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
+const { createAuditLog } = require('../utils/auditLog');
+const { notifyUser } = require('../utils/autoNotify');
 
 const col = db.collection('reviews');
 
@@ -142,6 +144,25 @@ router.patch('/:id/status', verifyToken, requireModerator, async (req, res) => {
 
     // Si se aprueba o rechaza, recalcular el rating de la pastelería
     await recalcShopRating(doc.data().shopId);
+
+    // Auditoría
+    const action = status === 'approved' ? 'review.approved' : 'review.rejected';
+    await createAuditLog({
+      action,
+      performedBy: req.user.uid,
+      targetType: 'review',
+      targetId: req.params.id,
+      previousState: doc.data().status,
+      newState: status,
+    });
+
+    // Notificar al autor de la reseña
+    const notifType = status === 'approved' ? 'review_approved' : 'review_rejected';
+    await notifyUser({
+      userId: doc.data().customerId,
+      type: notifType,
+      message: `Tu reseña ha sido ${status === 'approved' ? 'aprobada' : 'rechazada'} por un moderador`,
+    });
 
     res.json({ id: req.params.id, status });
   } catch (e) {

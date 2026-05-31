@@ -15,6 +15,8 @@ const TYPE_ICONS = {
   report_resolved: '📋',
   new_order: '🆕',
   payment_confirmed: '💳',
+  review_approved: '👍',
+  review_rejected: '👎',
 };
 
 const TYPE_LABELS_SHORT = {
@@ -26,6 +28,8 @@ const TYPE_LABELS_SHORT = {
   report_resolved: 'Reporte resuelto',
   new_order: 'Nueva orden',
   payment_confirmed: 'Pago confirmado',
+  review_approved: 'Reseña aprobada',
+  review_rejected: 'Reseña rechazada',
 };
 
 export default function Navbar() {
