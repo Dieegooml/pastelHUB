@@ -5,6 +5,7 @@ const { verifyToken, requireAdmin, requireCustomer } = require('../middlewares/a
 const { validate } = require('../middlewares/validate');
 const { createPaymentSchema, updatePaymentSchema } = require('../validators/paymentValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
+const { generateInvoiceFromPayment } = require('./invoices');
 
 const col = db.collection('payments');
 
@@ -136,6 +137,17 @@ router.patch('/:id/status', verifyToken, requireAdmin, async (req, res) => {
     };
 
     await col.doc(req.params.id).update(updates);
+
+    // Auto-generar factura cuando el pago se confirma
+    if (paymentStatus === 'paid') {
+      const paymentData = doc.data();
+      try {
+        await generateInvoiceFromPayment(paymentData.orderId);
+      } catch (e) {
+        console.error('Error al generar factura automática:', e.message);
+      }
+    }
+
     res.json({ id: req.params.id, ...updates });
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar estado del pago' });

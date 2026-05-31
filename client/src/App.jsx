@@ -17,6 +17,8 @@ import OwnerDashboard from "./pages/owner/OwnerDashboard";
 import Support from "./pages/customer/Support";
 import SupportNew from "./pages/customer/SupportNew";
 import SupportDetail from "./pages/customer/SupportDetail";
+import Invoices from "./pages/customer/Invoices";
+import AdminInvoices from "./pages/admin/Invoices";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
 import Shops from "./pages/admin/Shops";
@@ -49,6 +51,8 @@ export default function App() {
           <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
           <Route path="/support/new" element={<ProtectedRoute><SupportNew /></ProtectedRoute>} />
           <Route path="/support/:id" element={<ProtectedRoute><SupportDetail /></ProtectedRoute>} />
+          <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
+          <Route path="/admin/invoices" element={<ProtectedRoute role="admin"><AdminInvoices /></ProtectedRoute>} />
           <Route path="/owner" element={<ProtectedRoute role={['owner', 'admin']}><OwnerDashboard /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute role="admin"><Dashboard /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute role="admin"><Users /></ProtectedRoute>} />

@@ -9,9 +9,10 @@ import OwnerTabProducts from './OwnerTabProducts';
 import OwnerTabOrders from './OwnerTabOrders';
 import OwnerTabPromotions from './OwnerTabPromotions';
 import OwnerTabSummary from './OwnerTabSummary';
+import OwnerTabBoletas from './OwnerTabBoletas';
 
-const TABS = ['info', 'products', 'orders', 'promotions', 'summary'];
-const TAB_LABELS = { info: 'Información', products: 'Productos', orders: 'Órdenes', promotions: 'Promociones', summary: 'Resumen' };
+const TABS = ['info', 'products', 'orders', 'promotions', 'summary', 'boletas'];
+const TAB_LABELS = { info: 'Información', products: 'Productos', orders: 'Órdenes', promotions: 'Promociones', summary: 'Resumen', boletas: 'Boletas' };
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
@@ -111,6 +112,7 @@ export default function OwnerDashboard() {
             {tab === 'orders' && <OwnerTabOrders selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
             {tab === 'promotions' && <OwnerTabPromotions selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
             {tab === 'summary' && <OwnerTabSummary selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
+            {tab === 'boletas' && <OwnerTabBoletas selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
           </>
         )}
       </motion.div>

@@ -133,6 +133,10 @@ export default function Navbar() {
           Mis órdenes
         </button>
 
+        <button onClick={() => navigate('/invoices')} style={btnStyle(location.pathname.startsWith('/invoices'))}>
+          Mis boletas
+        </button>
+
         <button onClick={() => navigate('/support')} style={btnStyle(location.pathname.startsWith('/support'))}>
           Soporte
         </button>
