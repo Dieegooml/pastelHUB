@@ -70,9 +70,11 @@ export default function Support() {
     } catch (e) { console.error(e); setError('Error al asignar ticket'); }
   };
 
-  const badge = (obj, key) => {
-    const c = obj[key] || obj.default;
-    return <span style={badgeStyle(c.bg, c.color)}>{c.label}</span>;
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      await supportService.updateStatus(id, newStatus);
+      load();
+    } catch (e) { console.error(e); setError('Error al cambiar estado'); }
   };
 
   const STATUS_FILTERS = [
@@ -80,6 +82,7 @@ export default function Support() {
     { value: 'open', label: 'Abiertos' },
     { value: 'in_progress', label: 'En progreso' },
     { value: 'resolved', label: 'Resueltos' },
+    { value: 'closed', label: 'Cerrados' },
   ];
 
   return (
@@ -177,10 +180,23 @@ export default function Support() {
                         <td style={cellStyle}><span style={badgeStyle(sc.bg, sc.color)}>{STATUS_TRANSLATIONS[t.status] || t.status}</span></td>
                         {isModerator && !isMobile && <td style={tdText()}>{t.assignedTo ? <span title={t.assignedTo}>{t.assignedTo.slice(0, 8)}…</span> : <span style={{ color: '#999' }}>—</span>}</td>}
                         <td style={tdText()}>
-                          <div style={{ display: 'flex', gap: '6px' }}>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                             <button onClick={() => navigate(`/support/${t.id}`)} style={{ padding: '4px 12px', borderRadius: '99px', border: `1px solid ${colors.border}`, cursor: 'pointer', fontSize: '12px', fontFamily: font.body, background: colors.white }}>Ver</button>
-                            {isModerator && !t.assignedTo && t.status !== 'resolved' && t.status !== 'closed' && (
-                              <button onClick={() => handleAssign(t.id)} style={{ padding: '4px 12px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: font.body, background: '#e3f2fd', color: '#1565c0' }}>Asignarme</button>
+                            {isModerator && (
+                              <>
+                                {!t.assignedTo && t.status === 'open' && (
+                                  <button onClick={() => handleAssign(t.id)} style={{ padding: '4px 10px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: font.body, background: '#e3f2fd', color: '#1565c0' }}>Asignarme</button>
+                                )}
+                                {t.status === 'open' && (
+                                  <button onClick={() => handleStatusChange(t.id, 'in_progress')} style={{ padding: '4px 10px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: font.body, background: '#e3f2fd', color: '#1565c0' }}>→ Prog.</button>
+                                )}
+                                {t.status === 'open' || t.status === 'in_progress' ? (
+                                  <button onClick={() => handleStatusChange(t.id, 'resolved')} style={{ padding: '4px 10px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: font.body, background: '#e1f5ee', color: '#1D9E75' }}>Resolver</button>
+                                ) : null}
+                                {(t.status === 'resolved' || t.status === 'closed') && (
+                                  <button onClick={() => handleStatusChange(t.id, 'open')} style={{ padding: '4px 10px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: font.body, background: '#fff8e1', color: '#f59e0b' }}>Reabrir</button>
+                                )}
+                              </>
                             )}
                           </div>
                         </td>

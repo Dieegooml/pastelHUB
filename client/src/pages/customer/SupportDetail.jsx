@@ -82,11 +82,11 @@ export default function SupportDetail() {
     finally { setSending(false); }
   };
 
-  const handleResolve = async () => {
+  const handleStatus = async (newStatus) => {
     try {
-      await supportService.updateStatus(id, 'resolved');
-      setTicket((prev) => ({ ...prev, status: 'resolved' }));
-    } catch (e) { console.error(e); setError('Error al resolver ticket'); }
+      await supportService.updateStatus(id, newStatus);
+      setTicket((prev) => ({ ...prev, status: newStatus }));
+    } catch (e) { console.error(e); setError('Error al cambiar estado del ticket'); }
   };
 
   const handleAssign = async () => {
@@ -136,12 +136,20 @@ export default function SupportDetail() {
           {ticket.createdAt ? ` — ${new Date(ticket.createdAt).toLocaleString('es-PE')}` : ''}
         </p>
 
-        {isModerator && ticket.status !== 'resolved' && ticket.status !== 'closed' && (
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-            {!ticket.assignedTo && (
-              <button onClick={handleAssign} style={{ padding: '6px 16px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: font.body, background: '#e3f2fd', color: '#1565c0', fontWeight: 600 }}>Asignarme ticket</button>
+        {isModerator && (
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            {ticket.status === 'open' && !ticket.assignedTo && (
+              <button onClick={handleAssign} style={{ padding: '6px 16px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: font.body, background: '#e3f2fd', color: '#1565c0', fontWeight: 600 }}>Asignarme</button>
             )}
-            <button onClick={handleResolve} style={{ padding: '6px 16px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: font.body, background: '#e1f5ee', color: '#1D9E75', fontWeight: 600 }}>Marcar como resuelto</button>
+            {ticket.status === 'open' && (
+              <button onClick={() => handleStatus('in_progress')} style={{ padding: '6px 16px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: font.body, background: '#e3f2fd', color: '#1565c0', fontWeight: 600 }}>Marcar en progreso</button>
+            )}
+            {ticket.status === 'open' || ticket.status === 'in_progress' ? (
+              <button onClick={() => handleStatus('resolved')} style={{ padding: '6px 16px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: font.body, background: '#e1f5ee', color: '#1D9E75', fontWeight: 600 }}>Resolver</button>
+            ) : null}
+            {(ticket.status === 'resolved' || ticket.status === 'closed') && (
+              <button onClick={() => handleStatus('open')} style={{ padding: '6px 16px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: font.body, background: '#fff8e1', color: '#f59e0b', fontWeight: 600 }}>Reabrir ticket</button>
+            )}
           </div>
         )}
 
