@@ -14,7 +14,8 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 function mockResponse(ok, status, body) {
-  return { ok, status, json: () => Promise.resolve(body) };
+  const text = JSON.stringify(body);
+  return { ok, status, text: () => Promise.resolve(text), json: () => Promise.resolve(body) };
 }
 
 describe('apiService', () => {
