@@ -20,13 +20,13 @@ export default function NotFound() {
         fontFamily: font.heading, fontSize: '28px', fontWeight: 700,
         color: colors.primary, margin: '12px 0 8px',
       }}>
-        En desarrollo
+        Página no encontrada
       </h2>
       <p style={{
         fontSize: '15px', color: colors.textSecondary, margin: '0 0 32px',
         textAlign: 'center', maxWidth: '400px',
       }}>
-        Esta página aún está en desarrollo
+        La página que buscas no existe o ha sido movida
       </p>
       <button
         onClick={() => navigate('/')}

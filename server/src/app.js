@@ -1,5 +1,6 @@
 require('dotenv').config();
 const path = require('path');
+const compression = require('compression');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -40,6 +41,9 @@ const authLimiter = rateLimit({
 
 const app = express();
 
+// Compresión de respuestas
+app.use(compression());
+
 // Seguridad HTTP headers
 app.use(helmet());
 
@@ -49,8 +53,8 @@ app.use(cors(corsOptions));
 // Limiter general para todas las rutas (antes del body parser para evitar DoS)
 app.use(limiter);
 
-// Parseo de JSON
-app.use(express.json());
+// Parseo de JSON con límite de tamaño
+app.use(express.json({ limit: '10mb' }));
 
 // Rutas API
 app.use('/api/auth', authLimiter, require('./routes/auth'));

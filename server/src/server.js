@@ -12,3 +12,18 @@ server.on('error', (err) => {
   }
   process.exit(1);
 });
+
+function gracefulShutdown(signal) {
+  console.log(`\n${signal} recibido. Cerrando servidor...`);
+  server.close(() => {
+    console.log('Servidor cerrado correctamente.');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error('Forzando cierre tras 10s de espera.');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
