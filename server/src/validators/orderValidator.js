@@ -9,6 +9,7 @@ const createOrderSchema = z.object({
   shop: z.object({
     shop_id: z.string().min(1, 'shop.shop_id es requerido'),
   }),
+  delivery_type: z.enum(['delivery', 'pickup']).optional(),
   items: z.array(z.object({
     product_id: z.string().optional().default(''),
     name: z.string().optional().default(''),

@@ -6,6 +6,7 @@ const { validate } = require('../middlewares/validate');
 const {
   createTicketSchema, updateTicketStatusSchema, assignTicketSchema, sendMessageSchema,
 } = require('../validators/supportValidator');
+const { tryPaginate } = require('../utils/paginate');
 
 const col = db.collection('supportTickets');
 
@@ -57,24 +58,20 @@ router.post('/tickets', verifyToken, validate(createTicketSchema), async (req, r
 // GET — listar tickets
 // Admin/moderator: todos; customer/owner: solo propios
 router.get('/tickets', verifyToken, async (req, res) => {
-  try {
-    const roles = req.user?.roles || [];
-    let query = col.orderBy('createdAt', 'desc');
+  const roles = req.user?.roles || [];
+  const filters = [];
 
-    if (!roles.includes('admin') && !roles.includes('moderator')) {
-      query = query.where('userId', '==', req.user.uid);
-    }
-
-    if (req.query.status) {
-      query = query.where('status', '==', req.query.status);
-    }
-
-    const snap = await query.get();
-    const tickets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json({ data: tickets });
-  } catch (e) {
-    res.status(500).json({ error: 'Error al obtener tickets' });
+  if (!roles.includes('admin') && !roles.includes('moderator')) {
+    filters.push({ field: 'userId', value: req.user.uid });
   }
+
+  if (req.query.status) {
+    filters.push({ field: 'status', value: req.query.status });
+  }
+
+  await tryPaginate(res, col, req.query, {
+    orderBy: 'createdAt', orderDirection: 'desc', filters,
+  }, 'Error al obtener tickets');
 });
 
 // GET — ticket por ID

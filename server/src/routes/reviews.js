@@ -279,7 +279,7 @@ async function recalcShopRating(shopId) {
       return;
     }
 
-    const total  = snap.docs.reduce((sum, d) => sum + d.data().rating, 0);
+    const total  = snap.docs.reduce((sum, d) => sum + (d.data().rating || 0), 0);
     const avg    = parseFloat((total / snap.docs.length).toFixed(1));
     await db.collection('pastryShops').doc(shopId).update({ rating: avg });
   } catch (e) {

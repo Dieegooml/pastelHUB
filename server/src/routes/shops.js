@@ -77,7 +77,7 @@ router.put('/:id', verifyToken, (req, res, next) => {
   next();
 }, validate(updateShopSchema), requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
@@ -147,7 +147,7 @@ router.patch('/:id/status', verifyToken, requireAdmin, async (req, res) => {
 // DELETE pastelería
 router.delete('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
@@ -191,7 +191,7 @@ router.get('/:id/schedules', async (req, res) => {
 // POST agregar horario
 router.post('/:id/schedules', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
@@ -233,7 +233,7 @@ router.post('/:id/schedules', verifyToken, requireOwnerOrAdmin(async (req) => {
 // PUT actualizar horario por día
 router.put('/:id/schedules/:day', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
@@ -266,7 +266,7 @@ router.put('/:id/schedules/:day', verifyToken, requireOwnerOrAdmin(async (req) =
 // DELETE horario por día
 router.delete('/:id/schedules/:day', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
@@ -308,7 +308,7 @@ router.get('/:id/categories', async (req, res) => {
 // POST agregar categoría
 router.post('/:id/categories', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
@@ -341,7 +341,7 @@ router.post('/:id/categories', verifyToken, requireOwnerOrAdmin(async (req) => {
 // PUT actualizar categoría
 router.put('/:id/categories/:categoryId', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {
@@ -374,7 +374,7 @@ router.put('/:id/categories/:categoryId', verifyToken, requireOwnerOrAdmin(async
 // DELETE categoría
 router.delete('/:id/categories/:categoryId', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
 }), async (req, res) => {

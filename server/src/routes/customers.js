@@ -124,6 +124,22 @@ router.patch('/:id/default-address', verifyToken, requireSelfOrAdmin(), validate
   }
 });
 
+// PATCH actualizar customer (alias de PUT — mismo schema)
+router.patch('/:id', verifyToken, requireSelfOrAdmin(), validate(updateCustomerSchema), async (req, res) => {
+  try {
+    const doc = await col.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Customer no encontrado' });
+
+    const { phone } = req.body;
+    const updates = { ...(phone !== undefined && { phone }) };
+
+    await col.doc(req.params.id).update(updates);
+    res.json({ id: req.params.id, ...doc.data(), ...updates });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al actualizar el customer' });
+  }
+});
+
 // DELETE customer
 router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {

@@ -100,6 +100,7 @@ PastelHub implementa una API REST completa con **11 módulos principales** y **8
 | Método | Ruta | Descripción | Auth | Status |
 |--------|------|-------------|------|--------|
 | GET | `/orders` | Listar todas las órdenes | ✅ Admin | 200 |
+| GET | `/orders/my` | Órdenes del usuario autenticado | ✅ Customer | 200 |
 | GET | `/orders/shop/:shopId` | Órdenes por pastelería | ✅ Owner / Admin | 200 |
 | **GET** | **`/orders/shop/:shopId/summary`** | **Estadísticas de ventas** | **✅ Owner / Admin** | **200** |
 | GET | `/orders/customer/:userId` | Órdenes por cliente | ✅ Propio usuario / Admin | 200 |
@@ -110,8 +111,6 @@ PastelHub implementa una API REST completa con **11 módulos principales** y **8
 | PATCH | `/orders/:id/status` | Cambiar estado | ✅ Owner / Admin | 200, 400, 404 |
 | PATCH | `/orders/:id/payment-status` | Actualizar estado de pago | ✅ Admin | 200, 400, 404 |
 | **PATCH** | **`/orders/:id/cancel`** | **Cancelar orden pendiente** | **✅ Customer** | **200, 400, 404** |
-| PATCH | `/orders/:id/review` | Agregar reseña a orden | ✅ Customer | 200, 400, 404 |
-| PATCH | `/orders/:id/review/reply` | Responder reseña desde orden | ✅ Owner | 200, 400, 404 |
 
 ### Summary — Campos de Respuesta
 
@@ -183,6 +182,7 @@ PastelHub implementa una API REST completa con **11 módulos principales** y **8
 | GET | `/reviews/shop/:shopId` | Reseñas aprobadas de una pastelería | ✅ Público | 200 |
 | GET | `/reviews/customer/:customerId` | Reseñas de un cliente | ✅ Propio usuario / Admin | 200 |
 | GET | `/reviews/status/:status` | Filtrar por estado (moderación) | ✅ Moderator / Admin | 200, 400 |
+| GET | `/reviews/by-order/:orderId` | Reseña de una orden específica | ✅ Propio usuario / Admin | 200, 404 |
 | GET | `/reviews/:id` | Obtener una reseña | ✅ Autor / Owner / Admin | 200, 404 |
 | POST | `/reviews` | Crear reseña (auto-aprobada) | ✅ Customer | 201, 400, 404 |
 | PUT | `/reviews/:id` | Editar reseña (solo pending) | ✅ Autor / Admin | 200, 400, 404 |
@@ -245,10 +245,13 @@ PastelHub implementa una API REST completa con **11 módulos principales** y **8
 | Método | Ruta | Descripción | Auth | Status |
 |--------|------|-------------|------|--------|
 | GET | `/payments` | Listar todos los pagos | ✅ Admin | 200 |
+| GET | `/payments/status/:status` | Filtrar por estado | ✅ Admin | 200, 400 |
 | GET | `/payments/order/:orderId` | Pago de una orden | ✅ Propio usuario / Admin | 200, 404 |
 | GET | `/payments/:id` | Obtener un pago | ✅ Propio usuario / Admin | 200, 404 |
 | POST | `/payments` | Crear pago | ✅ Customer | 201, 400, 404 |
 | PUT | `/payments/:id` | Actualizar pago | ✅ Admin | 200, 404 |
+| PATCH | `/payments/:id/status` | Actualizar estado del pago | ✅ Admin | 200, 400, 404 |
+| DELETE | `/payments/:id` | Eliminar pago | ✅ Admin | 200, 400 |
 
 ---
 
@@ -260,9 +263,11 @@ PastelHub implementa una API REST completa con **11 módulos principales** y **8
 |--------|------|-------------|------|--------|
 | GET | `/customers` | Listar todos los clientes | ✅ Admin | 200 |
 | GET | `/customers/:id` | Obtener perfil de cliente | ✅ Propio usuario / Admin | 200, 404 |
+| GET | `/customers/:id/full` | Perfil con direcciones | ✅ Propio usuario / Admin | 200, 404 |
 | **POST** | **`/customers`** | **Crear perfil (auto usando req.user.uid)** | **✅ Autenticado** | **201, 400** |
 | PUT | `/customers/:id` | Actualizar perfil | ✅ Propio usuario / Admin | 200, 404 |
-| PATCH | `/customers/:id` | Actualizar parcialmente | ✅ Propio usuario / Admin | 200, 404 |
+| PATCH | `/customers/:id` | Actualizar perfil | ✅ Propio usuario / Admin | 200, 404 |
+| PATCH | `/customers/:id/default-address` | Cambiar dirección por defecto | ✅ Propio usuario / Admin | 200, 404 |
 | DELETE | `/customers/:id` | Eliminar perfil | ✅ Admin | 200, 404 |
 
 ### Sub-recursos — Addresses (Direcciones de envío)
@@ -285,6 +290,22 @@ PastelHub implementa una API REST completa con **11 módulos principales** y **8
 | POST | `/auth/sync` | Sincronizar usuario tras login (auto-crea customer) | ✅ Token | 200 |
 | GET | `/auth/me` | Obtener perfil del usuario autenticado | ✅ Token | 200 |
 | POST | `/auth/assign-role` | Asignar roles a usuario | ✅ Admin | 201, 400, 404 |
+
+---
+
+## 1️⃣2️⃣ SUPPORT TICKETS — Gestión de Tickets de Soporte
+
+### Endpoints
+
+| Método | Ruta | Descripción | Auth | Status |
+|--------|------|-------------|------|--------|
+| GET | `/support/tickets` | Listar tickets (admin/moderator: todos, customer/owner: propios) | ✅ Token | 200 |
+| GET | `/support/tickets/:id` | Obtener ticket | ✅ Token (propio / admin / moderator) | 200, 404 |
+| POST | `/support/tickets` | Crear ticket | ✅ Customer / Owner | 201, 400 |
+| POST | `/support/tickets/:id/messages` | Enviar mensaje en ticket | ✅ Token (propio / admin / moderator) | 201, 400, 404 |
+| GET | `/support/tickets/:id/messages` | Mensajes de un ticket | ✅ Token (propio / admin / moderator) | 200, 404 |
+| PATCH | `/support/tickets/:id/status` | Cambiar estado del ticket | ✅ Moderator / Admin | 200, 400, 404 |
+| PATCH | `/support/tickets/:id/assign` | Asignarse un ticket | ✅ Moderator / Admin | 200, 400, 404 |
 
 ---
 
@@ -329,6 +350,7 @@ Todos los endpoints están consumidos por servicios en `client/src/services/`:
 | `reportsService.js` | CRUD reportes + moderación | `getAll`, `getByStatus`, `getByTarget`, `getByModerator`, `getByUser`, `getById`, `create`, `update`, `delete`, `assign`, `updateStatus` |
 | `customersService.js` | CRUD clientes + direcciones | `getAll`, `getById`, `create`, `update`, `patch`, `delete`, addresses |
 | `promotionsService.js` | CRUD promociones | `getByShopPublic`, `getByShopAll`, `getById`, `create`, `update`, `toggle`, `delete` |
+| `supportService.js` | Tickets de soporte | `getTickets`, `getTicket`, `createTicket`, `updateStatus`, `assignTicket`, `sendMessage`, `getMessages` |
 
 ---
 

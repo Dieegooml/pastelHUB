@@ -50,7 +50,7 @@ router.post('/', verifyToken, (req, res, next) => {
   next();
 }, validate(createProductSchema), requireOwnerOrAdmin(async (req) => {
   const shopDoc = await db.collection('pastryShops').doc(req.body.shop_id).get();
-  if (!shopDoc.exists) throw new Error('not found');
+  if (!shopDoc.exists) throw Object.assign(new Error('La pastelería no existe'), { status: 404 });
   req.resourceDoc = shopDoc;
   return shopDoc.data().owner_id;
 }), async (req, res) => {
@@ -94,10 +94,10 @@ router.put('/:id', verifyToken, (req, res, next) => {
   next();
 }, validate(updateProductSchema), requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Producto no encontrado'), { status: 404 });
   req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
-  if (!shopDoc.exists) throw new Error('not found');
+  if (!shopDoc.exists) throw Object.assign(new Error('La pastelería no existe'), { status: 404 });
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
@@ -120,10 +120,10 @@ router.put('/:id', verifyToken, (req, res, next) => {
 // PATCH cambiar disponibilidad
 router.patch('/:id/availability', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Producto no encontrado'), { status: 404 });
   req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
-  if (!shopDoc.exists) throw new Error('not found');
+  if (!shopDoc.exists) throw Object.assign(new Error('La pastelería no existe'), { status: 404 });
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
@@ -148,10 +148,10 @@ router.patch('/:id/availability', verifyToken, requireOwnerOrAdmin(async (req) =
 // DELETE producto
 router.delete('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Producto no encontrado'), { status: 404 });
   req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
-  if (!shopDoc.exists) throw new Error('not found');
+  if (!shopDoc.exists) throw Object.assign(new Error('La pastelería no existe'), { status: 404 });
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
@@ -181,10 +181,10 @@ router.get('/:id/variants', async (req, res) => {
 // POST agregar variante
 router.post('/:id/variants', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Producto no encontrado'), { status: 404 });
   req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
-  if (!shopDoc.exists) throw new Error('not found');
+  if (!shopDoc.exists) throw Object.assign(new Error('La pastelería no existe'), { status: 404 });
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
@@ -221,10 +221,10 @@ router.post('/:id/variants', verifyToken, requireOwnerOrAdmin(async (req) => {
 // PUT actualizar variante
 router.put('/:id/variants/:variantId', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Producto no encontrado'), { status: 404 });
   req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
-  if (!shopDoc.exists) throw new Error('not found');
+  if (!shopDoc.exists) throw Object.assign(new Error('La pastelería no existe'), { status: 404 });
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {
@@ -257,10 +257,10 @@ router.put('/:id/variants/:variantId', verifyToken, requireOwnerOrAdmin(async (r
 // DELETE variante
 router.delete('/:id/variants/:variantId', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
-  if (!doc.exists) throw new Error('not found');
+  if (!doc.exists) throw Object.assign(new Error('Producto no encontrado'), { status: 404 });
   req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
-  if (!shopDoc.exists) throw new Error('not found');
+  if (!shopDoc.exists) throw Object.assign(new Error('La pastelería no existe'), { status: 404 });
   return shopDoc.data().owner_id;
 }), async (req, res) => {
   try {

@@ -197,7 +197,7 @@ router.post('/', verifyToken, validate(createOrderSchema), requireCustomer, asyn
   try {
     const {
       customer, shop, items,
-      totals, payment,
+      totals, payment, delivery_type,
     } = req.body;
 
     if (!customer?.user_id || !shop?.shop_id || !items?.length || !payment?.method) {
@@ -239,6 +239,7 @@ router.post('/', verifyToken, validate(createOrderSchema), requireCustomer, asyn
         shop_id: shop.shop_id,
         name:    shopDoc.data().name || '',
       },
+      delivery_type:  delivery_type || 'delivery',
       status:         'pending',
       status_history: ['pending'],
       items: items.map(item => ({
