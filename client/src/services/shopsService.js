@@ -2,6 +2,7 @@ import { api } from './apiService';
 
 export const shopsService = {
   getAll:            ()           => api.get('/shops'),
+  getByOwner:        (ownerId)    => api.get(`/shops/owner/${ownerId}`),
   getById:           (id)         => api.get(`/shops/${id}`),
   create:            (data)       => api.post('/shops', data),
   update:            (id, data)   => api.put(`/shops/${id}`, data),

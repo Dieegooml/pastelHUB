@@ -56,7 +56,7 @@ export default function OrderDetail() {
     setSubmitting(true);
     setReviewError('');
     try {
-      const created = await reviewsService.create({ order_id: id, shop_id: order.shop?.shop_id, rating: reviewRating, comment: reviewComment });
+      const created = await reviewsService.create({ orderId: id, shopId: order.shop?.shop_id, rating: reviewRating, comment: reviewComment });
       setReviewSuccess('¡Reseña enviada!');
       setReviewComment('');
       if (created?.id) setReview(created);

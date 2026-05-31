@@ -28,9 +28,8 @@ export default function OwnerDashboard() {
   useEffect(() => {
     const load = async () => {
       try {
-        const all = await shopsService.getAll();
-        const owned = (all?.data || []).filter((s) => s.owner_id === user?.uid);
-        setShops(owned);
+        const all = await shopsService.getByOwner(user?.uid);
+        setShops(all?.data || []);
       } catch (e) { console.error(e); setError(e.message || 'Error al cargar pastelerías'); } finally { setLoading(false); }
     };
     load();
@@ -38,8 +37,8 @@ export default function OwnerDashboard() {
 
   const refreshShops = useCallback(async () => {
     try {
-      const all = await shopsService.getAll();
-      setShops((all?.data || []).filter((s) => s.owner_id === user?.uid));
+      const all = await shopsService.getByOwner(user?.uid);
+      setShops(all?.data || []);
     } catch (e) { console.error(e); setError(e.message || 'Error al recargar'); }
   }, [user?.uid]);
 

@@ -142,7 +142,7 @@ export default function Orders() {
   const handleAddReview = async (id) => {
     const order = orders.find((o) => o.id === id);
     try {
-      const created = await reviewsService.create({ order_id: id, shop_id: order?.shop?.shop_id || '', rating: reviewForm.rating, comment: reviewForm.comment });
+      const created = await reviewsService.create({ orderId: id, shopId: order?.shop?.shop_id || '', rating: reviewForm.rating, comment: reviewForm.comment });
       setReviewForm({ rating: 5, comment: '' });
       setReviewMap((p) => ({ ...p, [id]: created }));
       setSuccess('Reseña agregada');

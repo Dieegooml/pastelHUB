@@ -27,6 +27,7 @@ export default function ShopDetail() {
   const [products, setProducts] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [toast, setToast] = useState('');
   const [addedIds, setAddedIds] = useState({});
@@ -43,7 +44,7 @@ export default function ShopDetail() {
         setShop(shopData);
         setProducts(productsData?.data || []);
         setReviews(reviewsData?.data || []);
-      } catch (e) { console.error(e); } finally { setLoading(false); }
+      } catch (e) { console.error(e); setLoadError('Error al cargar la pastelería'); } finally { setLoading(false); }
     };
     load();
   }, [id]);
@@ -86,6 +87,18 @@ export default function ShopDetail() {
           <div style={{ height: '200px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '12px', animation: 'shimmer 1.5s infinite', marginBottom: '16px' }} />
           <div style={{ height: '24px', width: '60%', background: '#f0f0f0', borderRadius: '6px', marginBottom: '12px' }} />
           <div style={{ height: '16px', width: '40%', background: '#f0f0f0', borderRadius: '6px' }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
+        <Navbar />
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 2rem', textAlign: 'center' }}>
+          <p style={{ color: colors.error, fontFamily: font.body, fontSize: '15px' }}>{loadError}</p>
+          <button onClick={() => navigate('/')} style={{ ...smallBtn, marginTop: '12px' }}>Volver al inicio</button>
         </div>
       </div>
     );

@@ -67,7 +67,7 @@ export default function ModeratorDashboard() {
 
   return (
     <div style={{ padding: '32px', maxWidth: 1000, margin: '0 auto' }}>
-      <h1 style={{ fontFamily: font.title, fontSize: '24px', marginBottom: 4, color: colors.textPrimary }}>
+      <h1 style={{ fontFamily: font.heading, fontSize: '24px', marginBottom: 4, color: colors.text }}>
         Panel de Moderador
       </h1>
       <p style={{ fontFamily: font.body, fontSize: '14px', color: colors.textSecondary, marginBottom: 24 }}>
@@ -83,7 +83,7 @@ export default function ModeratorDashboard() {
         custom={0}
         style={{ marginTop: 24 }}
       >
-        <h2 style={{ fontFamily: font.title, fontSize: '18px', marginBottom: 16, color: colors.textPrimary }}>
+        <h2 style={{ fontFamily: font.heading, fontSize: '18px', marginBottom: 16, color: colors.text }}>
           Resumen
         </h2>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
@@ -103,7 +103,7 @@ export default function ModeratorDashboard() {
                 e.currentTarget.style.transform = 'none';
               }}
             >
-              <div style={{ fontSize: '28px', fontWeight: 700, fontFamily: font.title, color: card.color }}>
+              <div style={{ fontSize: '28px', fontWeight: 700, fontFamily: font.heading, color: card.color }}>
                 {card.value}
               </div>
               <div style={{ fontSize: '14px', color: colors.textSecondary, fontFamily: font.body, marginTop: 4 }}>

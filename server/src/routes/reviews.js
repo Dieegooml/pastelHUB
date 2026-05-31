@@ -269,19 +269,22 @@ router.delete('/:id', verifyToken, async (req, res) => {
 // considerando solo reseñas aprobadas
 async function recalcShopRating(shopId) {
   try {
-    const snap = await col
-      .where('shopId', '==', shopId)
-      .where('status', '==', 'approved')
-      .get();
+    await db.runTransaction(async (txn) => {
+      const snap = await txn.get(
+        col
+          .where('shopId', '==', shopId)
+          .where('status', '==', 'approved')
+      );
 
-    if (snap.empty) {
-      await db.collection('pastryShops').doc(shopId).update({ rating: 0 });
-      return;
-    }
+      if (snap.empty) {
+        txn.update(db.collection('pastryShops').doc(shopId), { rating: 0 });
+        return;
+      }
 
-    const total  = snap.docs.reduce((sum, d) => sum + (d.data().rating || 0), 0);
-    const avg    = parseFloat((total / snap.docs.length).toFixed(1));
-    await db.collection('pastryShops').doc(shopId).update({ rating: avg });
+      const total = snap.docs.reduce((sum, d) => sum + (d.data().rating || 0), 0);
+      const avg   = parseFloat((total / snap.docs.length).toFixed(1));
+      txn.update(db.collection('pastryShops').doc(shopId), { rating: avg });
+    });
   } catch (e) {
     console.error('Error al recalcular rating:', e);
   }
