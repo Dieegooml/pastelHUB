@@ -1,7 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
+import Chatbot from "./components/Chatbot";
+import RateLimitToast from "./components/RateLimitToast";
 import Login from "./pages/public/Login";
 import Register from "./pages/public/Register";
 import NotFound from "./pages/public/NotFound";
@@ -32,12 +34,13 @@ import Payments from "./pages/admin/Payments";
 import Promotions from "./pages/admin/Promotions";
 import ModeratorDashboard from "./pages/moderator/ModeratorDashboard";
 
-export default function App() {
+function AppContent() {
+  const location = useLocation();
+  const hideChat = ['/login', '/register'].includes(location.pathname);
+
   return (
-    <ErrorBoundary>
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+    <>
+      <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<ProtectedRoute><ShopsList /></ProtectedRoute>} />
@@ -68,6 +71,18 @@ export default function App() {
           <Route path="/moderator" element={<ProtectedRoute role={['moderator', 'admin']}><ModeratorDashboard /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        {!hideChat && <Chatbot />}
+        <RateLimitToast />
+      </>
+    );
+  }
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppContent />
       </BrowserRouter>
     </AuthProvider>
     </ErrorBoundary>
