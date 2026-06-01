@@ -490,5 +490,140 @@ Para un MVP con 100 usuarios activos:
 
 ---
 
+---
+
+## 🚀 Despliegue a Producción (Firebase Hosting + Cloud Run)
+
+### Arquitectura
+
+```
+Firebase Hosting                    Cloud Run
+┌─────────────────────┐             ┌──────────────────┐
+│  pastelhub.web.app  │  /api/**    │  pastelhub-server │
+│                     │ ──────────► │  (Express + API)  │
+│  client/dist/       │             │                   │
+│  (React SPA)        │             │  Firestore Auth   │
+│                     │ ◄────────── │  Gemini AI        │
+│                     │  HTTP JSON  │                   │
+└─────────────────────┘             └──────────────────┘
+```
+
+### Prerrequisitos
+
+```bash
+# Herramientas necesarias
+gcloud auth login
+gcloud config set project pastehub-2d2b2
+firebase login
+
+# APIs a habilitar (una vez)
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com cloudbuild.googleapis.com
+```
+
+### Paso 1: Crear secrets en Secret Manager
+
+```bash
+gcloud secrets create firebase-private-key --replication-policy="automatic"
+gcloud secrets create gemini-api-key --replication-policy="automatic"
+```
+
+Subir los valores desde `server/.env`:
+```bash
+# CORTAR el valor de FIREBASE_PRIVATE_KEY desde server/.env y pegarlo:
+cat <<< "-----BEGIN PRIVATE KEY-----\nMIIEvQIB...==\n-----END PRIVATE KEY-----" | gcloud secrets versions add firebase-private-key --data-file=-
+
+# Subir Gemini API key
+echo -n "AQ.Ab8RN6LAkY1..." | gcloud secrets versions add gemini-api-key --data-file=-
+```
+
+### Paso 2: Desplegar (automático)
+
+```bash
+bash deploy.sh
+```
+
+El script ejecuta:
+1. Crea Artifact Registry (si no existe)
+2. Build + push Docker image del servidor
+3. Deploy a Cloud Run con env vars + secrets
+4. Build del frontend con `VITE_API_URL=""` (same-origin)
+5. Deploy a Firebase Hosting
+
+### Paso 3: Desplegar índices de Firestore
+
+```bash
+firebase deploy --only firestore:indexes
+```
+
+### Paso 4: Verificar
+
+```bash
+# Health endpoint
+curl https://pastehub-2d2b2.web.app/api/health
+
+# SPA routing - probar en navegador
+# - https://pastehub-2d2b2.web.app/login
+# - https://pastehub-2d2b2.web.app/shops/1
+```
+
+### Despliegue manual (paso a paso)
+
+Si prefieres ejecutar cada paso manualmente:
+
+```bash
+# 1. Artifact Registry
+gcloud artifacts repositories create pastelhub --location=us-central1 --repository-format=docker
+
+# 2. Build + Push (backend)
+cd server
+docker build -t us-central1-docker.pkg.dev/pastehub-2d2b2/pastelhub/pastelhub-server:latest .
+docker push us-central1-docker.pkg.dev/pastehub-2d2b2/pastelhub/pastelhub-server:latest
+cd ..
+
+# 3. Deploy Cloud Run
+gcloud run deploy pastelhub-server \
+  --image=us-central1-docker.pkg.dev/pastehub-2d2b2/pastelhub/pastelhub-server:latest \
+  --region=us-central1 \
+  --allow-unauthenticated \
+  --cpu=1 --memory=512Mi \
+  --min-instances=0 --max-instances=10 \
+  --concurrency=80 --timeout=300 \
+  --set-env-vars="NODE_ENV=production,CLIENT_URL=https://pastehub-2d2b2.web.app,FIREBASE_PROJECT_ID=pastehub-2d2b2,FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@pastehub-2d2b2.iam.gserviceaccount.com" \
+  --update-secrets="FIREBASE_PRIVATE_KEY=firebase-private-key:latest,GEMINI_API_KEY=gemini-api-key:latest"
+
+# 4. Build frontend
+cd client
+npm ci
+npm run build
+cd ..
+
+# 5. Deploy hosting
+firebase deploy --only hosting
+
+# 6. Deploy indices
+firebase deploy --only firestore:indexes
+```
+
+### Variable de entorno CLIENT_URL
+
+La variable `CLIENT_URL` en el backend controla CORS. Debe coincidir exactamente con el dominio de Firebase Hosting:
+
+| Entorno | CLIENT_URL |
+|---------|-----------|
+| Local | `http://localhost` (default) |
+| Producción | `https://pastehub-2d2b2.web.app` |
+
+### Consideraciones de producción
+
+| Aspecto | Nota |
+|---------|------|
+| **Backups** | El backup automático (cron 3 AM) funciona en Cloud Run pero es efímero. Para persistencia real, migrar a Cloud Scheduler + Cloud Storage |
+| **Rate limiting** | 100 req/15min general, 10 req/15min auth. Si los tests de carga fallan con 429, ejecutar con `LOAD_TEST=true` |
+| **Escalado** | Mínimo 0 instancias (sin tráfico = sin costo). Máximo 10. Concurrency 80 por instancia |
+| **Memoria** | 512 MB es suficiente para picos de ~80 requests concurrentes |
+| **Firebase Admin** | Usa Opción C (variables de entorno individuales) con `FIREBASE_PRIVATE_KEY` desde Secret Manager |
+| **Gemini AI** | El chat usa `gemini-2.0-flash-exp`. API key desde Secret Manager |
+
 **Documento generado:** 17/05/2026  
+**Última actualización:** 31/05/2026  
 **Estado:** ✅ Entorno Cloud Preparado y Documentado
