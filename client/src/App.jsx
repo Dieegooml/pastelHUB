@@ -9,6 +9,8 @@ import Register from "./pages/public/Register";
 import NotFound from "./pages/public/NotFound";
 import ShopsList from "./pages/public/ShopsList";
 import ShopDetail from "./pages/public/ShopDetail";
+import ProductDetail from "./pages/public/ProductDetail";
+import Footer from "./components/Footer";
 import Cart from "./pages/customer/Cart";
 import Checkout from "./pages/customer/Checkout";
 import MyOrders from "./pages/customer/MyOrders";
@@ -45,6 +47,7 @@ function AppContent() {
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<ProtectedRoute><ShopsList /></ProtectedRoute>} />
           <Route path="/shops/:id" element={<ProtectedRoute><ShopDetail /></ProtectedRoute>} />
+          <Route path="/products/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
           <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
           <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
           <Route path="/my-orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
@@ -71,6 +74,7 @@ function AppContent() {
           <Route path="/moderator" element={<ProtectedRoute role={['moderator', 'admin']}><ModeratorDashboard /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <Footer />
         {!hideChat && <Chatbot />}
         <RateLimitToast />
       </>
