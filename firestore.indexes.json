@@ -115,13 +115,6 @@
       ]
     },
     {
-      "collectionGroup": "payments",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "orderId", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "chatSessions",
       "queryScope": "COLLECTION",
       "fields": [
@@ -149,13 +142,6 @@
       "collectionGroup": "invoices",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "orderId", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "invoices",
-      "queryScope": "COLLECTION",
-      "fields": [
         { "fieldPath": "shop_id",   "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
@@ -174,13 +160,6 @@
       "fields": [
         { "fieldPath": "shop_id",      "order": "ASCENDING" },
         { "fieldPath": "is_available", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "reviews",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "orderId", "order": "ASCENDING" }
       ]
     }
   ],
