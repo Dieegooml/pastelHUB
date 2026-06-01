@@ -5,6 +5,7 @@ import Navbar from '../../components/Navbar';
 import { colors, font, badge as badgeStyle } from '../../styles/theme';
 import { shopsService } from '../../services/shopsService';
 import { productsService } from '../../services/productsService';
+import { slugify } from '../../utils/slug';
 import { reviewsService } from '../../services/reviewsService';
 
 const smallBtn = {
@@ -231,7 +232,7 @@ export default function ShopDetail() {
                       </div>
                     )}
                     <div style={{ padding: '12px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <button onClick={() => navigate(`/products/${p.id}`)} style={{ fontFamily: font.heading, fontSize: '15px', fontWeight: 600, color: colors.primary, margin: 0, padding: 0, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>{p.name}</button>
+                      <button onClick={() => navigate(`/producto/${slugify(shop?.name)}/${p.id}`)} style={{ fontFamily: font.heading, fontSize: '15px', fontWeight: 600, color: colors.primary, margin: 0, padding: 0, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>{p.name}</button>
                       {p.description && (
                         <p style={{ fontFamily: font.body, fontSize: '11px', color: colors.textSecondary, margin: '3px 0 6px', lineHeight: 1.4, flex: 1 }}>{p.description}</p>
                       )}

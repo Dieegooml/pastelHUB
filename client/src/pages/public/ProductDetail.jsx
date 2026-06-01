@@ -7,7 +7,7 @@ import Navbar from '../../components/Navbar';
 import { colors, font, btnPrimary } from '../../styles/theme';
 
 export default function ProductDetail() {
-  const { id } = useParams();
+  const { shop: shopSlug, id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [shop, setShop] = useState(null);

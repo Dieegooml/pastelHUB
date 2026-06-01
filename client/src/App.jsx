@@ -47,7 +47,7 @@ function AppContent() {
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<ProtectedRoute><ShopsList /></ProtectedRoute>} />
           <Route path="/shops/:id" element={<ProtectedRoute><ShopDetail /></ProtectedRoute>} />
-          <Route path="/products/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
+          <Route path="/producto/:shop/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
           <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
           <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
           <Route path="/my-orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
