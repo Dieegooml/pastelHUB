@@ -27,7 +27,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const limiter = rateLimit({
   windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000, // 5s (test) / 15 min
-  max: isLoadTest ? 5000 : (isDev ? 500 : 100),     // 5000 (test) / 500 (dev) / 100 (prod)
+  max: isLoadTest ? 5000 : 500,                       // 5000 (test) / 500 (prod & dev)
   message: { error: 'Demasiadas peticiones, intenta en 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -35,7 +35,7 @@ const limiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000, // 5s (test) / 15 min
-  max: isLoadTest ? 1000 : (isDev ? 100 : 10),       // 1000 (test) / 100 (dev) / 10 (prod)
+  max: isLoadTest ? 1000 : 50,                        // 1000 (test) / 50 (prod & dev)
   message: { error: 'Demasiados intentos de autenticación, intenta en 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
