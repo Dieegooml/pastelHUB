@@ -14,24 +14,41 @@ router.post('/sync', verifyToken, async (req, res) => {
     const userDoc = await userRef.get();
 
     if (!userDoc.exists) {
+      // Preservar custom claims existentes (ej: admin asignado via script/consola)
+      let roles = ['customer'];
+      let hasPreExistingClaims = false;
+      try {
+        const userRecord = await admin.auth().getUser(uid);
+        if (userRecord.customClaims?.roles) {
+          roles = userRecord.customClaims.roles;
+          hasPreExistingClaims = true;
+        }
+      } catch {}
+
       const data = {
         email,
         full_name:  name  || '',
         phone:      '',
-        roles:      ['customer'],
+        roles,
         password_hash: '',
         addresses:  [],
         createdAt:  new Date().toISOString(),
         updatedAt:  new Date().toISOString(),
       };
       await userRef.set(data);
-      await admin.auth().setCustomUserClaims(uid, { roles: ['customer'] });
 
-      // Crear perfil customer automáticamente
-      await db.collection('customers').doc(uid).set({
-        defaultAddressId: '',
-        createdAt: new Date().toISOString(),
-      });
+      // Solo sobrescribir claims si no había pre-existentes
+      if (!hasPreExistingClaims) {
+        await admin.auth().setCustomUserClaims(uid, { roles });
+      }
+
+      // Crear perfil customer solo si el rol lo incluye
+      if (roles.includes('customer')) {
+        await db.collection('customers').doc(uid).set({
+          defaultAddressId: '',
+          createdAt: new Date().toISOString(),
+        });
+      }
 
       return res.status(201).json({ id: uid, ...data, isNew: true });
     }
