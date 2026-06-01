@@ -1,4 +1,5 @@
 FROM node:20.18.0-alpine3.21
+RUN apk add --no-cache wget
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev

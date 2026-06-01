@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { db } = require('./config/firebase');
 
 // Configuración de CORS
 const clientUrl = process.env.CLIENT_URL || 'http://localhost';
@@ -26,7 +27,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const limiter = rateLimit({
   windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000, // 5s (test) / 15 min
-  max: isDev ? 500 : 100,          // 500 (dev) / 100 (prod)
+  max: isLoadTest ? 5000 : (isDev ? 500 : 100),     // 5000 (test) / 500 (dev) / 100 (prod)
   message: { error: 'Demasiadas peticiones, intenta en 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -34,7 +35,7 @@ const limiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000, // 5s (test) / 15 min
-  max: isDev ? 100 : 10,           // 100 (dev) / 10 (prod)
+  max: isLoadTest ? 1000 : (isDev ? 100 : 10),       // 1000 (test) / 100 (dev) / 10 (prod)
   message: { error: 'Demasiados intentos de autenticación, intenta en 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -55,7 +56,7 @@ app.use(cors(corsOptions));
 app.use(limiter);
 
 // Parseo de JSON con límite de tamaño
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '100kb' }));
 
 // Rutas API
 app.use('/api/auth', authLimiter, require('./routes/auth'));
@@ -71,10 +72,17 @@ app.use('/api/payments', require('./routes/payments'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/support', require('./routes/support'));
 app.use('/api/invoices', require('./routes/invoices'));
+app.use('/api/chat', require('./routes/chat'));
+app.use('/api/admin/backup', require('./routes/backups'));
 
 // Ruta para salud del servidor
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+app.get('/api/health', async (req, res) => {
+  try {
+    await db.collection('health').doc('_check').get();
+    res.json({ status: 'ok', firestore: 'connected' });
+  } catch (e) {
+    res.status(503).json({ status: 'error', firestore: 'disconnected', message: e.message });
+  }
 });
 
 // Manejo de rutas inexistentes (solo API)

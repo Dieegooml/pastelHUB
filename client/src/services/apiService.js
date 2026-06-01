@@ -1,7 +1,8 @@
 import { auth } from '../config/firebase';
 import { signOut } from 'firebase/auth';
+import { triggerRateLimit } from './rateLimitHandler';
 
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const BASE = import.meta.env.VITE_API_URL || '';
 
 async function getHeaders() {
   const token = await auth.currentUser?.getIdToken();
@@ -12,8 +13,14 @@ async function getHeaders() {
 }
 
 async function handleResponse(res) {
+  if (res.status === 429) triggerRateLimit();
   const text = await res.text();
-  const data = text ? JSON.parse(text) : {};
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
   if (!res.ok) {
     const err = new Error(data.error || data.message || `HTTP ${res.status}`);
     err.status = res.status;
