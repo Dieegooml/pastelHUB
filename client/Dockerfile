@@ -1,4 +1,4 @@
-FROM node:20.18.0-alpine3.21 AS build
+FROM node:20-alpine AS build
 
 ARG VITE_API_URL
 ARG VITE_FIREBASE_API_KEY
@@ -17,7 +17,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM nginx:1.27.4-alpine
+FROM nginx:stable-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
