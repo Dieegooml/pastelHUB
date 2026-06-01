@@ -8,6 +8,13 @@ const { paginate, tryPaginate } = require('../utils/paginate');
 
 const col = db.collection('notifications');
 
+const countCache = new Map();
+const CACHE_TTL = 15000;
+
+function invalidateCountCache(userId) {
+  countCache.delete(`unread_${userId}`);
+}
+
 const VALID_TYPES = [
   'order_update',
   'new_review',
@@ -34,12 +41,20 @@ router.get('/user/:userId', verifyToken, requireSelfOrAdmin('userId'), async (re
 // GET conteo de no leídas por usuario (propio usuario o admin)
 router.get('/user/:userId/unread/count', verifyToken, requireSelfOrAdmin('userId'), async (req, res) => {
   try {
+    const key = `unread_${req.params.userId}`;
+    const cached = countCache.get(key);
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
+      return res.json({ count: cached.count });
+    }
     const snap = await col
       .where('userId', '==', req.params.userId)
       .where('isRead', '==', false)
       .count()
       .get();
-    res.json({ count: snap.data().count || 0 });
+    const count = snap.data().count || 0;
+    countCache.set(key, { count, ts: Date.now() });
+    if (countCache.size > 5000) countCache.clear();
+    res.json({ count });
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener conteo de notificaciones' });
   }
@@ -133,6 +148,7 @@ router.patch('/:id/read', verifyToken, async (req, res) => {
     }
 
     await col.doc(req.params.id).update({ isRead: true });
+    invalidateCountCache(doc.data().userId);
     res.json({ id: req.params.id, isRead: true });
   } catch (e) {
     res.status(500).json({ error: 'Error al marcar como leída' });
@@ -155,6 +171,8 @@ router.patch('/user/:userId/read-all', verifyToken, requireSelfOrAdmin('userId')
     snap.docs.forEach(d => batch.update(d.ref, { isRead: true }));
     await batch.commit();
 
+    invalidateCountCache(req.params.userId);
+
     res.json({ message: 'Notificaciones marcadas como leídas', count: snap.docs.length });
   } catch (e) {
     res.status(500).json({ error: 'Error al marcar notificaciones como leídas' });
@@ -173,6 +191,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
     }
 
     await col.doc(req.params.id).delete();
+    invalidateCountCache(doc.data().userId);
     res.json({ message: 'Notificación eliminada correctamente' });
   } catch (e) {
     res.status(500).json({ error: 'Error al eliminar la notificación' });
@@ -191,6 +210,8 @@ router.delete('/user/:userId', verifyToken, requireSelfOrAdmin('userId'), async 
     const batch = db.batch();
     snap.docs.forEach(d => batch.delete(d.ref));
     await batch.commit();
+
+    invalidateCountCache(req.params.userId);
 
     res.json({ message: 'Notificaciones eliminadas correctamente', count: snap.docs.length });
   } catch (e) {

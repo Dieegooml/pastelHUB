@@ -4,6 +4,36 @@ import { triggerRateLimit } from './rateLimitHandler';
 
 const BASE = import.meta.env.VITE_API_URL || '';
 
+const getCache = new Map();
+const GET_CACHE_TTL = 30000;
+
+function getCached(path) {
+  const entry = getCache.get(path);
+  if (entry && Date.now() - entry.ts < GET_CACHE_TTL) return entry.data;
+  getCache.delete(path);
+  return null;
+}
+
+function setCache(path, data) {
+  getCache.set(path, { data, ts: Date.now() });
+  if (getCache.size > 200) {
+    const now = Date.now();
+    for (const [k, v] of getCache) {
+      if (now - v.ts > GET_CACHE_TTL) getCache.delete(k);
+    }
+  }
+}
+
+function invalidateCache(prefix) {
+  if (prefix) {
+    for (const k of getCache.keys()) {
+      if (k.startsWith(prefix)) getCache.delete(k);
+    }
+  } else {
+    getCache.clear();
+  }
+}
+
 async function getHeaders() {
   const token = await auth.currentUser?.getIdToken();
   return {
@@ -68,9 +98,13 @@ async function apiFetch(path, options = {}) {
 }
 
 export const api = {
-  get:    (path) => apiFetch(path),
-  post:   (path, body) => apiFetch(path, { method: 'POST', body: JSON.stringify(body) }),
-  put:    (path, body) => apiFetch(path, { method: 'PUT', body: JSON.stringify(body) }),
-  delete: (path) => apiFetch(path, { method: 'DELETE' }),
-  patch:  (path, body) => apiFetch(path, { method: 'PATCH', body: JSON.stringify(body) }),
+  get: (path) => {
+    const cached = getCached(path);
+    if (cached) return Promise.resolve(cached);
+    return apiFetch(path).then(data => { setCache(path, data); return data; });
+  },
+  post:   (path, body) => { invalidateCache(path.split('/').slice(0, 2).join('/')); return apiFetch(path, { method: 'POST', body: JSON.stringify(body) }); },
+  put:    (path, body) => { invalidateCache(path.split('/').slice(0, 2).join('/')); return apiFetch(path, { method: 'PUT', body: JSON.stringify(body) }); },
+  delete: (path) => { invalidateCache(path.split('/').slice(0, 2).join('/')); return apiFetch(path, { method: 'DELETE' }); },
+  patch:  (path, body) => { invalidateCache(path.split('/').slice(0, 2).join('/')); return apiFetch(path, { method: 'PATCH', body: JSON.stringify(body) }); },
 };

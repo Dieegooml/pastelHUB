@@ -65,8 +65,20 @@ export default function Navbar() {
 
   useEffect(() => {
     loadUnread();
-    const interval = setInterval(loadUnread, 30000);
-    return () => clearInterval(interval);
+    let interval = setInterval(loadUnread, 120000);
+    const onVisibility = () => {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        loadUnread();
+        interval = setInterval(loadUnread, 120000);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [loadUnread]);
 
   useEffect(() => {

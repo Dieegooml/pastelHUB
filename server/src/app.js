@@ -42,6 +42,15 @@ const authLimiter = rateLimit({
 });
 
 const app = express();
+app.set('etag', 'weak');
+
+// Cache-Control para endpoints públicos GET
+const publicCache = (req, res, next) => {
+  if (req.method === 'GET' && !req.headers.authorization) {
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+  }
+  next();
+};
 
 // Compresión de respuestas
 app.use(compression());
@@ -61,13 +70,10 @@ app.use(express.json({ limit: '100kb' }));
 // Rutas API
 app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
-app.use('/api/shops', require('./routes/shops'));
-app.use('/api/products', require('./routes/products'));
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/notifications', require('./routes/notifications'));
-app.use('/api/reports', require('./routes/reports'));
-app.use('/api/promotions', require('./routes/promotions'));
-app.use('/api/reviews', require('./routes/reviews'));
+app.use('/api/shops', publicCache, require('./routes/shops'));
+app.use('/api/products', publicCache, require('./routes/products'));
+app.use('/api/promotions', publicCache, require('./routes/promotions'));
+app.use('/api/reviews', publicCache, require('./routes/reviews'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/support', require('./routes/support'));
