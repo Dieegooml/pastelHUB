@@ -6,7 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 firebase-debug.log*
 firebase-debug.*.log*
-STATUS.md
+# STATUS.md
 
 # Firebase cache
 .firebase/
