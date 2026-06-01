@@ -7,5 +7,5 @@ export const paymentsService = {
   create: (data) => api.post('/payments', data),
   update: (id, data) => api.put(`/payments/${id}`, data),
   delete: (id) => api.delete(`/payments/${id}`),
-  updateStatus: (id, status, transaction_ref) => api.patch(`/payments/${id}/status`, { status, transaction_ref }),
+  updateStatus: (id, paymentStatus, transaction_ref) => api.patch(`/payments/${id}/status`, { paymentStatus, transaction_ref }),
 };
