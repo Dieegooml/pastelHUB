@@ -9,6 +9,11 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
 - **Database:** Firestore (NoSQL)
 - **Auth:** Firebase Auth (email/password + Google) + Custom Claims for roles
 - **Testing:** Jest 30 + Supertest (unit/integration), k6 (load)
+- **Cloud Run:** `pastelhub-server` (us-central1), backups + load tests
+- **Cloud Storage:** `pastehub-2d2b2-backups` (us-central1, 30-day lifecycle)
+- **Cloud Scheduler:** `daily-backup` (0 3 * * * → POST /api/admin/backup)
+- **Artifact Registry:** `us-central1-docker.pkg.dev/pastehub-2d2b2/pastelhub/`
+- **Service Accounts:** `scheduler-sa` (run.invoker + storage.objectAdmin)
 
 ## Project Structure
 ```
@@ -168,18 +173,41 @@ expect(res.body.data).toHaveLength(1);
 
 ## Recent Git History
 ```
-7eae6dd feat: migrar validación a Zod en todos los módulos
-5ceaa60 refactor: unificar reseñas en colección reviews, eliminar endpoints duplicados en orders
-638a99a feat: agregar índices compuestos faltantes a Firestore
-1737022 fix: corregir middleware requireCustomer para validar roles correctamente
-32c9ae8 docs: actualizar README y API_ENDPOINTS con nuevas funcionalidades (promociones, resumen, notificaciones)
-90884c4 feat: agregar pestana Resumen al panel de dueno con graficas de ventas
-ff41e7d feat: agregar endpoint GET summary con estadisticas de ventas por pasteleria
-7b5162f feat: agregar pestana Promociones al panel de dueno con formulario de creacion/edicion
-b291145 feat: agregar CRUD de promociones (descuentos, combos, 2x1) para duenos de pastelerias
-31378dc feat: agregar campana de notificaciones con badge, dropdown y pagina de usuario
-de50343 feat: agregar endpoint GET /unread/count para conteo de notificaciones no leidas
+f6ab010 feat: rutas de productos con slug de pasteleria + id
+cc4ae98 perf: optimizar trafico de solicitudes con polling reducido, caché y ETag
+f656f8e fix: aumentar rate limits de 100/10 a 500/50 para evitar falsos 429 en produccion
+532c8de feat: agregar vista detalle de producto y footer con soporte
+2e79ad1 fix: VITE_API_URL=/api en produccion para coincidir con rewrite de Firebase Hosting
+a28ebe3 fix: eliminar indices de campo unico no necesarios en Firestore
+2c62404 fix: cambiar tags de imagenes Docker a versiones estables
+54ff668 feat: configurar despliegue a Firebase Hosting + Cloud Run
+e4a4aef feat: chatbot con Gemini AI y validacion de sesiones
+0e13809 test: actualizar health test con verificacion de Firestore
+b2a39de docs: agregar STATUS.md con estado real del proyecto
+f6f7a61 feat: UI para rate limit (429) en frontend
+1ee16d3 feat: sistema de backups automatizados con endpoint REST y cron
+4663a32 fix: corregir modelo Gemini y userRole en chat
+11b037d fix: corregir campo status por paymentStatus en paymentsService
 ```
+
+## Load Testing (k6)
+- **Script:** `server/tests/load/load-test.js` — 10 endpoints, stages progresivos, MAX_VUs configurable
+- **Dockerfile:** `server/tests/load/Dockerfile.k6` — `FROM grafana/k6:latest`
+- **Cloud Run Job:** `k6-load-test` (us-central1, 5 tasks, 2 CPU, 1GiB)
+- **Ejecutar:** `gcloud run jobs execute k6-load-test --region=us-central1 --update-env-vars=MAX_VUS=1000`
+- **Variables:** TARGET_URL, MAX_VUS (default 1000), STEADY_MINUTES (default 5), LOAD_TEST (bool)
+
+## Backups
+- **Endpoint:** POST `/api/admin/backup` (require admin)
+- **Local:** `server/src/utils/backupService.js` — exporta colecciones + subcolecciones, comprime con gzip
+- **GCS upload:** Via `uploadToGCS()` en backupService.js — opt-in con `BACKUP_BUCKET` env var
+- **Bucket:** `pastehub-2d2b2-backups` (us-central1, lifecycle 30 días)
+- **Scheduler:** `daily-backup` — 0 3 * * * → POST /api/admin/backup (OIDC con scheduler-sa)
+
+## Próximos Pasos (ver HANDOVER.md)
+1. Agregar `handleSummary()` a load-test.js para reporte HTML subido a GCS
+2. Aumentar CPU/Memoria del Cloud Run Job para 1000-5000 VUs
+3. Debuggear 3 suites de tests fallidos (orders, reports, shops — 404 de Express 5)
 
 ## Known Gaps
 - No image upload (Firebase Storage)

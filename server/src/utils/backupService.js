@@ -1,5 +1,9 @@
 const { admin, db } = require('../config/firebase');
+const { Storage } = require('@google-cloud/storage');
 const zlib = require('zlib');
+
+const BACKUP_BUCKET = process.env.BACKUP_BUCKET || '';
+const storage = BACKUP_BUCKET ? new Storage() : null;
 
 const SUBCOLLECTIONS = {
   pastryShops: ['schedules', 'categories'],
@@ -18,6 +22,21 @@ const ALL_COLLECTIONS = [
 
 let lastBackup = null;
 let backupHistory = [];
+
+async function uploadToGCS(filename, data, meta) {
+  if (!BACKUP_BUCKET || !storage) return false;
+  try {
+    const bucket = storage.bucket(BACKUP_BUCKET);
+    await bucket.file(filename).save(data);
+    const metaFilename = filename.replace('.json.gz', '.meta.json');
+    await bucket.file(metaFilename).save(JSON.stringify(meta, null, 2));
+    console.log(`[BACKUP] Subido a gs://${BACKUP_BUCKET}/${filename}`);
+    return true;
+  } catch (e) {
+    console.error(`[BACKUP] Error subiendo a GCS: ${e.message}`);
+    return false;
+  }
+}
 
 async function exportCollection(collectionName) {
   const snap = await db.collection(collectionName).get();
@@ -68,9 +87,13 @@ async function createBackup(collections) {
   lastBackup = entry;
   backupHistory.push(entry);
 
+  const filename = `backup-${timestamp.replace(/[:.]/g, '-')}.json.gz`;
+
+  await uploadToGCS(filename, compressed, entry);
+
   return {
     data: compressed,
-    filename: `backup-${timestamp.replace(/[:.]/g, '-')}.json.gz`,
+    filename,
     meta: entry,
   };
 }
