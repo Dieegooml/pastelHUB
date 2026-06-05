@@ -20,6 +20,9 @@
 #   Configuracion: Cloud Build configuration file (cloudbuild.yaml)
 #   Sustituciones: _REGION=us-central1
 # ============================================================
+options:
+  logging: CLOUD_LOGGING_ONLY
+
 steps:
 
   # ==========================================================
