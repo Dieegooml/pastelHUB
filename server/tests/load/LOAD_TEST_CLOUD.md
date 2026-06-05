@@ -86,7 +86,7 @@ gcloud run jobs execute k6-load-test --region=us-central1 ^
 ```cmd
 REM Normal (~8 min)
 gcloud run jobs execute k6-load-test --region=us-central1 ^
-  --update-env-vars=MAX_VUS=5000
+  --update-env-vars=MAX_VUS=10000
 
 REM Rapido (~2 min)
 gcloud run jobs execute k6-load-test --region=us-central1 ^
