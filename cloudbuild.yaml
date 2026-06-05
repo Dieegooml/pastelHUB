@@ -143,16 +143,13 @@ steps:
           --region=${_REGION} \
           --format='value(status.url)' 2>/dev/null || true)
 
-        if [ -z "$SERVICE_URL" ]; then
+        if [ -z "$$SERVICE_URL" ]; then
           echo "[SMOKE] ERROR: No se pudo obtener URL del servicio"
           exit 1
         fi
 
         # Construir URL de staging: https://staging---{host}
-        STAGING_URL=$(echo "$SERVICE_URL" | sed 's|://|://staging---|')
-
-        echo "[SMOKE] Service URL: $SERVICE_URL"
-        echo "[SMOKE] Staging URL: $STAGING_URL"
+        STAGING_URL=$(echo "$$SERVICE_URL" | sed 's|://|://staging---|')
 
         echo "[SMOKE] Staging URL: $$STAGING_URL"
         echo "[SMOKE] Iniciando smoke tests..."
