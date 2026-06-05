@@ -45,9 +45,9 @@ app.use('/api/auth', authLimiter, require('./routes/auth'));  // Auth
 ## Límites Configurados
 
 | Ruta | Límite | Ventana (producción) | Ventana (LOAD_TEST) |
-|---|---|---|---|
-| **Todas las rutas** | 100 req/IP | 15 min | 5s |
-| **/api/auth** | 10 req/IP | 15 min | 5s |
+|---|---|---|---|---|
+| **Todas las rutas** | 500 req/IP (100k en LOAD_TEST) | 15 min | 5s |
+| **/api/auth** | 50 req/IP (20k en LOAD_TEST) | 15 min | 5s |
 
 ---
 

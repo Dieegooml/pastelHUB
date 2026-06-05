@@ -3,7 +3,10 @@ set -euo pipefail
 
 # ============================================================
 # deploy.sh — Despliegue completo de PastelHub a GCP
-# Uso: bash deploy.sh [--skip-build] [--skip-hosting]
+# Uso: bash deploy.sh [--skip-tests] [--skip-build] [--skip-hosting] [--skip-smoke]
+# Ej:  bash deploy.sh                              (full: tests + backend + frontend + smoke)
+#      bash deploy.sh --skip-tests --skip-smoke     (solo deploy, sin validacion)
+#      bash deploy.sh --skip-hosting                (solo backend + tests)
 # ============================================================
 
 PROJECT_ID="pastehub-2d2b2"
@@ -11,12 +14,16 @@ REGION="us-central1"
 SERVICE_NAME="pastelhub-server"
 REPO_NAME="pastelhub"
 IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SERVICE_NAME}"
+DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Colores para output
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 info()  { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+
+CLOUD_RUN_URL=""
+HOSTING_URL="https://${PROJECT_ID}.web.app"
 
 # Verificar prerequisitos
 command -v gcloud >/dev/null 2>&1 || error "gcloud CLI no instalado"
@@ -25,6 +32,15 @@ command -v docker >/dev/null 2>&1 || error "Docker no instalado"
 
 gcloud config get-value project 2>/dev/null | grep -q "${PROJECT_ID}" || \
   error "Ejecuta: gcloud config set project ${PROJECT_ID}"
+
+# ============================================================
+# FASE 0: Pre-deployment Validation
+# ============================================================
+run_pre_deploy() {
+  info "=== FASE 0: Validacion pre-despliegue ==="
+  bash "$DIR/pre-deploy.sh" --skip-client
+  echo ""
+}
 
 # ============================================================
 # FASE 1: Backend — Cloud Run
@@ -56,11 +72,11 @@ deploy_backend() {
     --image=${IMAGE_NAME}:latest \
     --region=${REGION} \
     --allow-unauthenticated \
-    --cpu=1 \
-    --memory=512Mi \
-    --min-instances=0 \
-    --max-instances=10 \
-    --concurrency=80 \
+    --cpu=4 \
+    --memory=2Gi \
+    --min-instances=1 \
+    --max-instances=50 \
+    --concurrency=250 \
     --timeout=300 \
     --set-env-vars="NODE_ENV=production,CLIENT_URL=https://${PROJECT_ID}.web.app" \
     --update-secrets="FIREBASE_PRIVATE_KEY=firebase-private-key:latest,GEMINI_API_KEY=gemini-api-key:latest" \
@@ -100,27 +116,33 @@ deploy_frontend() {
 # POST: Verificacion
 # ============================================================
 verify() {
-  info "=== Verificacion post-despliegue ==="
-  HOSTING_URL="https://${PROJECT_ID}.web.app"
-  echo "  Hosting:   ${HOSTING_URL}"
-  echo "  Login:     ${HOSTING_URL}/login"
-  echo "  Health:    ${HOSTING_URL}/api/health"
-  echo ""
-  echo "  Probar health: curl ${HOSTING_URL}/api/health"
-  echo ""
+  if [ -z "$CLOUD_RUN_URL" ]; then
+    # Obtener URL si no se desplego backend en esta ejecucion
+    CLOUD_RUN_URL=$(gcloud run services describe ${SERVICE_NAME} --region=${REGION} --format='value(status.url)' 2>/dev/null || echo "")
+  fi
+  if [ -z "$CLOUD_RUN_URL" ]; then
+    warn "No se pudo obtener URL del backend. Saltando smoke tests."
+    return
+  fi
+  info "=== Smoke tests post-despliegue ==="
+  bash "$DIR/smoke-test.sh" "$CLOUD_RUN_URL" "$HOSTING_URL"
 }
 
 # ============================================================
 # MAIN
 # ============================================================
 main() {
+  SKIP_TESTS=false
   SKIP_BUILD=false
   SKIP_HOSTING=false
+  SKIP_SMOKE=false
 
   for arg in "$@"; do
     case "$arg" in
+      --skip-tests) SKIP_TESTS=true ;;
       --skip-build) SKIP_BUILD=true ;;
       --skip-hosting) SKIP_HOSTING=true ;;
+      --skip-smoke) SKIP_SMOKE=true ;;
       *) error "Argumento desconocido: $arg" ;;
     esac
   done
@@ -135,19 +157,33 @@ main() {
   echo "============================================"
   echo ""
 
+  # FASE 0: Pre-deployment validation
+  if [ "$SKIP_TESTS" = false ]; then
+    run_pre_deploy
+  else
+    warn "Saltando validacion pre-despliegue (--skip-tests)"
+  fi
+
+  # FASE 1: Backend
   if [ "$SKIP_BUILD" = false ]; then
     deploy_backend
   else
     warn "Saltando build backend (--skip-build)"
   fi
 
+  # FASE 2: Frontend
   if [ "$SKIP_HOSTING" = false ]; then
     deploy_frontend
   else
     warn "Saltando deploy frontend (--skip-hosting)"
   fi
 
-  verify
+  # FASE 3: Smoke tests
+  if [ "$SKIP_SMOKE" = false ]; then
+    verify
+  else
+    warn "Saltando smoke tests (--skip-smoke)"
+  fi
 }
 
 main "$@"

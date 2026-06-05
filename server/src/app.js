@@ -27,7 +27,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const limiter = rateLimit({
   windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000, // 5s (test) / 15 min
-  max: isLoadTest ? 5000 : 500,                       // 5000 (test) / 500 (prod & dev)
+  max: isLoadTest ? 100000 : 500,                     // 100k (test) / 500 (prod & dev)
   message: { error: 'Demasiadas peticiones, intenta en 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -35,7 +35,7 @@ const limiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000, // 5s (test) / 15 min
-  max: isLoadTest ? 1000 : 50,                        // 1000 (test) / 50 (prod & dev)
+  max: isLoadTest ? 20000 : 50,                       // 20k (test) / 50 (prod & dev)
   message: { error: 'Demasiados intentos de autenticación, intenta en 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -67,11 +67,22 @@ app.use(limiter);
 // Parseo de JSON con límite de tamaño
 app.use(express.json({ limit: '100kb' }));
 
+// Normalizar trailing slash para Express 5 (router.get('/') no coincide sin /)
+app.use((req, res, next) => {
+  if (req.path.length > 1 && req.path.endsWith('/')) {
+    req.url = req.url.slice(0, -1);
+  }
+  next();
+});
+
 // Rutas API
 app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/shops', publicCache, require('./routes/shops'));
 app.use('/api/products', publicCache, require('./routes/products'));
+app.use('/api/orders', require('./routes/orders'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/reports', require('./routes/reports'));
 app.use('/api/promotions', publicCache, require('./routes/promotions'));
 app.use('/api/reviews', publicCache, require('./routes/reviews'));
 app.use('/api/payments', require('./routes/payments'));

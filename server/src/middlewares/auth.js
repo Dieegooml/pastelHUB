@@ -1,14 +1,14 @@
 const { admin } = require('../config/firebase');
 
 const verifyToken = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Token requerido' });
-  }
-
   if (process.env.LOAD_TEST === 'true' && process.env.LOAD_TEST_REAL_AUTH !== 'true') {
     req.user = { uid: 'load-test-user', email: 'load@test.com', roles: ['admin'] };
     return next();
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token requerido' });
   }
 
   try {

@@ -1,0 +1,315 @@
+# ============================================================
+# cloudbuild.yaml — CI/CD Pipeline para PastelHub
+# 
+# Requisitos: Otorgar estos roles a la SA de Cloud Build:
+#   gcloud projects add-iam-policy-binding pastehub-2d2b2 \
+#     --member=serviceAccount:$(gcloud projects describe pastehub-2d2b2 --format='value(projectNumber)')@cloudbuild.gserviceaccount.com \
+#     --role=roles/run.admin
+#   gcloud projects add-iam-policy-binding pastehub-2d2b2 \
+#     --member=... \
+#     --role=roles/artifactregistry.admin
+#   gcloud projects add-iam-policy-binding pastehub-2d2b2 \
+#     --member=... \
+#     --role=roles/iam.serviceAccountUser
+#   gcloud projects add-iam-policy-binding pastehub-2d2b2 \
+#     --member=... \
+#     --role=roles/firebase.hosting.admin
+#
+# Disparador (crear en GCP Console > Cloud Build > Triggers):
+#   Evento: Push a rama main
+#   Configuracion: Cloud Build configuration file (cloudbuild.yaml)
+#   Sustituciones: _REGION=us-central1
+# ============================================================
+steps:
+
+  # ==========================================================
+  # PASO 0: Capturar revision actual para posible rollback
+  # ==========================================================
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'capture-current-revision'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run services describe pastelhub-server \
+          --region=${_REGION} \
+          --format='value(status.traffic[?contains(revisionName)].revisionName)' \
+          2>/dev/null | head -1 > /workspace/current-revision.txt || true
+        echo "Revision actual: $(cat /workspace/current-revision.txt 2>/dev/null || echo 'ninguna')"
+
+  # ==========================================================
+  # PASO 1: Tests unitarios del servidor
+  # ==========================================================
+  - name: 'node:20-alpine'
+    id: 'server-unit-tests'
+    dir: 'server'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        npm ci --include=dev
+        npm test
+    timeout: 300s
+
+  # ==========================================================
+  # PASO 2: Lint + Tests del cliente (Vitest)
+  # ==========================================================
+  - name: 'node:20-alpine'
+    id: 'client-tests'
+    dir: 'client'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        npm ci --include=dev
+        npm run lint
+        npm test
+    timeout: 300s
+
+  # ==========================================================
+  # PASO 3: Construir imagen Docker del servidor
+  # ==========================================================
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    dir: 'server'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/pastelhub/pastelhub-server:$SHORT_SHA'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/pastelhub/pastelhub-server:latest'
+      - '.'
+    timeout: 300s
+    waitFor:
+      - 'server-unit-tests'
+      - 'client-tests'
+
+  # ==========================================================
+  # PASO 4: Pushear imagen a Artifact Registry
+  # ==========================================================
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/pastelhub/pastelhub-server:$SHORT_SHA'
+    waitFor:
+      - 'build-image'
+
+  # ==========================================================
+  # PASO 5: Desplegar a Cloud Run (SIN trafico, tag staging)
+  #         Solo la revision nueva recibe el tag "staging".
+  #         Ningun usuario ve la nueva revision hasta que
+  #         pasen los smoke tests (PASO 7).
+  # ==========================================================
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'deploy-staging'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'pastelhub-server'
+      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/pastelhub/pastelhub-server:$SHORT_SHA'
+      - '--region=${_REGION}'
+      - '--no-traffic'
+      - '--tag=staging'
+      - '--cpu=4'
+      - '--memory=2Gi'
+      - '--min-instances=1'
+      - '--max-instances=50'
+      - '--concurrency=250'
+      - '--timeout=300'
+      - '--set-env-vars=NODE_ENV=production,CLIENT_URL=https://$PROJECT_ID.web.app'
+      - '--update-secrets=FIREBASE_PRIVATE_KEY=firebase-private-key:latest,GEMINI_API_KEY=gemini-api-key:latest'
+      - '--set-env-vars=FIREBASE_PROJECT_ID=$PROJECT_ID,FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--allow-unauthenticated'
+    waitFor:
+      - 'push-image'
+
+  # ==========================================================
+  # PASO 6: Obtener URL de staging y correr smoke tests
+  # ==========================================================
+  - name: 'curlimages/curl:latest'
+    id: 'smoke-tests'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+
+        # Obtener URL de la revision staging
+        STAGING_URL=$(gcloud run services describe pastelhub-server \
+          --region=${_REGION} \
+          --format='value(status.traffic[?tag==staging].url)' 2>/dev/null || true)
+
+        if [ -z "$STAGING_URL" ]; then
+          echo "[SMOKE] ERROR: No se pudo obtener URL de staging"
+          echo "[SMOKE] Listando trafico actual:"
+          gcloud run services describe pastelhub-server --region=${_REGION} \
+            --format='table(status.traffic[].tag,status.traffic[].revisionName,status.traffic[].percent)'
+          exit 1
+        fi
+
+        echo "[SMOKE] Staging URL: ${STAGING_URL}"
+        echo "[SMOKE] Iniciando smoke tests..."
+
+        FAILED=0
+
+        # Test 1: Health
+        echo -n "[SMOKE] Health check... "
+        HTTP_CODE=$(curl -s -o /tmp/smoke-health.json -w "%{http_code}" \
+          --max-time 15 "${STAGING_URL}/api/health" 2>/dev/null || echo "000")
+        FIRESTORE=$(grep -o '"firestore":"[^"]*"' /tmp/smoke-health.json 2>/dev/null | cut -d'"' -f4 || echo "unknown")
+        if [ "$HTTP_CODE" = "200" ] && [ "$FIRESTORE" = "connected" ]; then
+          echo "PASS (HTTP ${HTTP_CODE}, Firestore: ${FIRESTORE})"
+        else
+          echo "FAIL (HTTP ${HTTP_CODE}, Firestore: ${FIRESTORE})"
+          FAILED=1
+        fi
+
+        # Test 2: Products
+        echo -n "[SMOKE] Products endpoint... "
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+          --max-time 15 "${STAGING_URL}/api/products?limit=1" 2>/dev/null || echo "000")
+        if [ "$HTTP_CODE" = "200" ]; then
+          echo "PASS (HTTP ${HTTP_CODE})"
+        else
+          echo "FAIL (HTTP ${HTTP_CODE})"
+          FAILED=1
+        fi
+
+        # Test 3: Shops
+        echo -n "[SMOKE] Shops endpoint... "
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+          --max-time 15 "${STAGING_URL}/api/shops?limit=1" 2>/dev/null || echo "000")
+        if [ "$HTTP_CODE" = "200" ]; then
+          echo "PASS (HTTP ${HTTP_CODE})"
+        else
+          echo "FAIL (HTTP ${HTTP_CODE})"
+          FAILED=1
+        fi
+
+        # Test 4: 404
+        echo -n "[SMOKE] 404 handling... "
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+          --max-time 15 "${STAGING_URL}/api/nonexistent" 2>/dev/null || echo "000")
+        if [ "$HTTP_CODE" = "404" ]; then
+          echo "PASS (HTTP ${HTTP_CODE})"
+        else
+          echo "FAIL (HTTP ${HTTP_CODE})"
+          FAILED=1
+        fi
+
+        # Test 5: Response time (< 2s)
+        echo -n "[SMOKE] Response time... "
+        START=$(date +%s%N)
+        curl -s -o /dev/null --max-time 15 "${STAGING_URL}/api/health" 2>/dev/null || true
+        END=$(date +%s%N)
+        MS=$(( (END - START) / 1000000 ))
+        if [ "$MS" -lt 2000 ]; then
+          echo "PASS (${MS}ms)"
+        else
+          echo "FAIL (${MS}ms)"
+          FAILED=1
+        fi
+
+        echo ""
+        if [ "$FAILED" = "0" ]; then
+          echo "[SMOKE] Todos los smoke tests pasaron."
+          echo "ok" > /workspace/smoke-result.txt
+        else
+          echo "[SMOKE] Algunos smoke tests FALLARON."
+          echo "fail" > /workspace/smoke-result.txt
+        fi
+    waitFor:
+      - 'deploy-staging'
+    timeout: 120s
+
+  # ==========================================================
+  # PASO 7: Promover o hacer rollback segun smoke tests
+  # ==========================================================
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'promote-or-rollback'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        RESULT=$(cat /workspace/smoke-result.txt 2>/dev/null || echo "fail")
+        if [ "$RESULT" = "ok" ]; then
+          echo "[CI/CD] Smoke tests OK → Promoviendo a produccion..."
+          gcloud run services update-traffic pastelhub-server \
+            --region=${_REGION} \
+            --to-latest
+          echo "[CI/CD] Nueva revision promovida exitosamente."
+        else
+          PREV=$(cat /workspace/current-revision.txt 2>/dev/null || echo "")
+          if [ -n "$PREV" ]; then
+            echo "[CI/CD] Smoke tests FALLARON → Revirtiendo a: ${PREV}"
+            gcloud run services update-traffic pastelhub-server \
+              --region=${_REGION} \
+              --to-revisions="${PREV}=100"
+            gcloud run services update-traffic pastelhub-server \
+              --region=${_REGION} \
+              --remove-tag=staging
+            echo "[CI/CD] Rollback completado."
+          else
+            echo "[CI/CD] No hay revision anterior para rollback."
+            echo "[CI/CD] Eliminando tag staging..."
+            gcloud run services update-traffic pastelhub-server \
+              --region=${_REGION} \
+              --remove-tag=staging
+          fi
+          exit 1
+        fi
+    waitFor:
+      - 'smoke-tests'
+    timeout: 60s
+
+  # ==========================================================
+  # PASO 8: Construir frontend
+  # ==========================================================
+  - name: 'node:20-alpine'
+    id: 'build-frontend'
+    dir: 'client'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        npm ci
+        npm run build
+    timeout: 300s
+    waitFor:
+      - 'promote-or-rollback'
+
+  # ==========================================================
+  # PASO 9: Desplegar frontend a Firebase Hosting
+  # ==========================================================
+  - name: 'node:20-alpine'
+    id: 'deploy-frontend'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        npm ci
+        npm install -g firebase-tools
+        firebase deploy --only hosting --non-interactive
+    dir: 'client'
+    timeout: 300s
+    waitFor:
+      - 'build-frontend'
+
+# ============================================================
+# Imagenes a conservar en Artifact Registry
+# ============================================================
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/pastelhub/pastelhub-server:$SHORT_SHA'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/pastelhub/pastelhub-server:latest'
+
+# ============================================================
+# Sustituciones por defecto
+# ============================================================
+substitutions:
+  _REGION: us-central1
+
+# ============================================================
+# Timeout total del pipeline
+# ============================================================
+timeout: 1800s

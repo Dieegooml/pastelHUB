@@ -56,12 +56,15 @@ node restore.js backups/2026-05-30T12-00-00
 
 ### Bypass auth (mock)
 
-| Comando | VUs | Requiere |
-|---|---|---|
-| `npm run load-test` | 100 | Servidor en otra terminal con `npm run start:load-test` |
-| `npm run load-test:50` | 50 | Servidor en otra terminal con `npm run start:load-test` |
+| Comando | VUs | Ramp | Steady | Requiere |
+|---|---|---|---|---|
+| `npm run load-test` | 100 | 20s | 10s | Servidor con `npm run start:load-test` |
+| `npm run load-test:50` | 50 | 20s | 10s | Servidor con `npm run start:load-test` |
+| `npm run load-test:1000` | 1000 | 60s | 60s | Servidor con `npm run start:load-test` |
+| `npm run load-test:5000` | 5000 | 120s | 120s | Servidor con `npm run start:load-test` |
+| `npm run load-test:custom` | (env) | (env) | (env) | `set CONCURRENCY=N&& set RAMP_SECONDS=S&& set STEADY_SECONDS=S&& npm run load-test:custom` |
 
-Reportes: `load-test-report.html`, `load-test-report-50.html`
+Reportes: `load-test-report.html`, `load-test-report-50.html`, etc.
 
 ### Auth real (Firebase)
 
@@ -81,9 +84,24 @@ Reporte: `load-test-report-real-auth.html`
 ### k6 (alternativa)
 
 ```bash
-k6 run tests/load/load-test.js
+# Smoke test rápido (~75s, 100 VUs)
+npm run load-test:k6:quick
+
+# Default: 1000 VUs (completo ~3.5min con 1min steady)
+k6 run tests/load/load-test.js -e STEADY_MINUTES=1
+
+# 5000 VUs completo (~3.5min)
+k6 run tests/load/load-test.js -e MAX_VUS=5000 -e STEADY_MINUTES=1
+
+# 5000 VUs modo rápido (~75s)
+k6 run tests/load/load-test.js -e QUICK=true -e MAX_VUS=5000 -e STEADY_MINUTES=0
+
+# Con reporte subido a GCS
+k6 run tests/load/load-test.js -e MAX_VUS=1000 -e STEADY_MINUTES=1 -e REPORT_BUCKET=pastehub-2d2b2-backups
 ```
-Requiere servidor corriendo y k6 instalado.
+
+Requiere servidor corriendo y k6 instalado. Genera reporte HTML auto-contenido via `handleSummary()`.  
+El modo `QUICK` usa rampas mínimas (5s→10s→15s + steady + 10s→5s bajada) para validación rápida.
 
 ---
 

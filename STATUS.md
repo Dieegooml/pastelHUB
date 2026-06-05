@@ -1,6 +1,6 @@
 # 📊 PastelHub — Estado del Proyecto
 
-> Documento generado: 31/05/2026
+> Documento generado: 04/06/2026
 
 ---
 
@@ -27,7 +27,7 @@
 | **Health** | `GET /api/health` + 404 handler | 3 |
 | **Middleware** | verifyToken + requireAdmin/Owner/Moderator/Customer/OwnerOrAdmin/SelfOrAdmin | 5 |
 
-**Total: ~263 tests unitarios** — Todos pasando.
+**Total: 338 tests unitarios** — 15 suites, todos pasando.
 
 ### Frontend — React (Vite) — 23 páginas funcionales
 
@@ -59,6 +59,11 @@
 
 ## 2. LO QUE FALTA ❌
 
+### Load Testing
+- ❌ P95=6.6s con 5000 VUs desde Windows local (threshold <5s). Ejecutar desde GCP (Cloud Run Job) debería resolverlo.
+- ❌ Rate limiting forzó 429 en un punto del test de 5000 VUs — ajustado a 100k/5s, monitorizar si es suficiente.
+- ❌ Docker Desktop no corriendo localmente impidió usar deploy.sh con docker build.
+
 ### Funcionalidades Pendientes
 
 | Funcionalidad | Prioridad | Descripción |
@@ -79,6 +84,7 @@
 
 | Aspecto | Estado |
 |---------|--------|
+| Load testing hasta 5000 VUs | ✅ 0.0% fallos, P95=1.1s (pasa <5s) — 2,234 req/s desde Cloud Run Job. Opción QUICK mode (~75s) disponible |
 | CI/CD | ❌ No configurado |
 | Dominio/SSL | ❌ No configurado |
 | Firestore Storage rules | ❌ No configuradas |
