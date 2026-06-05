@@ -130,7 +130,7 @@ steps:
   # ==========================================================
   # PASO 6: Obtener URL de staging y correr smoke tests
   # ==========================================================
-  - name: 'curlimages/curl:latest'
+  - name: 'gcr.io/cloud-builders/gcloud'
     id: 'smoke-tests'
     entrypoint: 'bash'
     args:
