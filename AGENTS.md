@@ -9,7 +9,7 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
 - **Database:** Firestore (NoSQL)
 - **Auth:** Firebase Auth (email/password + Google) + Custom Claims for roles
 - **Testing:** Jest 30 + Supertest (unit/integration), k6 (load)
-- **Cloud Run:** `pastelhub-server` (us-central1, 4 CPU, 2GB RAM, 250 concurrency, 1-50 instances), backups + load tests
+- **Cloud Run:** `pastelhub-server` (us-central1, 8 CPU, 4GB RAM, 500 concurrency, 2-25 instances), backups + load tests
 - **Cloud Storage:** `pastehub-2d2b2-backups` (us-central1, 30-day lifecycle)
 - **Cloud Scheduler:** `daily-backup` (0 3 * * * → POST /api/admin/backup)
 - **Artifact Registry:** `us-central1-docker.pkg.dev/pastehub-2d2b2/pastelhub/`
@@ -61,6 +61,7 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
 10. **clearMocks: true** — Global in jest.config, no manual `beforeEach` in test files
 11. **Validation via Zod** — All mutation endpoints use Zod schemas via `validate()` middleware
 12. **Snake_case in Firestore** — Fields like `shop_id`, `is_active`, `owner_id`, `start_date`, `end_date`
+13. **Seed masivo** — `npm run seed-data` (o `seed-data:clean` para limpiar antes) genera ~285 documentos con @faker-js/faker: 1 admin, 2 mods, 6 owners, 20 customers, 6 shops, ~48 productos, ~33 órdenes, pagos, reseñas, promos, notificaciones y reportes
 
 ## Route Structure
 | Route | Mounted At | Auth Model | Notes |
@@ -258,10 +259,11 @@ f6f7a61 feat: UI para rate limit (429) en frontend
 
 ## Próximos Pasos
 1. ~~Agregar `handleSummary()` a load-test.js para reporte HTML subido a GCS~~ ✅
-2. ~~Aumentar CPU/Memoria de Cloud Run para 1000-5000 VUs~~ ✅ (4 CPU, 2GB RAM, 250 concurrency, 50 max instances)
+2. ~~Aumentar CPU/Memoria de Cloud Run para 1000-5000 VUs~~ ✅ (8 CPU, 4GB RAM, 500 concurrency, 2-25 instances)
 3. ✅ Debuggear 404 de Express 5 en rutas (orders, notifications, reports no montadas; trailing slashes) — montado fix en app.js + middleware de normalización
 4. ✅ Auth bypass LOAD_TEST — movido check antes del header check en verifyToken
-5. ❌ P95 (5000 VUs) = 6.6s > threshold 5s — cuello de botella es Windows local (connectex/timeout), no Cloud Run
+5. ❌ P95 (5000 VUs con QUICK) = 15.6s > threshold 5s — ramp-up muy agresivo (0→5000 VUs en 30s); Cloud Run no escala tan rápido; usar ramp-up gradual de 60s o min-instances=5
+6. ✅ entrypoint.sh — arreglado `set -e` que impedía subir reporte a GCS cuando k6 fallaba thresholds (exit code 99)
 6. ✅ Subida de reporte HTML a GCS — instalados curl + sed + jq en Dockerfile; `entrypoint.sh` sube vía curl con token de metadata y genera signed URL via IAM `signBlob` API (scheduler-sa autofirmante)
 7. ✅ Script local `sign-report-url.sh` para generar signed URLs desde la máquina local con `gsutil signurl -i scheduler-sa`
 8. ✅ Pipeline CI/CD completo — cloudbuild.yaml con test gating, staged rollout (staging tag), smoke tests post-deploy, rollback automático, deploy frontend

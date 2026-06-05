@@ -585,9 +585,9 @@ gcloud run deploy pastelhub-server \
   --image=us-central1-docker.pkg.dev/pastehub-2d2b2/pastelhub/pastelhub-server:latest \
   --region=us-central1 \
   --allow-unauthenticated \
-  --cpu=4 --memory=2Gi \
-  --min-instances=1 --max-instances=50 \
-  --concurrency=250 --timeout=300 \
+  --cpu=8 --memory=4Gi \
+  --min-instances=2 --max-instances=25 \
+  --concurrency=500 --timeout=600 \
   --set-env-vars="NODE_ENV=production,CLIENT_URL=https://pastehub-2d2b2.web.app,FIREBASE_PROJECT_ID=pastehub-2d2b2,FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@pastehub-2d2b2.iam.gserviceaccount.com" \
   --update-secrets="FIREBASE_PRIVATE_KEY=firebase-private-key:latest,GEMINI_API_KEY=gemini-api-key:latest"
 
@@ -686,10 +686,11 @@ gcloud run jobs execute k6-load-test --region=us-central1 \
 Para 5000 VUs el servidor Cloud Run está configurado con:
 | Recurso | Valor |
 |---------|-------|
-| CPU | 4 vCPU |
-| RAM | 2 GB |
-| Concurrency | 250 req/instancia |
-| Max instances | 50 |
+| CPU | 8 vCPU |
+| RAM | 4 GB |
+| Concurrency | 500 req/instancia |
+| Min instances | 2 (5 si se necesitan más pre-calentadas) |
+| Max instances | 25 |
 | Rate limit (LOAD_TEST) | 100k req/5s general, 20k req/5s auth |
 
 ---

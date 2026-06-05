@@ -72,12 +72,12 @@ deploy_backend() {
     --image=${IMAGE_NAME}:latest \
     --region=${REGION} \
     --allow-unauthenticated \
-    --cpu=4 \
-    --memory=2Gi \
-    --min-instances=1 \
-    --max-instances=50 \
-    --concurrency=250 \
-    --timeout=300 \
+    --cpu=8 \
+    --memory=4Gi \
+    --min-instances=2 \
+    --max-instances=25 \
+    --concurrency=500 \
+    --timeout=600 \
     --set-env-vars="NODE_ENV=production,CLIENT_URL=https://${PROJECT_ID}.web.app" \
     --update-secrets="FIREBASE_PRIVATE_KEY=firebase-private-key:latest,GEMINI_API_KEY=gemini-api-key:latest" \
     --set-env-vars="FIREBASE_PROJECT_ID=${PROJECT_ID},FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@${PROJECT_ID}.iam.gserviceaccount.com"
