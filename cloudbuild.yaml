@@ -138,18 +138,21 @@ steps:
       - |
         set -euo pipefail
 
-        # Obtener URL de la revision staging
-        STAGING_URL=$(gcloud run services describe pastelhub-server \
+        # Obtener URL base del servicio
+        SERVICE_URL=$(gcloud run services describe pastelhub-server \
           --region=${_REGION} \
-          --format='value(status.traffic[?tag==staging].url)' 2>/dev/null || true)
+          --format='value(status.url)' 2>/dev/null || true)
 
-        if [ -z "$$STAGING_URL" ]; then
-          echo "[SMOKE] ERROR: No se pudo obtener URL de staging"
-          echo "[SMOKE] Listando trafico actual:"
-          gcloud run services describe pastelhub-server --region=${_REGION} \
-            --format='table(status.traffic[].tag,status.traffic[].revisionName,status.traffic[].percent)'
+        if [ -z "$SERVICE_URL" ]; then
+          echo "[SMOKE] ERROR: No se pudo obtener URL del servicio"
           exit 1
         fi
+
+        # Construir URL de staging: https://staging---{host}
+        STAGING_URL=$(echo "$SERVICE_URL" | sed 's|://|://staging---|')
+
+        echo "[SMOKE] Service URL: $SERVICE_URL"
+        echo "[SMOKE] Staging URL: $STAGING_URL"
 
         echo "[SMOKE] Staging URL: $$STAGING_URL"
         echo "[SMOKE] Iniciando smoke tests..."
