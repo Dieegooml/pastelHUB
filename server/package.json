@@ -36,6 +36,8 @@
     "load-test:report": "node tests/load/load-report.js",
     "load-test:k6": "k6 run tests/load/load-test.js",
     "load-test:k6:quick": "k6 run tests/load/load-test.js -e QUICK=true -e MAX_VUS=100 -e STEADY_MINUTES=0",
+    "load-test:k6:500": "k6 run tests/load/load-test.js -e MAX_VUS=500 -e STEADY_MINUTES=5",
+    "load-test:k6:500:quick": "k6 run tests/load/load-test.js -e QUICK=true -e MAX_VUS=500 -e STEADY_MINUTES=1",
     "load-test:k6:1000": "k6 run tests/load/load-test.js -e MAX_VUS=1000 -e STEADY_MINUTES=5",
     "load-test:k6:5000": "k6 run tests/load/load-test.js -e MAX_VUS=5000 -e STEADY_MINUTES=5",
     "load-test:k6:1000:quick": "k6 run tests/load/load-test.js -e QUICK=true -e MAX_VUS=1000 -e STEADY_MINUTES=1",
