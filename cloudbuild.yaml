@@ -143,7 +143,7 @@ steps:
           --region=${_REGION} \
           --format='value(status.traffic[?tag==staging].url)' 2>/dev/null || true)
 
-        if [ -z "$STAGING_URL" ]; then
+        if [ -z "$$STAGING_URL" ]; then
           echo "[SMOKE] ERROR: No se pudo obtener URL de staging"
           echo "[SMOKE] Listando trafico actual:"
           gcloud run services describe pastelhub-server --region=${_REGION} \
@@ -151,7 +151,7 @@ steps:
           exit 1
         fi
 
-        echo "[SMOKE] Staging URL: $STAGING_URL"
+        echo "[SMOKE] Staging URL: $$STAGING_URL"
         echo "[SMOKE] Iniciando smoke tests..."
 
         FAILED=0
@@ -159,63 +159,63 @@ steps:
         # Test 1: Health
         echo -n "[SMOKE] Health check... "
         HTTP_CODE=$(curl -s -o /tmp/smoke-health.json -w "%{http_code}" \
-          --max-time 15 "$STAGING_URL/api/health" 2>/dev/null || echo "000")
+          --max-time 15 "$$STAGING_URL/api/health" 2>/dev/null || echo "000")
         FIRESTORE=$(grep -o '"firestore":"[^"]*"' /tmp/smoke-health.json 2>/dev/null | cut -d'"' -f4 || echo "unknown")
-        if [ "$HTTP_CODE" = "200" ] && [ "$FIRESTORE" = "connected" ]; then
-          echo "PASS (HTTP $HTTP_CODE, Firestore: $FIRESTORE)"
+        if [ "$$HTTP_CODE" = "200" ] && [ "$$FIRESTORE" = "connected" ]; then
+          echo "PASS (HTTP $$HTTP_CODE, Firestore: $$FIRESTORE)"
         else
-          echo "FAIL (HTTP $HTTP_CODE, Firestore: $FIRESTORE)"
+          echo "FAIL (HTTP $$HTTP_CODE, Firestore: $$FIRESTORE)"
           FAILED=1
         fi
 
         # Test 2: Products
         echo -n "[SMOKE] Products endpoint... "
         HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-          --max-time 15 "$STAGING_URL/api/products?limit=1" 2>/dev/null || echo "000")
-        if [ "$HTTP_CODE" = "200" ]; then
-          echo "PASS (HTTP $HTTP_CODE)"
+          --max-time 15 "$$STAGING_URL/api/products?limit=1" 2>/dev/null || echo "000")
+        if [ "$$HTTP_CODE" = "200" ]; then
+          echo "PASS (HTTP $$HTTP_CODE)"
         else
-          echo "FAIL (HTTP $HTTP_CODE)"
+          echo "FAIL (HTTP $$HTTP_CODE)"
           FAILED=1
         fi
 
         # Test 3: Shops
         echo -n "[SMOKE] Shops endpoint... "
         HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-          --max-time 15 "$STAGING_URL/api/shops?limit=1" 2>/dev/null || echo "000")
-        if [ "$HTTP_CODE" = "200" ]; then
-          echo "PASS (HTTP $HTTP_CODE)"
+          --max-time 15 "$$STAGING_URL/api/shops?limit=1" 2>/dev/null || echo "000")
+        if [ "$$HTTP_CODE" = "200" ]; then
+          echo "PASS (HTTP $$HTTP_CODE)"
         else
-          echo "FAIL (HTTP $HTTP_CODE)"
+          echo "FAIL (HTTP $$HTTP_CODE)"
           FAILED=1
         fi
 
         # Test 4: 404
         echo -n "[SMOKE] 404 handling... "
         HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-          --max-time 15 "$STAGING_URL/api/nonexistent" 2>/dev/null || echo "000")
-        if [ "$HTTP_CODE" = "404" ]; then
-          echo "PASS (HTTP $HTTP_CODE)"
+          --max-time 15 "$$STAGING_URL/api/nonexistent" 2>/dev/null || echo "000")
+        if [ "$$HTTP_CODE" = "404" ]; then
+          echo "PASS (HTTP $$HTTP_CODE)"
         else
-          echo "FAIL (HTTP $HTTP_CODE)"
+          echo "FAIL (HTTP $$HTTP_CODE)"
           FAILED=1
         fi
 
         # Test 5: Response time (< 2s)
         echo -n "[SMOKE] Response time... "
         START=$(date +%s%N)
-        curl -s -o /dev/null --max-time 15 "$STAGING_URL/api/health" 2>/dev/null || true
+        curl -s -o /dev/null --max-time 15 "$$STAGING_URL/api/health" 2>/dev/null || true
         END=$(date +%s%N)
         MS=$(( (END - START) / 1000000 ))
-        if [ "$MS" -lt 2000 ]; then
-          echo "PASS ($MSms)"
+        if [ "$$MS" -lt 2000 ]; then
+          echo "PASS ($$MSms)"
         else
-          echo "FAIL ($MSms)"
+          echo "FAIL ($$MSms)"
           FAILED=1
         fi
 
         echo ""
-        if [ "$FAILED" = "0" ]; then
+        if [ "$$FAILED" = "0" ]; then
           echo "[SMOKE] Todos los smoke tests pasaron."
           echo "ok" > /workspace/smoke-result.txt
         else
@@ -236,7 +236,7 @@ steps:
       - '-c'
       - |
         RESULT=$(cat /workspace/smoke-result.txt 2>/dev/null || echo "fail")
-        if [ "$RESULT" = "ok" ]; then
+        if [ "$$RESULT" = "ok" ]; then
           echo "[CI/CD] Smoke tests OK → Promoviendo a produccion..."
           gcloud run services update-traffic pastelhub-server \
             --region=${_REGION} \
@@ -244,11 +244,11 @@ steps:
           echo "[CI/CD] Nueva revision promovida exitosamente."
         else
           PREV=$(cat /workspace/current-revision.txt 2>/dev/null || echo "")
-          if [ -n "$PREV" ]; then
-            echo "[CI/CD] Smoke tests FALLARON → Revirtiendo a: $PREV"
+          if [ -n "$$PREV" ]; then
+            echo "[CI/CD] Smoke tests FALLARON → Revirtiendo a: $$PREV"
             gcloud run services update-traffic pastelhub-server \
               --region=${_REGION} \
-              --to-revisions="$PREV=100"
+              --to-revisions="$$PREV=100"
             gcloud run services update-traffic pastelhub-server \
               --region=${_REGION} \
               --remove-tag=staging
