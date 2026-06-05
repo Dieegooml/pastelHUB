@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
-k6 run /script.js "$@"
+k6 run /script.js "$@" || K6_EXIT=$?
 REPORT_FILE=$(ls -t /tmp/k6-report-*.html 2>/dev/null | head -1)
 if [ -n "$REPORT_BUCKET" ] && [ -n "$REPORT_FILE" ]; then
   BNAME=$(basename "$REPORT_FILE")
@@ -46,3 +46,4 @@ if [ -n "$REPORT_BUCKET" ] && [ -n "$REPORT_FILE" ]; then
     echo "  https://storage.googleapis.com/${REPORT_BUCKET}/load-reports/${BNAME}?GoogleAccessId=${SA}&Expires=${EXPIRES}&Signature=${SIGNATURE_URL}"
   fi
 fi
+exit ${K6_EXIT:-0}
