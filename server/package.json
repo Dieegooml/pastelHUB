@@ -14,6 +14,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.4.0",
     "javascript-obfuscator": "^5.4.2",
     "jest": "^30.4.2",
     "jest-html-reporter": "^4.4.0",
@@ -47,6 +48,8 @@
     "build:prod": "node obfuscate.js",
     "start:prod": "node prod.js",
     "seed": "node seed.js",
+    "seed-data": "node seed-data.js",
+    "seed-data:clean": "node seed-data.js --clean",
     "backup": "node backup.js",
     "backup:users": "node backup.js users",
     "backup:shops": "node backup.js pastryShops",
