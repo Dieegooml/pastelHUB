@@ -208,9 +208,9 @@ steps:
         END=$(date +%s%N)
         MS=$(( (END - START) / 1000000 ))
         if [ "$$MS" -lt 2000 ]; then
-          echo "PASS ($$MSms)"
+          echo "PASS ($$MS ms)"
         else
-          echo "FAIL ($$MSms)"
+          echo "FAIL ($$MS ms)"
           FAILED=1
         fi
 
