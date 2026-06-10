@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireModerator, requireCustomer, requireSelfOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
@@ -283,7 +284,7 @@ async function recalcShopRating(shopId) {
       txn.update(db.collection('pastryShops').doc(shopId), { rating: avg });
     });
   } catch (e) {
-    console.error('Error al recalcular rating:', e);
+    logger.error('Error al recalcular rating', { error: e.message, shopId });
   }
 }
 

@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const { db } = require('../config/firebase');
 
 const VALID_ACTIONS = [
@@ -15,7 +16,7 @@ const VALID_ACTIONS = [
 
 async function createAuditLog({ action, performedBy, targetType, targetId, previousState, newState, reason }) {
   if (!VALID_ACTIONS.includes(action)) {
-    console.error(`acción de auditoría inválida: ${action}`);
+    logger.warn('Acción de auditoría inválida', { action });
     return;
   }
 
@@ -40,7 +41,7 @@ async function createAuditLog({ action, performedBy, targetType, targetId, previ
       await userRef.update({ moderationCount: current + 1 });
     }
   } catch (e) {
-    console.error('Error al crear entrada de auditoría:', e);
+    logger.error('Error al crear entrada de auditoría', { error: e.message, action, performedBy });
   }
 }
 

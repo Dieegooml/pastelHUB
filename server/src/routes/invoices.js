@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const PDFDocument = require('pdfkit');
+const logger = require('../utils/logger');
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireOwnerOrAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
@@ -345,7 +346,7 @@ async function generateInvoiceFromPayment(orderId) {
     const ref = await col.add(data);
     return { id: ref.id, ...data };
   } catch (e) {
-    console.error('Error en generateInvoiceFromPayment:', e.message);
+    logger.error('Error en generateInvoiceFromPayment', { error: e.message, paymentId: paymentData?.id || 'unknown' });
     return null;
   }
 }

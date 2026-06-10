@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const { db } = require('../config/firebase');
 
 const TYPE_LABELS = {
@@ -23,7 +24,7 @@ async function notifyUser({ userId, type, message }) {
       createdAt: new Date().toISOString(),
     });
   } catch (e) {
-    console.error('Error al crear notificación automática:', e);
+    logger.error('Error al crear notificación automática', { error: e.message, userId, type });
   }
 }
 

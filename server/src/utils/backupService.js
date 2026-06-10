@@ -1,6 +1,7 @@
 const { admin, db } = require('../config/firebase');
 const { Storage } = require('@google-cloud/storage');
 const zlib = require('zlib');
+const logger = require('./logger');
 
 const BACKUP_BUCKET = process.env.BACKUP_BUCKET || '';
 const storage = BACKUP_BUCKET ? new Storage() : null;
@@ -30,10 +31,10 @@ async function uploadToGCS(filename, data, meta) {
     await bucket.file(filename).save(data);
     const metaFilename = filename.replace('.json.gz', '.meta.json');
     await bucket.file(metaFilename).save(JSON.stringify(meta, null, 2));
-    console.log(`[BACKUP] Subido a gs://${BACKUP_BUCKET}/${filename}`);
+    logger.info('Backup subido a GCS', { bucket: BACKUP_BUCKET, filename });
     return true;
   } catch (e) {
-    console.error(`[BACKUP] Error subiendo a GCS: ${e.message}`);
+    logger.error('Error subiendo backup a GCS', { error: e.message, bucket: BACKUP_BUCKET });
     return false;
   }
 }

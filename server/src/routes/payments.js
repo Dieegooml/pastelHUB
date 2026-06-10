@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireCustomer } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
@@ -141,7 +142,7 @@ router.patch('/:id/status', verifyToken, requireAdmin, validate(updatePaymentSta
       try {
         await generateInvoiceFromPayment(paymentData.orderId);
       } catch (e) {
-        console.error('Error al generar factura automática:', e.message);
+        logger.error('Error al generar factura automática', { error: e.message, orderId: paymentData.orderId });
       }
     }
 
