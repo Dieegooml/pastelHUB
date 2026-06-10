@@ -95,4 +95,30 @@ router.post('/assign-role', verifyToken, requireAdmin, validate(assignRoleSchema
   }
 });
 
+// POST — guardar token FCM para push notifications
+router.post('/fcm-token', verifyToken, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token requerido' });
+    const { saveFcmToken } = require('../utils/fcmService');
+    await saveFcmToken(req.user.uid, token);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al guardar token' });
+  }
+});
+
+// DELETE — eliminar token FCM
+router.delete('/fcm-token', verifyToken, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token requerido' });
+    const { removeFcmToken } = require('../utils/fcmService');
+    await removeFcmToken(req.user.uid, token);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al eliminar token' });
+  }
+});
+
 module.exports = router;

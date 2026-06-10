@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { registerFcmServiceWorker, requestFcmPermission, removeFcmToken } from '../services/fcmService';
 
 const AuthContext = createContext(null);
 
@@ -17,11 +18,14 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    registerFcmServiceWorker();
     return onAuthStateChanged(auth, async (u) => {
       if (u) {
         const token = await u.getIdTokenResult(true);
         setUser({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL, roles: token.claims.roles || [] });
+        requestFcmPermission().catch(() => {});
       } else {
+        removeFcmToken().catch(() => {});
         setUser(null);
       }
       setLoading(false);

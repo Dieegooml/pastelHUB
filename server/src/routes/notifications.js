@@ -5,6 +5,7 @@ const { verifyToken, requireAdmin, requireSelfOrAdmin } = require('../middleware
 const { validate } = require('../middlewares/validate');
 const { createNotificationSchema, bulkNotificationSchema } = require('../validators/notificationValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
+const { sendPush } = require('../utils/fcmService');
 
 const col = db.collection('notifications');
 
@@ -107,6 +108,7 @@ router.post('/', verifyToken, requireAdmin, validate(createNotificationSchema), 
     };
 
     const ref = await col.add(data);
+    sendPush(userId, title || type, message, { type, notificationId: ref.id }).catch(() => {});
     res.status(201).json({ id: ref.id, ...data });
   } catch (e) {
     res.status(500).json({ error: 'Error al crear la notificación' });
@@ -130,6 +132,7 @@ router.post('/bulk', verifyToken, requireAdmin, validate(bulkNotificationSchema)
     });
 
     await batch.commit();
+    userIds.forEach(uid => sendPush(uid, title || type, message, { type }).catch(() => {}));
     res.status(201).json({ count: created.length, notifications: created });
   } catch (e) {
     res.status(500).json({ error: 'Error al crear notificaciones masivas' });
