@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const logger = require('./utils/logger');
 const { db } = require('./config/firebase');
 
 // Configuración de CORS
@@ -75,6 +76,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// Logging de peticiones HTTP
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    logger.info('HTTP Request', {
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      duration,
+      userId: req.user?.uid || 'anonymous',
+    });
+  });
+  next();
+});
+
 // Rutas API
 app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
@@ -102,6 +119,27 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Métricas de monitoreo (uso interno)
+app.get('/api/metrics', (req, res) => {
+  const mem = process.memoryUsage();
+  const cpu = process.cpuUsage();
+  res.json({
+    uptime: process.uptime(),
+    memory: {
+      rss: Math.round(mem.rss / 1024 / 1024) + 'MB',
+      heapTotal: Math.round(mem.heapTotal / 1024 / 1024) + 'MB',
+      heapUsed: Math.round(mem.heapUsed / 1024 / 1024) + 'MB',
+    },
+    cpu: {
+      user: Math.round(cpu.user / 1000) + 'ms',
+      system: Math.round(cpu.system / 1000) + 'ms',
+    },
+    nodeVersion: process.version,
+    platform: process.platform,
+    env: process.env.NODE_ENV || 'development',
+  });
+});
+
 // Manejo de rutas inexistentes (solo API)
 app.use((req, res, next) => {
   res.status(404).json({ error: 'Ruta no encontrada' });
@@ -109,7 +147,7 @@ app.use((req, res, next) => {
 
 // Manejo global de errores
 app.use((err, req, res, next) => {
-  console.error('Error global:', err.stack);
+  logger.error('Error global', { stack: err.stack, method: req.method, path: req.path });
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 

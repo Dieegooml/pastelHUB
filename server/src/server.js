@@ -1,43 +1,44 @@
 const cron = require('node-cron');
 const app = require('./app');
+const logger = require('./utils/logger');
 const { createBackup, ALL_COLLECTIONS } = require('./utils/backupService');
 
 const PORT = process.env.PORT || 3001;
 const server = app.listen(PORT, () => {
-  console.log('Servidor en puerto', PORT);
+  logger.info('Servidor iniciado', { port: PORT, env: process.env.NODE_ENV || 'development' });
 });
 
 if (process.env.NODE_ENV === 'production' && !process.env.LOAD_TEST) {
   const schedule = process.env.BACKUP_SCHEDULE || '0 3 * * *';
   cron.schedule(schedule, async () => {
-    console.log('[BACKUP] Iniciando backup automático...');
+    logger.info('Backup automático iniciado');
     try {
       const result = await createBackup(ALL_COLLECTIONS);
-      console.log(`[BACKUP] Completado: ${result.meta.total} documentos`);
+      logger.info('Backup completado', { totalDocs: result.meta.total });
     } catch (e) {
-      console.error('[BACKUP] Error:', e.message);
+      logger.error('Error en backup automático', { error: e.message });
     }
   });
-  console.log(`[BACKUP] Programación: ${schedule}`);
+  logger.info('Backup programado', { schedule });
 }
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`El puerto ${PORT} está en uso`);
+    logger.error('Puerto en uso', { port: PORT });
   } else {
-    console.error('Error al iniciar el servidor:', err.message);
+    logger.error('Error al iniciar servidor', { error: err.message });
   }
   process.exit(1);
 });
 
 function gracefulShutdown(signal) {
-  console.log(`\n${signal} recibido. Cerrando servidor...`);
+  logger.warn('Señal recibida, cerrando servidor', { signal });
   server.close(() => {
-    console.log('Servidor cerrado correctamente.');
+    logger.info('Servidor cerrado correctamente');
     process.exit(0);
   });
   setTimeout(() => {
-    console.error('Forzando cierre tras 10s de espera.');
+    logger.error('Forzando cierre tras 10s de espera');
     process.exit(1);
   }, 10000);
 }
