@@ -311,10 +311,18 @@ PastelHub implementa una API REST completa con **11 módulos principales** y **8
 
 ## Rate Limiting
 
-| Limiter | Ventana | Límite (dev) | Límite (prod) |
-|---------|---------|-------------|---------------|
-| General | 15 min | 500 | 100 |
-| Auth | 15 min | 100 | 10 |
+| Limiter | Ventana | Límite (dev/prod) | Límite (LOAD_TEST) |
+|---------|---------|-------------------|-------------------|
+| General | 15 min (5s test) | 500 | 100k/5s |
+| Auth | 15 min (5s test) | 50 | 20k/5s |
+
+---
+
+## 1️⃣3️⃣ METRICS — Monitoreo Interno
+
+| Método | Ruta | Descripción | Auth | Status |
+|--------|------|-------------|------|--------|
+| GET | `/metrics` | Métricas del servidor (uptime, memoria, CPU, Node) | ❌ Público (uso interno) | 200 |
 
 ---
 
@@ -354,6 +362,6 @@ Todos los endpoints están consumidos por servicios en `client/src/services/`:
 
 ---
 
-**Documento generado:** 28/05/2026  
-**Total de Endpoints:** 80+  
+**Documento generado:** 09/06/2026  
+**Total de Endpoints:** 85+  
 **Estado:** ✅ Implementados y Documentados

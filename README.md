@@ -40,6 +40,10 @@ PastelHub es una plataforma web tipo Rappi, pero especializada exclusivamente en
 - 🛡️ **Moderación de contenido** — revisión de reseñas, reportes y gestión de disputas
 - 🔄 **Recuperación de contraseña** — flujo completo con Firebase (sin backend propio)
 - 🤖 **Chatbot con IA** — asistente virtual impulsado por Gemini API para consultas sobre pedidos, productos y soporte (próximamente)
+- 📊 **Monitoreo interno** — endpoint `/api/metrics` con uptime, memoria, CPU y versión de Node
+- 📝 **Logs estructurados** — Winston con formato JSON en producción, coloreado en desarrollo, logging HTTP automático
+- ⚡ **Firestore optimizado** — connection pooling con `maxIdleChannels: 100`
+- 🔄 **Ramp-up progresivo** — Stages de load test graduales para 5000-50000 VUs con thresholds dinámicos
 
 ---
 
@@ -65,7 +69,7 @@ PastelHub es una plataforma web tipo Rappi, pero especializada exclusivamente en
 | **Backend** | Node.js + Express.js |
 | **Base de datos** | Firebase Firestore (NoSQL) |
 | **Autenticación** | Firebase Authentication + Custom Claims (roles) |
-| **Pruebas** | Jest 30 + Supertest (237 tests), k6 (carga) |
+| **Pruebas** | Jest 30 + Supertest (338 tests), k6 (carga hasta 50000 VUs) |
 | **Despliegue** | Vite build → servidor Express (frontend estático + API unificados) |
 
 ---
@@ -79,6 +83,7 @@ React App (navegador)
         ▼
 Express API (Node.js)
         │
+        ├── Winston Logger (HTTP logging + errores)
         ├── Firebase Auth Middleware (verifica ID Token)
         ├── Role Guard (custom claims + allow-self)
         │
@@ -93,6 +98,12 @@ Express API (Node.js)
         ├── /api/payments
         ├── /api/customers
         ├── /api/promotions
+        ├── /api/metrics (monitoreo)
+        ├── /api/health
+        ├── /api/backup
+        ├── /api/chat
+        ├── /api/invoices
+        ├── /api/support
         │
         ▼
 Firebase Firestore (NoSQL)
@@ -554,11 +565,17 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 | `npm run dev` | Servidor en modo desarrollo con hot reload |
 | `npm run start` | Servidor en producción |
 | `npm run start:load-test` | Servidor con ventanas de rate limit de 5s y bypass de Firebase Auth |
-| `npm run test` | Tests unitarios (Jest, 237 tests) + genera `test-report.html` |
+| `npm run test` | Tests unitarios (Jest, 338 tests) + genera `test-report.html` |
 | `npm run test:coverage` | Tests unitarios con reporte de cobertura HTML |
 | `npm run load-test` | Prueba de carga: 100 VUs, bypass auth |
 | `npm run load-test:50` | Prueba de carga: 50 VUs, bypass auth |
 | `npm run load-test:real-auth` | Prueba de carga: 100 VUs, auth Firebase real (automático) |
+| `npm run load-test:k6` | k6: 1000 VUs completo |
+| `npm run load-test:k6:1000` | k6: 1000 VUs completo |
+| `npm run load-test:k6:5000` | k6: 5000 VUs completo |
+| `npm run load-test:k6:10000` | k6: 10000 VUs completo |
+| `npm run load-test:k6:50000` | k6: 50000 VUs completo |
+| `npm run load-test:k6:quick` | k6: 100 VUs rápido (~45s) |
 | `npm run test:rate-limit` | Test de rate limiting (automático, genera reporte HTML) |
 
 ### Frontend (`/client`) — React
@@ -757,25 +774,42 @@ pastelhub/
 │   ├── src/
 │   │   ├── app.js                 # Express app (routes, cors, rate limiters)
 │   │   ├── server.js              # Entry point (app.listen)
-│   │   ├── routes/                # 11 routers: auth, users, shops, products, orders,
-│   │   │                          #   reviews, payments, notifications, reports, customers, promotions
+│   │   ├── routes/                # 14 routers: auth, users, shops, products, orders,
+│   │   │                          #   reviews, payments, notifications, reports, customers,
+│   │   │                          #   promotions, chat, invoices, support, backups
 │   │   ├── middlewares/
 │   │   │   └── auth.js            # verifyToken, requireAdmin, requireOwner, requireModerator,
 │   │   │                          #   requireCustomer, requireOwnerOrAdmin
 │   │   ├── config/
 │   │   │   └── firebase.js        # Inicialización Admin SDK
 │   │   ├── utils/
+│   │   │   ├── logger.js          # Winston: logs estructurados (JSON/coloreado)
 │   │   │   ├── paginate.js        # Paginación con count() de Firestore
-│   │   │   └── mappers.js         # Mapeo camelCase ↔ snake_case
+│   │   │   ├── mappers.js         # Mapeo camelCase ↔ snake_case
+│   │   │   ├── autoNotify.js      # Notificaciones automáticas
+│   │   │   ├── auditLog.js        # Auditoría de acciones
+│   │   │   ├── backupService.js   # Backup Firestore → GCS
+│   │   │   └── chat.js            # Integración Gemini AI
 │   │   └── validators/            # Schemas Zod por recurso
 │   ├── tests/
 │   │   ├── setup.js               # Mock de firebase-admin + helpers
-│   │   ├── health.test.js
-│   │   ├── middleware.test.js
-│   │   ├── auth.test.js
-│   │   ├── shops.test.js
-│   │   ├── users.test.js
-│   │   └── reviews.test.js
+│   │   ├── unit/                  # 13 archivos, 338 tests
+│   │   │   ├── health.test.js
+│   │   │   ├── middleware.test.js
+│   │   │   ├── auth.test.js
+│   │   │   ├── users.test.js
+│   │   │   ├── shops.test.js
+│   │   │   ├── products.test.js
+│   │   │   ├── orders.test.js
+│   │   │   ├── payments.test.js
+│   │   │   ├── reviews.test.js
+│   │   │   ├── notifications.test.js
+│   │   │   ├── reports.test.js
+│   │   │   └── customers.test.js
+│   │   ├── load/
+│   │   │   └── load-test.js       # k6: 100-50000 VUs, reporte HTML
+│   │   └── rate-limit/
+│   │       └── rate-limit-test.js
 │   ├── backup.js                  # Script de backup Firestore → JSON
 │   └── package.json
 │

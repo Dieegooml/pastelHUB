@@ -35,7 +35,8 @@ Firebase Admin SDK está **mockeado** — no requiere `serviceAccountKey.json` n
 | `tests/unit/notifications.test.js` | 18 | CRUD notificaciones + bulk |
 | `tests/unit/reports.test.js` | 28 | CRUD reportes + asignación + resolución |
 | `tests/unit/customers.test.js` | 24 | CRUD customers + direcciones |
-| **Total** | **232** | |
+| `tests/unit/promotions.test.js` | 22 | CRUD promociones + toggle |
+| **Total** | **338** | |
 
 ### Ejecutar
 
@@ -60,8 +61,8 @@ npm run test:watch                # Modo watch
  PASS  tests/unit/auth.test.js
  ...
 
-Tests:       232 passed, 232 total
-Time:        5.3 s
+Tests:       338 passed, 338 total
+Time:        6.2 s
 ```
 
 ### Mock de Firebase
@@ -141,13 +142,61 @@ Script alternativo de carga para quienes tengan k6 instalado.
 
 ### Script
 
-`tests/load/load-test.js`
+`tests/load/load-test.js` — Soporta de 100 a 50000 VUs con stages progresivos y thresholds dinámicos.
 
 ### Ejecutar
 
 ```bash
-cd server && k6 run tests/load/load-test.js
+cd server
+
+# 100 VUs (smoke test rápido)
+k6 run tests/load/load-test.js -e QUICK=true -e MAX_VUS=100 -e LOAD_TEST=true
+
+# 1000 VUs (completo ~7 min)
+k6 run tests/load/load-test.js -e MAX_VUS=1000
+
+# 5000 VUs (completo ~10 min)
+k6 run tests/load/load-test.js -e MAX_VUS=5000 -e LOAD_TEST=true
+
+# 10000 VUs (alta carga)
+k6 run tests/load/load-test.js -e MAX_VUS=10000 -e LOAD_TEST=true
+
+# 50000 VUs (máxima carga)
+k6 run tests/load/load-test.js -e MAX_VUS=50000 -e LOAD_TEST=true
 ```
+
+### Scripts npm disponibles
+
+| Comando | VUs | Modo |
+|---------|:---:|:----:|
+| `npm run load-test:k6:quick` | 100 | Rápido (~45s) |
+| `npm run load-test:k6:500` | 500 | Completo |
+| `npm run load-test:k6:500:quick` | 500 | Rápido |
+| `npm run load-test:k6:1000` | 1000 | Completo |
+| `npm run load-test:k6:1000:quick` | 1000 | Rápido |
+| `npm run load-test:k6:5000` | 5000 | Completo |
+| `npm run load-test:k6:5000:quick` | 5000 | Rápido |
+| `npm run load-test:k6:10000` | 10000 | Completo |
+| `npm run load-test:k6:10000:quick` | 10000 | Rápido |
+| `npm run load-test:k6:50000` | 50000 | Completo |
+| `npm run load-test:k6:50000:quick` | 50000 | Rápido |
+
+### Variables de entorno k6
+
+| Variable | Default | Descripción |
+|----------|---------|-------------|
+| `TARGET_URL` | `http://localhost:3001` | URL del servidor |
+| `MAX_VUS` | `1000` | Usuarios virtuales concurrentes |
+| `STEADY_MINUTES` | `5` | Duración del estado estable |
+| `QUICK` | `false` | Modo rápido (stages acortados) |
+| `LOAD_TEST` | `false` | Bypass de autenticación |
+
+### Thresholds dinámicos
+
+| Carga | P95 | P99 | Fallos |
+|-------|:---:|:---:|:------:|
+| ≤10000 VUs | <5000ms | <10000ms | <2% |
+| >10000 VUs | <10000ms | <20000ms | <5% |
 
 ---
 
@@ -165,8 +214,8 @@ Script Node.js que verifica automáticamente que los rate limiters del servidor 
 
 | Límite | Max | Ventana | Esperado | Resultado |
 |---|---|---|---|---|
-| General (todas las rutas) | 100 req | 5s (LOAD_TEST) | Bloqueo en #101 | PASA |
-| Auth (/api/auth) | 10 req | 5s (LOAD_TEST) | Bloqueo en #11 | PASA |
+| General (todas las rutas) | 100k req | 5s (LOAD_TEST) | Bloqueo en #100001 | PASA |
+| Auth (/api/auth) | 20k req | 5s (LOAD_TEST) | Bloqueo en #20001 | PASA |
 
 ### Ejecutar
 
@@ -183,7 +232,7 @@ Genera `rate-limit-test-report.html`.
 
 ```bash
 # Unitarias (Jest)
-cd server && npm test                             # 232 tests, genera HTML
+cd server && npm test                             # 338 tests, genera HTML
 cd server && npm run test:coverage                # Con cobertura
 cd server && npm run test:watch                   # Modo watch
 
@@ -196,7 +245,11 @@ cd server && npm run load-test:50                 # Terminal 2: 50 VUs
 cd server && npm run load-test:real-auth          # Spawnea servidor solo
 
 # Carga (k6) — requiere servidor corriendo
-cd server && k6 run tests/load/load-test.js
+cd server && npm run load-test:k6:quick           # 100 VUs rápido (~45s)
+cd server && npm run load-test:k6:1000            # 1000 VUs completo
+cd server && npm run load-test:k6:5000            # 5000 VUs completo
+cd server && npm run load-test:k6:10000           # 10000 VUs completo
+cd server && npm run load-test:k6:50000           # 50000 VUs completo
 
 # Rate limiting — automático
 cd server && npm run test:rate-limit              # Spawnea servidores

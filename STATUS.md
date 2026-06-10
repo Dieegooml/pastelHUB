@@ -1,6 +1,6 @@
 # 📊 PastelHub — Estado del Proyecto
 
-> Documento generado: 04/06/2026
+> Documento generado: 09/06/2026
 
 ---
 
@@ -54,6 +54,12 @@
 - ✅ Firestore Rules con control de acceso por roles
 - ✅ Ofuscación de código para producción
 - ✅ Backup/restore scripts
+- ✅ **Logs estructurados** — Winston con formato JSON en prod, coloreado en dev; logging HTTP automático
+- ✅ **Endpoint /api/metrics** — Monitoreo interno: uptime, memoria, CPU, versión de Node
+- ✅ **Firestore connection pooling** — `maxIdleChannels: 100` para alto rendimiento
+- ✅ **min-instances=5** — Cloud Run escala con 5 instancias mínimas para evitar cold starts
+- ✅ **Stages progresivos en k6** — Ramp-up gradual para cargas de 10000-50000 VUs con thresholds dinámicos
+- ✅ **Scripts k6 expandidos** — 12 scripts npm para 100/500/1000/5000/10000/50000 VUs en modo normal y quick
 
 ---
 
@@ -63,6 +69,9 @@
 - ❌ P95=6.6s con 5000 VUs desde Windows local (threshold <5s). Ejecutar desde GCP (Cloud Run Job) debería resolverlo.
 - ❌ Rate limiting forzó 429 en un punto del test de 5000 VUs — ajustado a 100k/5s, monitorizar si es suficiente.
 - ❌ Docker Desktop no corriendo localmente impidió usar deploy.sh con docker build.
+- ✅ Thresholds dinámicos para altas cargas (>10000 VUs: p95<10000, failed<5%)
+- ✅ Stages de ramp-up más graduales (15s/30s/45s en quick, hasta 120s en completo)
+- ✅ Scripts npm para 10000 y 50000 VUs con variantes quick
 
 ### Funcionalidades Pendientes
 

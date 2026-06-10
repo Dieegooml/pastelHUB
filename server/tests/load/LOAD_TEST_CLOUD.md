@@ -1,6 +1,6 @@
 # Load Tests en Cloud — CMD (Windows)
 
-Servidor: **8 CPU / 4GB RAM / 500 concurrency / 2-25 instances / 600s timeout**
+Servidor: **8 CPU / 4GB RAM / 500 concurrency / 5-25 instances / 600s timeout**
 
 ---
 
@@ -103,6 +103,59 @@ gcloud run jobs execute k6-load-test --region=us-central1 ^
 ❌ Firestore saturado — no pasa threshold 5s
 
 **Observacion:** Mas instancias empeoran los fallos (2.9% → 13.4%). El cuello de botella es Firestore, no el compute.
+
+---
+
+## 10000 VUs
+
+### Ejecutar
+```cmd
+REM Normal (~12 min)
+gcloud run jobs execute k6-load-test --region=us-central1 ^
+  --cpu=4 --memory=4Gi ^
+  --update-env-vars=MAX_VUS=10000,STEADY_MINUTES=3
+
+REM Rapido (~1.5 min)
+gcloud run jobs execute k6-load-test --region=us-central1 ^
+  --cpu=4 --memory=4Gi ^
+  --update-env-vars=QUICK=true,MAX_VUS=10000,STEADY_MINUTES=0
+```
+
+### Umbrales (automáticos)
+| Umbral | Valor |
+|--------|-------|
+| P95 | <10000ms (relajado para alta carga) |
+| P99 | <20000ms |
+| Fallos | <5% |
+
+---
+
+## 50000 VUs
+
+### Ejecutar
+```cmd
+REM Normal (~15 min)
+gcloud run jobs execute k6-load-test --region=us-central1 ^
+  --cpu=8 --memory=8Gi ^
+  --update-env-vars=MAX_VUS=50000,STEADY_MINUTES=3
+
+REM Rapido (~2 min)
+gcloud run jobs execute k6-load-test --region=us-central1 ^
+  --cpu=8 --memory=8Gi ^
+  --update-env-vars=QUICK=true,MAX_VUS=50000,STEADY_MINUTES=0
+```
+
+### Umbrales (automáticos)
+| Umbral | Valor |
+|--------|-------|
+| P95 | <10000ms |
+| P99 | <20000ms |
+| Fallos | <5% |
+
+### Recomendación
+Para 50000 VUs se recomienda aumentar recursos: 8 CPU, 8GB RAM, min-instances=10.
+
+---
 
 ## Ver resultado
 

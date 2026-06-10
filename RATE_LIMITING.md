@@ -17,19 +17,19 @@ const rateLimit = require('express-rate-limit');
 const isLoadTest = process.env.LOAD_TEST === 'true' ||
                    process.env.LOAD_TEST_REAL_AUTH === 'true';
 
-// Limiter General: 100 requests por IP
+// Limiter General: 500 requests por IP (100k en LOAD_TEST)
 const limiter = rateLimit({
   windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000,  // 5s (test) / 15 min
-  max: 100,
+  max: isLoadTest ? 100000 : 500,
   message: { error: 'Demasiadas peticiones, intenta en 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Limiter Estricto para Autenticación: 10 requests por IP
+// Limiter Estricto para Autenticación: 50 requests por IP (20k en LOAD_TEST)
 const authLimiter = rateLimit({
   windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000,  // 5s (test) / 15 min
-  max: 10,
+  max: isLoadTest ? 20000 : 50,
   message: { error: 'Demasiados intentos de autenticación, intenta en 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -44,10 +44,10 @@ app.use('/api/auth', authLimiter, require('./routes/auth'));  // Auth
 
 ## Límites Configurados
 
-| Ruta | Límite | Ventana (producción) | Ventana (LOAD_TEST) |
-|---|---|---|---|---|
-| **Todas las rutas** | 500 req/IP (100k en LOAD_TEST) | 15 min | 5s |
-| **/api/auth** | 50 req/IP (20k en LOAD_TEST) | 15 min | 5s |
+| Ruta | Límite (prod/dev) | Límite (LOAD_TEST) | Ventana (prod) | Ventana (test) |
+|---|---|---|---|---|---|
+| **Todas las rutas** | 500 req/IP | 100k req/IP | 15 min | 5s |
+| **/api/auth** | 50 req/IP | 20k req/IP | 15 min | 5s |
 
 ---
 
@@ -102,8 +102,8 @@ npm run test:rate-limit
 ### Resultado esperado
 
 ```
-  Límite general: bloqueo en #101 (esperado: #101) ✅ PASA
-  Límite auth:    bloqueo en #11 (esperado: #11) ✅ PASA
+  Límite general: bloqueo en #501 (esperado: #501) ✅ PASA
+  Límite auth:    bloqueo en #51 (esperado: #51) ✅ PASA
 ```
 
 Genera `rate-limit-test-report.html`.
@@ -139,5 +139,5 @@ node test-rate-limit.js
 
 ---
 
-**Documento generado:** 18/05/2026  
+**Documento generado:** 09/06/2026  
 **Estado:** Rate Limiting Implementado y Documentado

@@ -586,7 +586,7 @@ gcloud run deploy pastelhub-server \
   --region=us-central1 \
   --allow-unauthenticated \
   --cpu=8 --memory=4Gi \
-  --min-instances=2 --max-instances=25 \
+   --min-instances=5 --max-instances=25 \
   --concurrency=500 --timeout=600 \
   --set-env-vars="NODE_ENV=production,CLIENT_URL=https://pastehub-2d2b2.web.app,FIREBASE_PROJECT_ID=pastehub-2d2b2,FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@pastehub-2d2b2.iam.gserviceaccount.com" \
   --update-secrets="FIREBASE_PRIVATE_KEY=firebase-private-key:latest,GEMINI_API_KEY=gemini-api-key:latest"
@@ -618,61 +618,69 @@ La variable `CLIENT_URL` en el backend controla CORS. Debe coincidir exactamente
 | Aspecto | Nota |
 |---------|------|
 | **Backups** | El backup automático (cron 3 AM) funciona en Cloud Run pero es efímero. Para persistencia real, migrar a Cloud Scheduler + Cloud Storage |
-| **Rate limiting** | 500 req/15min general, 50 req/15min auth. En modo LOAD_TEST: 100k/5s general, 20k/5s auth (para soportar 5000 VUs) |
-| **Escalado** | Mínimo 1 instancia (evita cold start). Máximo 50. Concurrency 250 por instancia. Capaz de ~12,500 req/s en pico |
-| **Memoria** | 2 GB para soportar picos de ~250 requests concurrentes por instancia |
-| **CPU** | 4 vCPU para manejar 5000 VUs en load tests y picos de producción |
+| **Rate limiting** | 500 req/15min general, 50 req/15min auth. En modo LOAD_TEST: 100k/5s general, 20k/5s auth (para soportar 50000 VUs) |
+| **Escalado** | Mínimo 5 instancias (evita cold starts). Máximo 25. Concurrency 500 por instancia |
+| **Memoria** | 4 GB para soportar picos de ~500 requests concurrentes por instancia |
+| **CPU** | 8 vCPU para manejar 5000-50000 VUs en load tests y picos de producción |
 | **Firebase Admin** | Usa Opción C (variables de entorno individuales) con `FIREBASE_PRIVATE_KEY` desde Secret Manager |
 | **Gemini AI** | El chat usa `gemini-2.0-flash-exp`. API key desde Secret Manager |
+| **Logs** | Winston con formato JSON, reemplaza todos los console.* |
+| **Monitoreo** | Endpoint `/api/metrics` interno: uptime, memoria, CPU, versión Node |
+| **Metrics** | `GET /api/metrics` — público, uso interno |
 
 ### Load Testing con k6 (Cloud Run Job)
 
-El proyecto incluye un script de k6 (`server/tests/load/load-test.js`) que soporta hasta **5000 VUs**.
+El proyecto incluye un script de k6 (`server/tests/load/load-test.js`) que soporta hasta **50000 VUs** con stages progresivos y thresholds dinámicos.
 
 #### Ejecutar localmente
 
 ```bash
 cd server
 
-# 1000 VUs con Node.js runner (bypass auth)
-npm run load-test:1000
-
-# 5000 VUs con Node.js runner
-npm run load-test:5000
-
-# Smoke test rápido (~75s, 100 VUs)
+# Smoke test rápido (~45s, 100 VUs)
 npm run load-test:k6:quick
 
-# 1000 VUs con k6 (completo ~3.5min con 1min steady)
-k6 run tests/load/load-test.js -e MAX_VUS=1000 -e STEADY_MINUTES=1
+# 500 VUs
+npm run load-test:k6:500
 
-# 5000 VUs con k6 (completo ~3.5min)
-k6 run tests/load/load-test.js -e MAX_VUS=5000 -e STEADY_MINUTES=1
+# 1000 VUs
+npm run load-test:k6:1000
 
-# 5000 VUs modo rápido (~75s)
-k6 run tests/load/load-test.js -e QUICK=true -e MAX_VUS=5000 -e STEADY_MINUTES=0
+# 5000 VUs
+npm run load-test:k6:5000
+
+# 10000 VUs (alta carga)
+npm run load-test:k6:10000
+
+# 50000 VUs (máxima carga)
+npm run load-test:k6:50000
 ```
 
 #### Cloud Run Job (k6)
 
 ```bash
-# Smoke test rápido (~75s)
+# Smoke test rápido (~45s)
 gcloud run jobs execute k6-load-test --region=us-central1 \
   --update-env-vars=MAX_VUS=100,STEADY_MINUTES=0,QUICK=true
 
-# 1000 VUs (completo ~3.5min con 1min steady)
+# 1000 VUs (completo ~7min)
 gcloud run jobs execute k6-load-test --region=us-central1 \
-  --update-env-vars=MAX_VUS=1000,STEADY_MINUTES=1
+  --update-env-vars=MAX_VUS=1000,STEADY_MINUTES=3
 
-# 5000 VUs (completo ~3.5min)
+# 5000 VUs (completo ~10min)
 gcloud run jobs execute k6-load-test --region=us-central1 \
   --cpu=4 --memory=4Gi \
-  --update-env-vars=MAX_VUS=5000,STEADY_MINUTES=1
+  --update-env-vars=MAX_VUS=5000,STEADY_MINUTES=3
 
-# 5000 VUs modo rápido (~75s, solo para validación)
+# 10000 VUs (completo ~12min)
 gcloud run jobs execute k6-load-test --region=us-central1 \
   --cpu=4 --memory=4Gi \
-  --update-env-vars=MAX_VUS=5000,STEADY_MINUTES=0,QUICK=true
+  --update-env-vars=MAX_VUS=10000,STEADY_MINUTES=3
+
+# 50000 VUs (completo ~15min)
+gcloud run jobs execute k6-load-test --region=us-central1 \
+  --cpu=8 --memory=8Gi \
+  --update-env-vars=MAX_VUS=50000,STEADY_MINUTES=3
 ```
 
 #### Reportes
@@ -683,18 +691,18 @@ gcloud run jobs execute k6-load-test --region=us-central1 \
 
 #### Recursos del servidor
 
-Para 5000 VUs el servidor Cloud Run está configurado con:
+Para cargas altas el servidor Cloud Run está configurado con:
 | Recurso | Valor |
 |---------|-------|
 | CPU | 8 vCPU |
 | RAM | 4 GB |
 | Concurrency | 500 req/instancia |
-| Min instances | 2 (5 si se necesitan más pre-calentadas) |
+| Min instances | 5 |
 | Max instances | 25 |
 | Rate limit (LOAD_TEST) | 100k req/5s general, 20k req/5s auth |
 
 ---
 
 **Documento generado:** 17/05/2026  
-**Última actualización:** 04/06/2026  
+**Última actualización:** 09/06/2026  
 **Estado:** ✅ Entorno Cloud Preparado y Documentado
