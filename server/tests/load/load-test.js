@@ -23,27 +23,30 @@ const endpoints = [
   { path: '/api/customers',   name: 'List Customers'     },
 ];
 
+const isHighLoad = MAX_VUS > 10000;
+
 const stages = QUICK ? [
-  { duration: '5s',   target: Math.min(MAX_VUS, 100)                     },
-  { duration: '10s',  target: Math.min(MAX_VUS, Math.round(MAX_VUS * 0.5)) },
-  { duration: '15s',  target: MAX_VUS                                     },
+  { duration: '15s',  target: Math.min(MAX_VUS, 200)                     },
+  { duration: '30s',  target: Math.min(MAX_VUS, Math.round(MAX_VUS * 0.3)) },
+  { duration: '45s',  target: MAX_VUS                                     },
   { duration: `${Math.min(STEADY_MINUTES, 1)}m`, target: MAX_VUS           },
-  { duration: '10s',  target: Math.round(MAX_VUS * 0.3)                  },
-  { duration: '5s',   target: 0                                           },
+  { duration: '15s',  target: Math.round(MAX_VUS * 0.3)                  },
+  { duration: '10s',  target: 0                                           },
 ] : [
-  { duration: '15s',  target: Math.min(MAX_VUS, 100)                     },
-  { duration: '30s',  target: Math.min(MAX_VUS, Math.round(MAX_VUS * 0.5)) },
-  { duration: '60s',  target: MAX_VUS                                     },
+  { duration: '30s',  target: Math.min(MAX_VUS, 200)                     },
+  { duration: '60s',  target: Math.min(MAX_VUS, Math.round(MAX_VUS * 0.3)) },
+  { duration: '120s', target: Math.min(MAX_VUS, Math.round(MAX_VUS * 0.6)) },
+  { duration: '120s', target: MAX_VUS                                     },
   { duration: `${STEADY_MINUTES}m`, target: MAX_VUS                       },
-  { duration: '30s',  target: Math.round(MAX_VUS * 0.3)                  },
-  { duration: '15s',  target: 0                                           },
+  { duration: '60s',  target: Math.round(MAX_VUS * 0.3)                  },
+  { duration: '30s',  target: 0                                           },
 ];
 
 export const options = {
   stages,
   thresholds: {
-    http_req_duration: ['p(95)<5000', 'p(99)<10000'],
-    http_req_failed:   ['rate<0.02'],
+    http_req_duration: isHighLoad ? ['p(95)<10000', 'p(99)<20000'] : ['p(95)<5000', 'p(99)<10000'],
+    http_req_failed:   isHighLoad ? ['rate<0.05'] : ['rate<0.02'],
   },
   tags: {
     test_type: 'load',

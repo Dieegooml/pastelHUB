@@ -74,7 +74,7 @@ deploy_backend() {
     --allow-unauthenticated \
     --cpu=8 \
     --memory=4Gi \
-    --min-instances=2 \
+    --min-instances=5 \
     --max-instances=25 \
     --concurrency=500 \
     --timeout=600 \

@@ -22,6 +22,7 @@ const mockDb = {
   offset: jest.fn().mockImplementation(function (n) { this._offset = n; return this; }),
   count: countFn,
   batch: jest.fn(() => mockBatch),
+  settings: jest.fn(),
 };
 
 const mockAuth = {

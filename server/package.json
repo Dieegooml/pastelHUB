@@ -11,6 +11,7 @@
     "helmet": "^8.1.0",
     "node-cron": "^4.2.1",
     "pdfkit": "^0.18.0",
+    "winston": "^3.19.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -41,6 +42,10 @@
     "load-test:k6:500:quick": "k6 run tests/load/load-test.js -e QUICK=true -e MAX_VUS=500 -e STEADY_MINUTES=1",
     "load-test:k6:1000": "k6 run tests/load/load-test.js -e MAX_VUS=1000 -e STEADY_MINUTES=5",
     "load-test:k6:5000": "k6 run tests/load/load-test.js -e MAX_VUS=5000 -e STEADY_MINUTES=5",
+    "load-test:k6:10000": "k6 run tests/load/load-test.js -e MAX_VUS=10000 -e STEADY_MINUTES=5",
+    "load-test:k6:10000:quick": "k6 run tests/load/load-test.js -e QUICK=true -e MAX_VUS=10000 -e STEADY_MINUTES=1",
+    "load-test:k6:50000": "k6 run tests/load/load-test.js -e MAX_VUS=50000 -e STEADY_MINUTES=3",
+    "load-test:k6:50000:quick": "k6 run tests/load/load-test.js -e QUICK=true -e MAX_VUS=50000 -e STEADY_MINUTES=1",
     "load-test:k6:1000:quick": "k6 run tests/load/load-test.js -e QUICK=true -e MAX_VUS=1000 -e STEADY_MINUTES=1",
     "load-test:k6:5000:quick": "k6 run tests/load/load-test.js -e QUICK=true -e MAX_VUS=5000 -e STEADY_MINUTES=1",
     "load-test:real-auth": "set LOAD_TEST_REAL_AUTH=true&& set RESULTS_FILE=load-test-results-real-auth.json&& set REPORT_FILE=load-test-report-real-auth.html&& node tests/load/load-test-runner-real-auth-100.js && start load-test-report-real-auth.html",
