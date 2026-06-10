@@ -11,6 +11,7 @@ import {
   textareaStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary,
   btnSmallSecondary, tableHeaderStyle, labelStyle, badge,
 } from '../../styles/theme';
+import ImageUploader from '../../components/ImageUploader';
 
 const emptyForm = {
   category_id: '', name: '',
@@ -304,9 +305,7 @@ export default function Products() {
                 <label style={labelStyle}>Imagen (URL)</label>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <div style={{ flex: 1 }}>
-                    <input style={inputStyle} name="image_url" value={form.image_url} onChange={handleChange} placeholder="https://..." />
-                  </div>
-                  <ImagePreview url={form.image_url} />
+                    <ImageUploader folder="products" currentUrl={form.image_url} onUpload={(url) => setForm(p => ({ ...p, image_url: url }))} label="Producto" />
                 </div>
               </div>
             </div>

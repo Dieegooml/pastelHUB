@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { colors, font, inputStyle, btnSmallPrimary, btnGhost, btnDanger, tableHeaderStyle } from '../../styles/theme';
 import { productsService } from '../../services/productsService';
 import { smallInput, sectionTitle } from './ownerConstants';
+import ImageUploader from '../../components/ImageUploader';
 
 export default function OwnerTabProducts({ selectedShop, setError, setSuccess }) {
   const [products, setProducts] = useState([]);
@@ -82,7 +83,7 @@ export default function OwnerTabProducts({ selectedShop, setError, setSuccess })
             <div><label style={sectionTitle}>Stock</label><input style={smallInput} type="number" value={productForm.stock} onChange={(e) => setProductForm((p) => ({ ...p, stock: e.target.value }))} /></div>
             <div><label style={sectionTitle}>Categoría</label><input style={smallInput} value={productForm.categoryId} onChange={(e) => setProductForm((p) => ({ ...p, categoryId: e.target.value }))} /></div>
             <div style={{ gridColumn: '1 / -1' }}><label style={sectionTitle}>Descripción</label><textarea style={{ ...inputStyle, height: 'auto', minHeight: '50px', padding: '10px 14px', fontSize: '13px', resize: 'vertical' }} value={productForm.productDescription} onChange={(e) => setProductForm((p) => ({ ...p, productDescription: e.target.value }))} /></div>
-            <div style={{ gridColumn: '1 / -1' }}><label style={sectionTitle}>Imagen URL</label><input style={smallInput} value={productForm.imageUrl} onChange={(e) => setProductForm((p) => ({ ...p, imageUrl: e.target.value }))} /></div>
+            <div style={{ gridColumn: '1 / -1' }}><label style={sectionTitle}>Imagen</label><ImageUploader folder="products" currentUrl={productForm.imageUrl} onUpload={(url) => setProductForm((p) => ({ ...p, imageUrl: url }))} label="Producto" /></div>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontFamily: font.body, color: colors.text, cursor: 'pointer' }}>
                 <input type="checkbox" checked={productForm.isAvailable} onChange={(e) => setProductForm((p) => ({ ...p, isAvailable: e.target.checked }))} />

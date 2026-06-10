@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { colors, font, inputStyle, btnPrimary } from '../../styles/theme';
 import { shopsService } from '../../services/shopsService';
 import { smallInput, sectionTitle } from './ownerConstants';
+import ImageUploader from '../../components/ImageUploader';
 
 export default function OwnerTabInfo({ selectedShop, setError, setSuccess, onShopUpdate }) {
   const [shopForm, setShopForm] = useState({
@@ -70,14 +71,12 @@ export default function OwnerTabInfo({ selectedShop, setError, setSuccess, onSho
         <input style={smallInput} value={shopForm.deliveryRange} onChange={(e) => setShopForm((p) => ({ ...p, deliveryRange: e.target.value }))} />
       </div>
       <div>
-        <label style={sectionTitle}>Logo URL</label>
-        <input style={smallInput} value={shopForm.logoUrl} onChange={(e) => setShopForm((p) => ({ ...p, logoUrl: e.target.value }))} />
-        {shopForm.logoUrl && <img src={shopForm.logoUrl} alt="" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', marginTop: '4px' }} onError={(e) => { e.target.style.display = 'none'; }} />}
+        <label style={sectionTitle}>Logo</label>
+        <ImageUploader folder="shops/logos" currentUrl={shopForm.logoUrl} onUpload={(url) => setShopForm((p) => ({ ...p, logoUrl: url }))} label="Logo" />
       </div>
       <div>
-        <label style={sectionTitle}>Banner URL</label>
-        <input style={smallInput} value={shopForm.bannerUrl} onChange={(e) => setShopForm((p) => ({ ...p, bannerUrl: e.target.value }))} />
-        {shopForm.bannerUrl && <img src={shopForm.bannerUrl} alt="" style={{ width: '100%', height: '48px', borderRadius: '6px', objectFit: 'cover', marginTop: '4px' }} onError={(e) => { e.target.style.display = 'none'; }} />}
+        <label style={sectionTitle}>Banner</label>
+        <ImageUploader folder="shops/banners" currentUrl={shopForm.bannerUrl} onUpload={(url) => setShopForm((p) => ({ ...p, bannerUrl: url }))} label="Banner" />
       </div>
       <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', marginTop: '8px' }}>
         <button onClick={handleShopSave} disabled={savingShop} style={{ ...btnPrimary, fontSize: '13px', padding: '10px 28px', opacity: savingShop ? 0.7 : 1 }}>{savingShop ? 'Guardando...' : 'Guardar cambios'}</button>

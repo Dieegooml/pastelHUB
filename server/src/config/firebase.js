@@ -22,4 +22,11 @@ if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
 admin.initializeApp({ credential });
 
 const db = admin.firestore();
-module.exports = { admin, db };
+db.settings({
+  maxIdleChannels: 100,
+  ignoreUndefinedProperties: true,
+});
+const storage = admin.storage();
+const bucket = storage.bucket();
+
+module.exports = { admin, db, storage, bucket };

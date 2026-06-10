@@ -11,6 +11,7 @@ import {
   textareaStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary,
   tableHeaderStyle, labelStyle, badge,
 } from '../../styles/theme';
+import ImageUploader from '../../components/ImageUploader';
 
 const emptyForm = {
   shopName: '', description: '', owner_id: '',
@@ -269,22 +270,12 @@ export default function Shops() {
             <p style={{ fontSize: '13px', fontWeight: 600, color: colors.primary, fontFamily: font.body, margin: '0 0 10px' }}>Imágenes</p>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={labelStyle}>Logo (URL)</label>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <div style={{ flex: 1 }}>
-                    <input style={inputStyle} name="logoUrl" value={form.logoUrl} onChange={handleChange} placeholder="https://..." />
-                  </div>
-                  <ImagePreview url={form.logoUrl} alt="Logo" />
-                </div>
+                <label style={labelStyle}>Logo</label>
+                <ImageUploader folder="shops/logos" currentUrl={form.logoUrl} onUpload={(url) => setForm(p => ({ ...p, logoUrl: url }))} label="Logo" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={labelStyle}>Banner (URL)</label>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <div style={{ flex: 1 }}>
-                    <input style={inputStyle} name="bannerUrl" value={form.bannerUrl} onChange={handleChange} placeholder="https://..." />
-                  </div>
-                  <ImagePreview url={form.bannerUrl} alt="Banner" />
-                </div>
+                <label style={labelStyle}>Banner</label>
+                <ImageUploader folder="shops/banners" currentUrl={form.bannerUrl} onUpload={(url) => setForm(p => ({ ...p, bannerUrl: url }))} label="Banner" />
               </div>
             </div>
 
