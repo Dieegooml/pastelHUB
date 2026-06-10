@@ -8,4 +8,5 @@ export const paymentsService = {
   update: (id, data) => api.put(`/payments/${id}`, data),
   delete: (id) => api.delete(`/payments/${id}`),
   updateStatus: (id, paymentStatus, transaction_ref) => api.patch(`/payments/${id}/status`, { paymentStatus, transaction_ref }),
+  processGateway: (data) => api.post('/payments/gateway', data),
 };

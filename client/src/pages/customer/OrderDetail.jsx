@@ -5,6 +5,7 @@ import Navbar from '../../components/Navbar';
 import { colors, font, badge as badgeStyle, inputStyle, selectStyle } from '../../styles/theme';
 import { ordersService } from '../../services/ordersService';
 import { reviewsService } from '../../services/reviewsService';
+import { paymentsService } from '../../services/paymentsService';
 
 const STATUS_TRANSLATIONS = {
   pending: 'Pendiente', confirmed: 'Confirmado', preparing: 'Preparando',
@@ -26,6 +27,10 @@ const STATUS_ICONS = {
 };
 
 const ORDERED_STATUSES = ['pending', 'confirmed', 'preparing', 'on_the_way', 'delivered'];
+
+const PAYMENT_METHOD_LABELS = {
+  card: '💳 Tarjeta', cash: '💵 Efectivo', yape: '📱 Yape', plin: '📱 Plin',
+};
 
 export default function OrderDetail() {
   const { id } = useParams();
@@ -187,6 +192,28 @@ export default function OrderDetail() {
             </div>
           </div>
         </div>
+
+        {order.payment?.method && (
+          <div style={{ background: colors.white, borderRadius: '12px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '16px' }}>
+            <div style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Pago</div>
+            <div style={{ fontSize: '14px', fontFamily: font.body, color: colors.text, lineHeight: 1.6 }}>
+              {PAYMENT_METHOD_LABELS[order.payment.method] || order.payment.method}
+              {' — '}
+              <span style={{
+                padding: '2px 8px', borderRadius: '99px', fontSize: '11px', fontWeight: 600,
+                background: order.payment.status === 'paid' ? '#e8f5e9' : order.payment.status === 'failed' ? '#fee2e2' : '#fff8e1',
+                color: order.payment.status === 'paid' ? '#2e7d32' : order.payment.status === 'failed' ? '#ef4444' : '#f59e0b',
+              }}>
+                {order.payment.status === 'paid' ? 'Pagado' : order.payment.status === 'failed' ? 'Fallido' : order.payment.status === 'refunded' ? 'Reembolsado' : 'Pendiente'}
+              </span>
+              {order.payment.transaction_ref && (
+                <div style={{ fontSize: '11px', color: colors.textMuted, fontFamily: 'monospace', marginTop: '4px' }}>
+                  Ref: {order.payment.transaction_ref}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div style={{ background: colors.white, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '24px' }}>
           <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '16px' }}>Productos</h3>

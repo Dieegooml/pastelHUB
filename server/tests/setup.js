@@ -38,6 +38,15 @@ jest.mock('firebase-admin', () => ({
   initializeApp: jest.fn(),
   auth: jest.fn(() => mockAuth),
   firestore: jest.fn(() => mockDb),
+  storage: jest.fn(() => ({
+    bucket: jest.fn(() => ({
+      upload: jest.fn().mockResolvedValue([{ name: 'test.jpg' }]),
+      file: jest.fn(() => ({
+        delete: jest.fn().mockResolvedValue(),
+        getSignedUrl: jest.fn().mockResolvedValue(['https://storage.example.com/test.jpg']),
+      })),
+    })),
+  })),
 }));
 
 jest.mock('../serviceAccountKey.json', () => ({}), { virtual: true });

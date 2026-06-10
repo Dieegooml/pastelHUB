@@ -190,4 +190,80 @@ router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
+// POST procesar pago a través del gateway demo
+router.post('/gateway', verifyToken, async (req, res) => {
+  try {
+    const { orderId, paymentMethod, amount, cardDetails } = req.body;
+
+    if (!orderId || !paymentMethod || amount == null) {
+      return res.status(400).json({ error: 'orderId, paymentMethod y amount son requeridos' });
+    }
+    if (!['card', 'cash', 'yape', 'plin'].includes(paymentMethod)) {
+      return res.status(400).json({ error: 'Método de pago inválido' });
+    }
+
+    // Verificar orden existe y pertenece al usuario
+    const orderDoc = await db.collection('orders').doc(orderId).get();
+    if (!orderDoc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
+    if (orderDoc.data().customer?.user_id !== req.user.uid) {
+      return res.status(403).json({ error: 'Solo puedes pagar tus propias órdenes' });
+    }
+
+    // Verificar que no tenga pago previo
+    const existing = await col.where('orderId', '==', orderId).limit(1).get();
+    if (!existing.empty) {
+      return res.status(400).json({ error: 'Esta orden ya tiene un pago' });
+    }
+
+    // Simular demora del gateway
+    await new Promise(r => setTimeout(r, 1500));
+
+    // Generar transacción demo
+    const transactionRef = `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const success = paymentMethod === 'cash' || Math.random() > 0.1; // 90% éxito en pagos electrónicos
+
+    if (!success) {
+      const data = {
+        orderId, paymentMethod, amount, transactionRef,
+        paymentStatus: 'failed',
+        paidAt: '', createdAt: new Date().toISOString(),
+        errorMessage: 'Fondos insuficientes',
+      };
+      const ref = await col.add(data);
+      return res.status(200).json({ success: false, id: ref.id, ...data });
+    }
+
+    // Pago exitoso
+    const data = {
+      orderId, paymentMethod, amount, transactionRef,
+      paymentStatus: paymentMethod === 'cash' ? 'pending' : 'paid',
+      paidAt: paymentMethod === 'cash' ? '' : new Date().toISOString(),
+      cardLast4: cardDetails?.last4 || '',
+      cardholderName: cardDetails?.cardholderName || '',
+      createdAt: new Date().toISOString(),
+    };
+
+    const ref = await col.add(data);
+
+    // Actualizar estado de pago en la orden
+    await db.collection('orders').doc(orderId).update({
+      'payment.status': data.paymentStatus,
+      'payment.transaction_ref': transactionRef,
+    });
+
+    // Generar factura si pagado
+    if (data.paymentStatus === 'paid') {
+      try {
+        await generateInvoiceFromPayment(orderId);
+      } catch (e) {
+        logger.error('Error generando factura', { error: e.message, orderId });
+      }
+    }
+
+    res.status(201).json({ success: true, id: ref.id, ...data });
+  } catch (e) {
+    res.status(500).json({ error: 'Error procesando el pago' });
+  }
+});
+
 module.exports = router;
