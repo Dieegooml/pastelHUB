@@ -35,6 +35,7 @@ import Notifications from "./pages/admin/Notifications";
 import Payments from "./pages/admin/Payments";
 import Promotions from "./pages/admin/Promotions";
 import ModeratorDashboard from "./pages/moderator/ModeratorDashboard";
+import AdminChat from "./pages/admin/Chat";
 
 function AppContent() {
   const location = useLocation();
@@ -71,6 +72,7 @@ function AppContent() {
           <Route path="/admin/notifications" element={<ProtectedRoute role="admin"><Notifications /></ProtectedRoute>} />
           <Route path="/admin/payments" element={<ProtectedRoute role="admin"><Payments /></ProtectedRoute>} />
           <Route path="/admin/promotions" element={<ProtectedRoute role="admin"><Promotions /></ProtectedRoute>} />
+          <Route path="/admin/chat" element={<ProtectedRoute role="admin"><AdminChat /></ProtectedRoute>} />
           <Route path="/moderator" element={<ProtectedRoute role={['moderator', 'admin']}><ModeratorDashboard /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

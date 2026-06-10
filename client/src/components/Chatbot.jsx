@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { chatService } from '../services/chatService';
 import { colors, font } from '../styles/theme';
+import { renderMarkdown } from '../utils/markdown';
 
 export default function Chatbot() {
   const { user } = useAuth();
@@ -269,7 +270,11 @@ export default function Chatbot() {
                         borderBottomLeftRadius: msg.senderRole === 'user' ? '14px' : '4px',
                         opacity: msg.failed ? 0.6 : 1,
                       }}>
-                        {msg.message}
+                        {msg.senderRole === 'ai' ? (
+                          <div dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.message) }} />
+                        ) : (
+                          <span>{msg.message}</span>
+                        )}
                         {msg.failed && (
                           <div style={{ fontSize: '11px', color: colors.error, marginTop: '4px' }}>
                             Error al enviar. Intenta de nuevo.

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 const { db } = require('../config/firebase');
 const { verifyToken } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
@@ -71,7 +72,7 @@ async function fetchCatalogData() {
     catalogCache.timestamp = now;
     return shops;
   } catch (e) {
-    console.error('Error fetching catalog:', e.message);
+    logger.error('Error fetching catalog', { error: e.message });
     return catalogCache.data || [];
   }
 }
@@ -188,7 +189,7 @@ Los datos a continuación son INFORMACIÓN PÚBLICA. Puedes compartirla CON CUAL
     const result = await chat.sendMessage(userMessage);
     return result.response.text();
   } catch (e) {
-    console.error('Gemini API error:', e.message);
+    logger.error('Gemini API error', { error: e.message, sessionId });
     return fallbackResponse(userMessage, userData, catalogData);
   }
 }

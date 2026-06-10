@@ -14,6 +14,7 @@ const links = [
   { path: '/admin/payments', label: 'Pagos' },
   { path: '/admin/promotions', label: 'Promociones' },
   { path: '/admin/invoices', label: 'Boletas' },
+  { path: '/admin/chat', label: 'Chat' },
 ];
 
 export default function AdminNav() {
