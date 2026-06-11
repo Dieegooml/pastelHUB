@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { updatePassword } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
-import { colors, font, inputStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary, btnSmallSecondary, badge as badgeStyle, labelStyle } from '../../styles/theme';
+import { colors, font, inputStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary, btnSmallSecondary, badge as badgeStyle, labelStyle, animFadeIn } from '../../styles/theme';
 import { usersService } from '../../services/usersService';
+import ImageUploader from '../../components/ImageUploader';
 
 const ROLE_COLORS = {
   admin: { bg: '#fee2e2', color: '#ef4444' },
@@ -54,6 +54,7 @@ export default function Profile() {
   const [success, setSuccess] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [saving, setSaving] = useState({ name: false, phone: false });
 
@@ -68,6 +69,7 @@ export default function Profile() {
       if (u) {
         setFullName(u.full_name || '');
         setPhone(u.phone || '');
+        setPhotoUrl(u.photo_url || '');
         setAddresses(u.addresses || []);
       }
     } catch (e) { console.error(e); }
@@ -100,6 +102,24 @@ export default function Profile() {
     } catch (e) {
       setError(e?.response?.data?.error || 'Error al actualizar teléfono');
     } finally { setSaving((s) => ({ ...s, phone: false })); }
+  };
+
+  const handlePhotoUpload = async (url) => {
+    setPhotoUrl(url);
+    if (!url) {
+      try {
+        await usersService.update(user.uid, { photo_url: '' });
+      } catch (e) { console.error(e); }
+      return;
+    }
+    setError('');
+    setSuccess('');
+    try {
+      await usersService.update(user.uid, { photo_url: url });
+      setSuccess('Foto de perfil actualizada');
+    } catch (e) {
+      setError(e?.response?.data?.error || 'Error al actualizar foto');
+    }
   };
 
   const handleUpdatePassword = async () => {
@@ -154,10 +174,8 @@ export default function Profile() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={{ maxWidth: '600px', margin: '0 auto', padding: '40px 2rem 2rem' }}
+      <div
+        style={{ ...animFadeIn, maxWidth: '600px', margin: '0 auto', padding: '40px 2rem 2rem' }}
       >
         <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '24px' }}>Mi Perfil</h2>
         <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.5rem' }} />
@@ -168,18 +186,40 @@ export default function Profile() {
         {/* ── Avatar / Identidad ── */}
         <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-            <div style={{
-              width: '56px', height: '56px', borderRadius: '50%',
-              background: colors.primary, color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '24px', fontWeight: 700, fontFamily: font.heading,
-            }}>
-              {user?.email?.charAt(0).toUpperCase() || '?'}
-            </div>
-            <div>
+            {photoUrl ? (
+              <img
+                src={photoUrl}
+                alt="Foto de perfil"
+                style={{
+                  width: '56px', height: '56px', borderRadius: '50%',
+                  objectFit: 'cover', border: `2px solid ${colors.border}`,
+                }}
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            ) : (
+              <div style={{
+                width: '56px', height: '56px', borderRadius: '50%',
+                background: colors.primary, color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '24px', fontWeight: 700, fontFamily: font.heading,
+                flexShrink: 0,
+              }}>
+                {user?.email?.charAt(0).toUpperCase() || '?'}
+              </div>
+            )}
+            <div style={{ flex: 1 }}>
               <div style={{ fontSize: '18px', fontWeight: 600, fontFamily: font.body, color: colors.text }}>{fullName || user?.displayName || 'Sin nombre'}</div>
               <div style={{ fontSize: '13px', color: colors.textSecondary, fontFamily: font.body }}>{user?.email}</div>
             </div>
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <ImageUploader
+              folder="profiles"
+              currentImageUrl={photoUrl}
+              onUploadComplete={handlePhotoUpload}
+              label="Foto de perfil"
+              aspectRatio="1/1"
+            />
           </div>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {user?.roles?.map((role) => {
@@ -282,7 +322,7 @@ export default function Profile() {
             <button onClick={() => navigate('/owner')} style={btnPrimary}>Ir al panel de dueño</button>
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

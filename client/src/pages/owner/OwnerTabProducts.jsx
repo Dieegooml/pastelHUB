@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { colors, font, inputStyle, btnSmallPrimary, btnGhost, btnDanger, tableHeaderStyle } from '../../styles/theme';
+import { colors, font, inputStyle, btnSmallPrimary, btnGhost, btnDanger, tableHeaderStyle, animStagger } from '../../styles/theme';
 import { productsService } from '../../services/productsService';
 import { smallInput, sectionTitle } from './ownerConstants';
 import ImageUploader from '../../components/ImageUploader';
@@ -83,7 +82,7 @@ export default function OwnerTabProducts({ selectedShop, setError, setSuccess })
             <div><label style={sectionTitle}>Stock</label><input style={smallInput} type="number" value={productForm.stock} onChange={(e) => setProductForm((p) => ({ ...p, stock: e.target.value }))} /></div>
             <div><label style={sectionTitle}>Categoría</label><input style={smallInput} value={productForm.categoryId} onChange={(e) => setProductForm((p) => ({ ...p, categoryId: e.target.value }))} /></div>
             <div style={{ gridColumn: '1 / -1' }}><label style={sectionTitle}>Descripción</label><textarea style={{ ...inputStyle, height: 'auto', minHeight: '50px', padding: '10px 14px', fontSize: '13px', resize: 'vertical' }} value={productForm.productDescription} onChange={(e) => setProductForm((p) => ({ ...p, productDescription: e.target.value }))} /></div>
-            <div style={{ gridColumn: '1 / -1' }}><label style={sectionTitle}>Imagen</label><ImageUploader folder="products" currentUrl={productForm.imageUrl} onUpload={(url) => setProductForm((p) => ({ ...p, imageUrl: url }))} label="Producto" /></div>
+            <div style={{ gridColumn: '1 / -1' }}><label style={sectionTitle}>Imagen</label><ImageUploader folder="products" currentImageUrl={productForm.imageUrl} onUploadComplete={(url) => setProductForm((p) => ({ ...p, imageUrl: url }))} label="Producto" aspectRatio="1/1" /></div>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontFamily: font.body, color: colors.text, cursor: 'pointer' }}>
                 <input type="checkbox" checked={productForm.isAvailable} onChange={(e) => setProductForm((p) => ({ ...p, isAvailable: e.target.checked }))} />
@@ -109,8 +108,8 @@ export default function OwnerTabProducts({ selectedShop, setError, setSuccess })
               </tr></thead>
               <tbody>
                 {products.map((p, i) => (
-                  <motion.tr key={p.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                    style={{ borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe }}
+                  <tr
+                    style={{ ...animStagger(i * 0.03), borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }} onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
                   >
                     <td style={{ padding: '12px 16px', fontSize: '14px', fontFamily: font.body }}>{p.productName || p.name}</td>
@@ -123,7 +122,7 @@ export default function OwnerTabProducts({ selectedShop, setError, setSuccess })
                         <button onClick={() => handleProductDelete(p.id)} style={btnDanger}>Eliminar</button>
                       </div>
                     </td>
-                  </motion.tr>
+                  </tr>
                 ))}
               </tbody>
             </table>

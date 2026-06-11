@@ -72,11 +72,11 @@ export default function OwnerTabInfo({ selectedShop, setError, setSuccess, onSho
       </div>
       <div>
         <label style={sectionTitle}>Logo</label>
-        <ImageUploader folder="shops/logos" currentUrl={shopForm.logoUrl} onUpload={(url) => setShopForm((p) => ({ ...p, logoUrl: url }))} label="Logo" />
+        <ImageUploader folder="shops/logos" currentImageUrl={shopForm.logoUrl} onUploadComplete={(url) => setShopForm((p) => ({ ...p, logoUrl: url }))} label="Logo" aspectRatio="1/1" />
       </div>
       <div>
         <label style={sectionTitle}>Banner</label>
-        <ImageUploader folder="shops/banners" currentUrl={shopForm.bannerUrl} onUpload={(url) => setShopForm((p) => ({ ...p, bannerUrl: url }))} label="Banner" />
+        <ImageUploader folder="shops/banners" currentImageUrl={shopForm.bannerUrl} onUploadComplete={(url) => setShopForm((p) => ({ ...p, bannerUrl: url }))} label="Banner" aspectRatio="3/1" />
       </div>
       <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', marginTop: '8px' }}>
         <button onClick={handleShopSave} disabled={savingShop} style={{ ...btnPrimary, fontSize: '13px', padding: '10px 28px', opacity: savingShop ? 0.7 : 1 }}>{savingShop ? 'Guardando...' : 'Guardar cambios'}</button>
