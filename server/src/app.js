@@ -3,11 +3,18 @@ const compression = require('compression');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, defaultKeyGenerator } = require('express-rate-limit');
 const logger = require('./utils/logger');
+const { createTraceMiddleware } = require('./utils/logger');
+const { createRoleLimiter } = require('./middlewares/rateLimiter');
 const { db } = require('./config/firebase');
+const cache = require('./utils/cache');
 
-// Configuración de CORS
+const shopCache = cache.createStore('shops', { ttl: 60000 });
+const productCache = cache.createStore('products', { ttl: 60000 });
+const promotionCache = cache.createStore('promotions', { ttl: 60000 });
+const reviewCache = cache.createStore('reviews', { ttl: 30000 });
+
 const clientUrl = process.env.CLIENT_URL || 'http://localhost';
 const corsOptions = {
   origin: [
@@ -18,34 +25,13 @@ const corsOptions = {
     'http://localhost:3000',
   ].filter(Boolean),
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Trace-Id'],
   credentials: true,
 };
-
-// Configuración de limiters
-const isLoadTest = process.env.LOAD_TEST === 'true' || process.env.LOAD_TEST_REAL_AUTH === 'true';
-const isDev = process.env.NODE_ENV === 'development';
-
-const limiter = rateLimit({
-  windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000, // 5s (test) / 15 min
-  max: isLoadTest ? 100000 : 500,                     // 100k (test) / 500 (prod & dev)
-  message: { error: 'Demasiadas peticiones, intenta en 15 minutos' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const authLimiter = rateLimit({
-  windowMs: isLoadTest ? 5 * 1000 : 15 * 60 * 1000, // 5s (test) / 15 min
-  max: isLoadTest ? 20000 : 50,                       // 20k (test) / 50 (prod & dev)
-  message: { error: 'Demasiados intentos de autenticación, intenta en 15 minutos' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 const app = express();
 app.set('etag', 'weak');
 
-// Cache-Control para endpoints públicos GET
 const publicCache = (req, res, next) => {
   if (req.method === 'GET' && !req.headers.authorization) {
     res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
@@ -53,22 +39,99 @@ const publicCache = (req, res, next) => {
   next();
 };
 
-// Compresión de respuestas
+const blockedIPs = new Set(
+  (process.env.BLOCKED_IPS || '').split(',').map(s => s.trim()).filter(Boolean)
+);
+
+const isTest = process.env.NODE_ENV === 'test' || typeof global.it === 'function';
+
+const ipRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: parseInt(process.env.IP_RATE_LIMIT_MAX) || 100,
+  message: { error: 'Demasiadas solicitudes desde esta IP, intenta en 1 minuto' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => defaultKeyGenerator(req),
+  skip: (req) => {
+    if (isTest) return true;
+    const roles = req.user?.roles || [];
+    return roles.includes('admin');
+  },
+});
+
+const authFailRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: 'Demasiados intentos de autenticación, intenta en 1 minuto' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => defaultKeyGenerator(req),
+  skip: (req) => {
+    if (isTest) return true;
+    return !req.path.includes('/auth');
+  },
+});
+
+function securityHeaders(req, res, next) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+}
+
+function blockIPs(req, res, next) {
+  const ip = req.ip;
+  if (blockedIPs.has(ip)) {
+    logger.warn('Blocked IP attempted access', { ip, path: req.path });
+    return res.status(403).json({ error: 'Acceso denegado' });
+  }
+  next();
+}
+
+function suspiciousRequestLogger(req, res, next) {
+  const warnings = [];
+
+  if (!req.headers['user-agent']) {
+    warnings.push('missing-user-agent');
+  }
+
+  const suspiciousPaths = [
+    '/admin', '/wp-admin', '/wp-login', '/.env', '/config',
+    '/_ah', '/.git', '/vendor', '/phpmyadmin', '/sql',
+  ];
+  if (suspiciousPaths.some(p => req.path.startsWith(p))) {
+    warnings.push('unusual-path');
+  }
+
+  if (/['"\\;$(){}\n\r]/.test(req.path)) {
+    warnings.push('path-injection-attempt');
+  }
+
+  if (warnings.length > 0) {
+    logger.warn('Suspicious request detected', {
+      ip: req.ip,
+      method: req.method,
+      path: req.path,
+      warnings,
+      userAgent: req.headers['user-agent'] || 'missing',
+    });
+  }
+
+  next();
+}
+
 app.use(compression());
-
-// Seguridad HTTP headers
 app.use(helmet());
-
-// CORS configurado
 app.use(cors(corsOptions));
+app.use(createTraceMiddleware());
+app.use(securityHeaders);
+app.use(blockIPs);
+app.use(ipRateLimiter);
+app.use(authFailRateLimiter);
+app.use(suspiciousRequestLogger);
+app.use(createRoleLimiter());
+app.use(express.json({ limit: '10mb' }));
 
-// Limiter general para todas las rutas (antes del body parser para evitar DoS)
-app.use(limiter);
-
-// Parseo de JSON con límite de tamaño
-app.use(express.json({ limit: '100kb' }));
-
-// Normalizar trailing slash para Express 5 (router.get('/') no coincide sin /)
 app.use((req, res, next) => {
   if (req.path.length > 1 && req.path.endsWith('/')) {
     req.url = req.url.slice(0, -1);
@@ -76,23 +139,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// Logging de peticiones HTTP
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
-    logger.info('HTTP Request', {
+    const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
+    logger.log(level, 'HTTP Request', {
       method: req.method,
       path: req.path,
       status: res.statusCode,
       duration,
       userId: req.user?.uid || 'anonymous',
+      traceId: req.traceId,
     });
   });
   next();
 });
 
-// Rutas API
+const authLimiter = createRoleLimiter({ auth: true });
+
 app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/shops', publicCache, require('./routes/shops'));
@@ -108,18 +173,23 @@ app.use('/api/support', require('./routes/support'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/admin/backup', require('./routes/backups'));
+app.use('/api/uploads', require('./routes/uploads'));
 
-// Ruta para salud del servidor
 app.get('/api/health', async (req, res) => {
   try {
     await db.collection('health').doc('_check').get();
-    res.json({ status: 'ok', firestore: 'connected' });
+    const cacheStats = cache.allStats();
+    res.json({
+      status: 'ok',
+      firestore: 'connected',
+      cache: cacheStats,
+      uptime: process.uptime(),
+    });
   } catch (e) {
     res.status(503).json({ status: 'error', firestore: 'disconnected', message: e.message });
   }
 });
 
-// Métricas de monitoreo (uso interno)
 app.get('/api/metrics', (req, res) => {
   const mem = process.memoryUsage();
   const cpu = process.cpuUsage();
@@ -137,18 +207,22 @@ app.get('/api/metrics', (req, res) => {
     nodeVersion: process.version,
     platform: process.platform,
     env: process.env.NODE_ENV || 'development',
+    cache: cache.allStats(),
   });
 });
 
-// Manejo de rutas inexistentes (solo API)
+app.get('/api/admin/cache/stats', (req, res) => {
+  res.json(cache.allStats());
+});
+
 app.use((req, res, next) => {
   res.status(404).json({ error: 'Ruta no encontrada' });
 });
 
-// Manejo global de errores
 app.use((err, req, res, next) => {
-  logger.error('Error global', { stack: err.stack, method: req.method, path: req.path });
-  res.status(500).json({ error: 'Error interno del servidor' });
+  const traceId = req.traceId || 'unknown';
+  logger.error('Error global', { stack: err.stack, method: req.method, path: req.path, traceId });
+  res.status(500).json({ error: 'Error interno del servidor', traceId });
 });
 
 module.exports = app;

@@ -36,7 +36,59 @@ const PRODUCT_SNAKE_TO_CAMEL = {
   shop_id: 'shopId',
 };
 
+const ORDER_CAMEL_TO_SNAKE = {
+  userId: 'user_id',
+  shopId: 'shop_id',
+  deliveryType: 'delivery_type',
+  transactionRef: 'transaction_ref',
+  paymentMethod: 'payment.method',
+  statusHistory: 'status_history',
+};
+
+const ORDER_SNAKE_TO_CAMEL = {
+  user_id: 'userId',
+  shop_id: 'shopId',
+  delivery_type: 'deliveryType',
+  transaction_ref: 'transactionRef',
+  status_history: 'statusHistory',
+};
+
+const CUSTOMER_CAMEL_TO_SNAKE = {
+  userId: 'user_id',
+  fullName: 'full_name',
+  defaultAddressId: 'default_address_id',
+  isActive: 'is_active',
+};
+
+const CUSTOMER_SNAKE_TO_CAMEL = {
+  user_id: 'userId',
+  full_name: 'fullName',
+  default_address_id: 'defaultAddressId',
+  is_active: 'isActive',
+};
+
+const NOTIFICATION_CAMEL_TO_SNAKE = {
+  userId: 'userId',
+  isRead: 'isRead',
+};
+
+const REVIEW_CAMEL_TO_SNAKE = {
+  shopId: 'shopId',
+  orderId: 'orderId',
+  customerId: 'customerId',
+  ownerReply: 'ownerReply',
+};
+
+const REPORT_CAMEL_TO_SNAKE = {
+  targetType: 'targetType',
+  targetId: 'targetId',
+  reportedBy: 'reportedBy',
+  assignedTo: 'assignedTo',
+};
+
 function mapKeys(obj, keyMap) {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(item => mapKeys(item, keyMap));
   const result = {};
   for (const [key, value] of Object.entries(obj)) {
     const mappedKey = keyMap[key] || key;
@@ -61,9 +113,38 @@ function mapProductToResponse(doc) {
   return mapKeys(doc, PRODUCT_SNAKE_TO_CAMEL);
 }
 
+function mapOrderFromRequest(body) {
+  return mapKeys(body, ORDER_CAMEL_TO_SNAKE);
+}
+
+function mapOrderToResponse(doc) {
+  return mapKeys(doc, ORDER_SNAKE_TO_CAMEL);
+}
+
+function mapCustomerFromRequest(body) {
+  return mapKeys(body, CUSTOMER_CAMEL_TO_SNAKE);
+}
+
+function mapCustomerToResponse(doc) {
+  return mapKeys(doc, CUSTOMER_SNAKE_TO_CAMEL);
+}
+
 module.exports = {
   mapShopFromRequest,
   mapShopToResponse,
   mapProductFromRequest,
   mapProductToResponse,
+  mapOrderFromRequest,
+  mapOrderToResponse,
+  mapCustomerFromRequest,
+  mapCustomerToResponse,
+  mapKeys,
+  SHOP_CAMEL_TO_SNAKE,
+  SHOP_SNAKE_TO_CAMEL,
+  PRODUCT_CAMEL_TO_SNAKE,
+  PRODUCT_SNAKE_TO_CAMEL,
+  ORDER_CAMEL_TO_SNAKE,
+  ORDER_SNAKE_TO_CAMEL,
+  CUSTOMER_CAMEL_TO_SNAKE,
+  CUSTOMER_SNAKE_TO_CAMEL,
 };

@@ -124,6 +124,32 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
+    // ── supportTickets ──
+    match /supportTickets/{ticketId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAdmin() || hasRole('moderator');
+      allow delete: if isAdmin();
+      match /messages/{messageId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // ── invoices ──
+    match /invoices/{invoiceId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    // ── backupHistory ──
+    match /backupHistory/{backupId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
     // Deny everything else
     match /{document=**} {
       allow read, write: if false;
