@@ -24,6 +24,33 @@ vi.mock('../context/AuthContext', () => ({
   useAuth: vi.fn(),
 }));
 
+const NAV_TRANSLATIONS = {
+  'nav.home': 'Inicio',
+  'nav.cart': 'Carrito',
+  'nav.orders': 'Mis órdenes',
+  'nav.invoices': 'Facturas',
+  'nav.support': 'Soporte',
+  'nav.profile': 'Perfil',
+  'nav.owner': 'Dueño',
+  'nav.moderate': 'Moderar',
+  'nav.admin': 'Administrar',
+  'nav.logout': 'Cerrar sesión',
+  'nav.spanish': 'Español',
+  'nav.english': 'Inglés',
+  'notifications.title': 'Notificaciones',
+  'notifications.unread': 'sin leer',
+  'notifications.noNotifications': 'Sin notificaciones',
+  'notifications.viewAll': 'Ver todas',
+};
+
+vi.mock('../context/I18nContext', () => ({
+  useI18n: () => ({
+    t: (key, fallback) => NAV_TRANSLATIONS[key] ?? fallback ?? key,
+    lang: 'es',
+    setLang: vi.fn(),
+  }),
+}));
+
 import Navbar from '../components/Navbar';
 import * as authModule from '../context/AuthContext';
 
