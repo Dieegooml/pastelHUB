@@ -21,8 +21,40 @@ const ALL_COLLECTIONS = [
   'reports', 'promotions', 'chatSessions', 'supportTickets',
 ];
 
+const BACKUP_HISTORY_COLLECTION = 'backupHistory';
 let lastBackup = null;
 let backupHistory = [];
+
+async function loadBackupHistoryFromFirestore() {
+  try {
+    const snap = await db.collection(BACKUP_HISTORY_COLLECTION)
+      .orderBy('timestamp', 'desc')
+      .limit(50)
+      .get();
+    if (!snap.empty) {
+      backupHistory = snap.docs.map(d => d.data()).reverse();
+      lastBackup = backupHistory[backupHistory.length - 1] || null;
+      logger.info('Backup history loaded from Firestore', { count: backupHistory.length });
+    }
+  } catch (e) {
+    logger.warn('Could not load backup history from Firestore, using in-memory only', { error: e.message });
+  }
+}
+
+async function persistBackupToFirestore(entry) {
+  try {
+    const ref = db.collection(BACKUP_HISTORY_COLLECTION).doc(entry.timestamp);
+    await ref.set({
+      ...entry,
+      persistedAt: new Date().toISOString(),
+    });
+    logger.info('Backup entry persisted to Firestore', { timestamp: entry.timestamp, total: entry.total });
+  } catch (e) {
+    logger.warn('Could not persist backup to Firestore, keeping in memory only', { error: e.message });
+  }
+}
+
+loadBackupHistoryFromFirestore();
 
 async function uploadToGCS(filename, data, meta) {
   if (!BACKUP_BUCKET || !storage) return false;
@@ -87,6 +119,7 @@ async function createBackup(collections) {
   const entry = { timestamp, total: data.total, collections: results.map(r => ({ name: r.name, count: r.count, error: r.error })) };
   lastBackup = entry;
   backupHistory.push(entry);
+  await persistBackupToFirestore(entry);
 
   const filename = `backup-${timestamp.replace(/[:.]/g, '-')}.json.gz`;
 

@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken, requireAdmin } = require('../middlewares/auth');
 const { createBackup, getLastBackup, getBackupHistory, ALL_COLLECTIONS } = require('../utils/backupService');
+const {
+  listBackups,
+  restoreBackup,
+  validateBackup,
+  getBackupStats,
+} = require('../utils/restoreService');
 
 router.post('/', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -41,13 +47,70 @@ router.get('/download', verifyToken, requireAdmin, async (req, res) => {
 
 router.get('/last', verifyToken, requireAdmin, (req, res) => {
   const last = getLastBackup();
-  if (!last) return res.json({ message: 'No hay backups registrados en esta sesión' });
+  if (!last) return res.json({ message: 'No hay backups registrados' });
   res.json(last);
 });
 
 router.get('/history', verifyToken, requireAdmin, (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   res.json(getBackupHistory(limit));
+});
+
+router.get('/list', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20;
+    const backups = await listBackups({ limit });
+    res.json({ backups, count: backups.length });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al listar backups', details: e.message });
+  }
+});
+
+router.post('/restore', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const { filename, collections, dryRun, conflictStrategy } = req.body;
+
+    if (!filename) {
+      return res.status(400).json({ error: 'Se requiere el nombre del archivo de backup' });
+    }
+
+    const result = await restoreBackup(filename, {
+      collections: collections || null,
+      dryRun: dryRun || false,
+      conflictStrategy: conflictStrategy || 'overwrite',
+    });
+
+    res.json({
+      message: dryRun ? 'Simulación de restauración completada' : 'Restauración completada',
+      ...result,
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al restaurar backup', details: e.message });
+  }
+});
+
+router.post('/validate', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const { filename } = req.body;
+
+    if (!filename) {
+      return res.status(400).json({ error: 'Se requiere el nombre del archivo de backup' });
+    }
+
+    const result = await validateBackup(filename);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: 'Error al validar backup', details: e.message });
+  }
+});
+
+router.get('/info/:filename', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await getBackupStats(req.params.filename);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener info del backup', details: e.message });
+  }
 });
 
 module.exports = router;

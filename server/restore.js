@@ -1,156 +1,195 @@
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
-const { admin, db } = require('./src/config/firebase');
-const fs = require('fs');
-const path = require('path');
 
-const BACKUPS_DIR = path.join(__dirname, 'backups');
-const BATCH_SIZE = 500;
+const readline = require('readline');
+const {
+  listBackups,
+  restoreBackup,
+  validateBackup,
+  getBackupStats,
+} = require('./src/utils/restoreService');
 
-const SUBFIELD_KEYS = ['_schedules', '_categories', '_variants', '_items', '_addresses'];
-
-const pendingSubcollections = {};
-
-function findLatestBackup() {
-  const entries = fs.readdirSync(BACKUPS_DIR, { withFileTypes: true });
-  const dirs = entries
-    .filter(e => e.isDirectory() && /^\d{4}-\d{2}-\d{2}T/.test(e.name))
-    .map(e => e.name)
-    .sort()
-    .reverse();
-
-  if (!dirs.length) {
-    console.error('No se encontraron backups en server/backups/');
-    process.exit(1);
-  }
-
-  const latest = path.join(BACKUPS_DIR, dirs[0]);
-  console.log(`\uD83D\uDD0D \u00DAltimo backup encontrado: ${dirs[0]}`);
-  return latest;
+function ask(question) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise(resolve => rl.question(question, answer => { rl.close(); resolve(answer); }));
 }
 
-async function importCollection(collectionName, filePath) {
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  const docs = JSON.parse(raw);
-  if (!docs.length) return 0;
+function parseArgs() {
+  const args = {
+    filename: null,
+    dryRun: false,
+    collections: null,
+    force: false,
+    list: false,
+    validate: false,
+    info: false,
+  };
 
-  let restored = 0;
-
-  for (let i = 0; i < docs.length; i += BATCH_SIZE) {
-    const batch = db.batch();
-    const chunk = docs.slice(i, i + BATCH_SIZE);
-
-    for (const doc of chunk) {
-      const { id, ...data } = doc;
-
-      const subData = {};
-      for (const key of SUBFIELD_KEYS) {
-        if (data[key] !== undefined) {
-          subData[key] = data[key];
-          delete data[key];
-        }
-      }
-
-      if (Object.keys(subData).length > 0) {
-        if (!pendingSubcollections[collectionName]) {
-          pendingSubcollections[collectionName] = {};
-        }
-        pendingSubcollections[collectionName][id] = subData;
-      }
-
-      batch.set(db.collection(collectionName).doc(id), data, { merge: false });
+  let i = 2;
+  while (i < process.argv.length) {
+    const arg = process.argv[i];
+    if (arg === '--dry-run') {
+      args.dryRun = true;
+    } else if (arg === '--force') {
+      args.force = true;
+    } else if (arg === '--list') {
+      args.list = true;
+    } else if (arg === '--validate') {
+      args.validate = true;
+    } else if (arg === '--info') {
+      args.info = true;
+    } else if (arg === '--collections' && i + 1 < process.argv.length) {
+      args.collections = process.argv[i + 1].split(',').map(s => s.trim());
+      i++;
+    } else if (!arg.startsWith('--')) {
+      args.filename = arg;
     }
-
-    await batch.commit();
-    restored += chunk.length;
+    i++;
   }
 
-  return restored;
+  return args;
 }
 
-async function restoreSubcollections() {
-  let total = 0;
+async function main() {
+  const args = parseArgs();
 
-  for (const [collectionName, docs] of Object.entries(pendingSubcollections)) {
-    for (const [docId, subData] of Object.entries(docs)) {
-      const docRef = db.collection(collectionName).doc(docId);
-
-      for (const [key, items] of Object.entries(subData)) {
-        if (!Array.isArray(items) || items.length === 0) continue;
-
-        const subName = key.replace(/^_/, '');
-
-        for (let i = 0; i < items.length; i += BATCH_SIZE) {
-          const batch = db.batch();
-          const chunk = items.slice(i, i + BATCH_SIZE);
-
-          for (const item of chunk) {
-            const { id, ...itemData } = item;
-            batch.set(docRef.collection(subName).doc(id), itemData, { merge: false });
-            total++;
-          }
-
-          await batch.commit();
-        }
-      }
+  if (args.list) {
+    console.log('\nBackups disponibles:\n');
+    const backups = await listBackups();
+    if (backups.length === 0) {
+      console.log('  No se encontraron backups.');
+      return;
     }
+    backups.forEach((b, i) => {
+      const size = (b.size / 1024 / 1024).toFixed(2);
+      const date = new Date(b.updated).toLocaleString('es-MX');
+      console.log(`  ${i + 1}. ${b.filename}  (${size} MB, ${date}, ${b.source})`);
+    });
+    return;
   }
 
-  return total;
-}
-
-async function restore() {
-  const arg = process.argv[2];
-  const source = arg
-    ? (path.isAbsolute(arg) ? arg : path.join(process.cwd(), arg))
-    : findLatestBackup();
-
-  if (!fs.existsSync(source)) {
-    console.error(`No existe: ${source}`);
-    process.exit(1);
-  }
-
-  console.log(`\n\u267B Restaurando backup: ${source}\n`);
-
-  const metaPath = path.join(source, '_meta.json');
-  if (fs.existsSync(metaPath)) {
-    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
-    console.log(`   Backup del: ${meta.timestamp}`);
-    console.log(`   Colecciones: ${Object.keys(meta.collections).join(', ')}`);
+  if (args.validate) {
+    if (!args.filename) {
+      console.error('Error: Se requiere --filename. Uso: node restore.js --validate <filename>');
+      process.exit(1);
+    }
+    console.log(`\nValidando backup: ${args.filename}\n`);
+    const result = await validateBackup(args.filename);
+    console.log(`  Válido: ${result.valid ? 'SÍ' : 'NO'}`);
+    console.log(`  Versión: ${result.version || 'N/A'}`);
+    console.log(`  Timestamp: ${result.timestamp || 'N/A'}`);
+    console.log(`  Total documentos: ${result.totalDocs}`);
+    console.log(`  Colecciones: ${result.collections.length}`);
+    if (result.errors.length) {
+      console.log('\n  Errores:');
+      result.errors.forEach(e => console.log(`    - ${e}`));
+    }
+    if (result.warnings.length) {
+      console.log('\n  Advertencias:');
+      result.warnings.forEach(w => console.log(`    - ${w}`));
+    }
     console.log('');
+    return;
   }
 
-  const files = fs.readdirSync(source)
-    .filter(f => f.endsWith('.json') && f !== '_meta.json')
-    .sort();
-
-  let total = 0;
-
-  for (const file of files) {
-    const collectionName = file.replace('.json', '');
-    const filePath = path.join(source, file);
-
-    try {
-      const count = await importCollection(collectionName, filePath);
-      if (count > 0) {
-        console.log(`  \u2713 ${collectionName}: ${count} docs restaurados`);
-      } else {
-        console.log(`  - ${collectionName}: vac\u00EDo, se omite`);
+  if (args.info) {
+    if (!args.filename) {
+      console.error('Error: Se requiere --filename. Uso: node restore.js --info <filename>');
+      process.exit(1);
+    }
+    console.log(`\nEstadísticas del backup: ${args.filename}\n`);
+    const stats = await getBackupStats(args.filename);
+    console.log(`  Timestamp: ${stats.timestamp}`);
+    console.log(`  Versión: ${stats.version}`);
+    console.log(`  Total documentos: ${stats.totalDocs}`);
+    console.log(`  Colecciones: ${stats.collectionCount}`);
+    console.log('');
+    stats.collections.forEach(c => {
+      const err = c.hasError ? ' [ERROR]' : '';
+      console.log(`    ${c.name}: ${c.docCount} docs${err}`);
+    });
+    if (Object.keys(stats.subcollectionSummary).length) {
+      console.log('\n  Subcolecciones:');
+      for (const [key, count] of Object.entries(stats.subcollectionSummary)) {
+        if (count > 0) console.log(`    ${key}: ${count} docs`);
       }
-      total += count;
-    } catch (err) {
-      console.error(`  \u2717 ${collectionName}: ERROR \u2014 ${err.message}`);
+    }
+    console.log('');
+    return;
+  }
+
+  if (!args.filename) {
+    console.log('\nBuscando backups disponibles...\n');
+    const backups = await listBackups({ limit: 10 });
+    if (backups.length === 0) {
+      console.error('No se encontraron backups. Especifica un nombre de archivo.');
+      process.exit(1);
+    }
+    console.log('Backups encontrados:');
+    backups.forEach((b, i) => {
+      const size = (b.size / 1024 / 1024).toFixed(2);
+      const date = new Date(b.updated).toLocaleString('es-MX');
+      console.log(`  ${i + 1}. ${b.filename}  (${size} MB, ${date}, ${b.source})`);
+    });
+    console.log('');
+    const choice = await ask('Selecciona el número del backup a restaurar (o escribe el nombre): ');
+    const idx = parseInt(choice) - 1;
+    args.filename = (idx >= 0 && idx < backups.length) ? backups[idx].filename : choice;
+  }
+
+  if (!args.force) {
+    console.log('\n⚠  ADVERTENCIA: La restauración SOBREESCRIBIRÁ los datos existentes.');
+    console.log(`   Archivo: ${args.filename}`);
+    if (args.dryRun) console.log('   Modo: DRY RUN (simulación)');
+    if (args.collections) console.log(`   Colecciones: ${args.collections.join(', ')}`);
+    console.log('');
+    const confirm = await ask('¿Continuar? (s/N): ');
+    if (confirm.toLowerCase() !== 's' && confirm.toLowerCase() !== 'si') {
+      console.log('Restauración cancelada.');
+      return;
     }
   }
 
-  const subTotal = await restoreSubcollections();
+  console.log(`\nIniciando restauración de: ${args.filename}\n`);
 
-  console.log(`\n\u2705 Restauraci\u00F3n completada:`);
-  console.log(`   Documentos principales: ${total}`);
-  console.log(`   Documentos en subcolecciones: ${subTotal}`);
-  console.log(`   Total: ${total + subTotal}`);
+  try {
+    const result = await restoreBackup(args.filename, {
+      collections: args.collections,
+      dryRun: args.dryRun,
+      conflictStrategy: args.force ? 'overwrite' : 'skip',
+    });
+
+    if (args.dryRun) {
+      console.log('=== SIMULACIÓN DE RESTAURACIÓN ===\n');
+    } else {
+      console.log('=== RESTAURACIÓN COMPLETADA ===\n');
+    }
+
+    console.log(`  Archivo: ${result.filename}`);
+    console.log(`  Timestamp: ${result.timestamp}`);
+    console.log(`  Modo: ${result.dryRun ? 'Simulación' : 'Real'}`);
+    console.log(`  Estrategia: ${result.conflictStrategy}`);
+    console.log('');
+
+    result.collections.forEach(c => {
+      const label = c.status === 'empty' ? '(vacía)' : c.status === 'simulated' ? '(simulado)' : '';
+      console.log(`  ${c.name}: ${c.mainDocs} docs principales, ${c.subDocs} subdocs ${label}`);
+    });
+
+    console.log('');
+    console.log(`  Total documentos principales: ${result.mainDocs}`);
+    console.log(`  Total documentos subcolecciones: ${result.subDocs}`);
+    console.log(`  Total general: ${result.totalDocs}`);
+
+    if (result.errors.length) {
+      console.log(`\n  Errores (${result.errors.length}):`);
+      result.errors.forEach(e => console.log(`    - ${e}`));
+    }
+
+    console.log('');
+  } catch (err) {
+    console.error(`\nError fatal: ${err.message}`);
+    process.exit(1);
+  }
 }
 
-restore().catch(err => {
-  console.error('Error fatal:', err);
-  process.exit(1);
-});
+main();
