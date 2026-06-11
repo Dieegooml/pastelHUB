@@ -1,0 +1,198 @@
+# ============================================================
+# Alert Policies for PastelHub — Cloud Monitoring
+# Desplegar con:
+#   gcloud alpha monitoring policies create \
+#     --policy-from-file=deploy/alert-policies.yaml
+# ============================================================
+
+# ------------------------------------------------------------
+# Política 1: Latencia alta (P99 > 5s por 5 minutos)
+# ------------------------------------------------------------
+- displayName: "PastelHub - Latencia P99 Alta"
+  documentation:
+    content: "La latencia P99 ha superado los 5 segundos durante más de 5 minutos. Revisar:
+      - Escalado automático de Cloud Run
+      - Consultas lentas a Firestore
+      - Posible cuello de botella en instancias
+    Enlace: https://console.cloud.google.com/run/detail/us-central1/pastelhub-server/metrics"
+    mimeType: "text/markdown"
+  conditions:
+    - displayName: "P99 latency > 5s"
+      conditionThreshold:
+        filter: |
+          metric.type="run.googleapis.com/request_latencies"
+          resource.type="cloud_run_revision"
+          resource.label.service_name="pastelhub-server"
+        aggregations:
+          - alignmentPeriod: 60s
+            perSeriesAligner: ALIGN_PERCENTILE_99
+        duration: 300s
+        comparison: COMPARISON_GT
+        thresholdValue: 5000
+        trigger:
+          count: 1
+  alertStrategy:
+    autoClose: "1800s"
+  combiner: OR
+  enabled: true
+  notificationChannels:
+    - "projects/pastehub-2d2b2/notificationChannels/CHANNEL_ID_1"
+  severity: "WARNING"
+
+# ------------------------------------------------------------
+# Política 2: Tasa de error > 5% por 3 minutos
+# ------------------------------------------------------------
+- displayName: "PastelHub - Tasa de Error Alta"
+  documentation:
+    content: "La tasa de error (5xx) ha superado el 5% durante más de 3 minutos.
+      Revisar:
+      - Logs de error en Cloud Logging
+      - Posible despliegue con bugs
+      - Dependencias externas caídas (Firebase, MercadoPago)
+    Enlace: https://console.cloud.google.com/run/detail/us-central1/pastelhub-server/logs"
+    mimeType: "text/markdown"
+  conditions:
+    - displayName: "Error rate > 5%"
+      conditionThreshold:
+        filter: |
+          metric.type="run.googleapis.com/request_count"
+          resource.type="cloud_run_revision"
+          resource.label.service_name="pastelhub-server"
+          metric.label.response_code=monitoring.regex.full_match("5[0-9][0-9]")
+        aggregations:
+          - alignmentPeriod: 60s
+            perSeriesAligner: ALIGN_RATE
+        duration: 180s
+        comparison: COMPARISON_GT
+        thresholdValue: 0.05
+        trigger:
+          count: 1
+  alertStrategy:
+    autoClose: "1800s"
+  combiner: OR
+  enabled: true
+  notificationChannels:
+    - "projects/pastehub-2d2b2/notificationChannels/CHANNEL_ID_1"
+  severity: "CRITICAL"
+
+# ------------------------------------------------------------
+# Política 3: Surge de instancias (> 20 por 5 minutos)
+# ------------------------------------------------------------
+- displayName: "PastelHub - Pico de Instancias"
+  documentation:
+    content: "El número de instancias activas ha superado 20 durante más de 5 minutos.
+      Revisar:
+      - Pico de tráfico inesperado
+      - Pruebas de carga no planificadas
+      - Configuración de escalado (max-instances=25 está cerca)
+    Acción: Considerar aumentar max-instances si es tráfico legítimo."
+    mimeType: "text/markdown"
+  conditions:
+    - displayName: "Active instances > 20"
+      conditionThreshold:
+        filter: |
+          metric.type="run.googleapis.com/container/instance_count"
+          resource.type="cloud_run_revision"
+          resource.label.service_name="pastelhub-server"
+        aggregations:
+          - alignmentPeriod: 60s
+            perSeriesAligner: ALIGN_MAX
+        duration: 300s
+        comparison: COMPARISON_GT
+        thresholdValue: 20
+        trigger:
+          count: 1
+  alertStrategy:
+    autoClose: "1800s"
+  combiner: OR
+  enabled: true
+  notificationChannels:
+    - "projects/pastehub-2d2b2/notificationChannels/CHANNEL_ID_1"
+  severity: "WARNING"
+
+# ------------------------------------------------------------
+# Política 4: Memoria > 80% por 5 minutos
+# ------------------------------------------------------------
+- displayName: "PastelHub - Memoria Alta"
+  documentation:
+    content: "El uso de memoria ha superado el 80% durante más de 5 minutos.
+      Revisar:
+      - Posible fuga de memoria (memory leak)
+      - Aumentar límite de memoria en Cloud Run
+      - Revisar caché en memoria
+    Valor actual: 4GB — considerar aumentar a 8GB si persiste."
+    mimeType: "text/markdown"
+  conditions:
+    - displayName: "Memory utilization > 80%"
+      conditionThreshold:
+        filter: |
+          metric.type="run.googleapis.com/container/memory/utilizations"
+          resource.type="cloud_run_revision"
+          resource.label.service_name="pastelhub-server"
+        aggregations:
+          - alignmentPeriod: 60s
+            perSeriesAligner: ALIGN_MEAN
+        duration: 300s
+        comparison: COMPARISON_GT
+        thresholdValue: 0.8
+        trigger:
+          count: 1
+  alertStrategy:
+    autoClose: "1800s"
+  combiner: OR
+  enabled: true
+  notificationChannels:
+    - "projects/pastehub-2d2b2/notificationChannels/CHANNEL_ID_1"
+  severity: "WARNING"
+
+# ------------------------------------------------------------
+# Política 5: Backup no realizado en 36 horas
+# ------------------------------------------------------------
+- displayName: "PastelHub - Backup No Realizado"
+  documentation:
+    content: "No se ha creado un backup en las últimas 36 horas.
+      Revisar:
+      - Estado del Cloud Scheduler (daily-backup)
+      - Logs del endpoint /api/admin/backup
+      - Posible error en backupService.js
+    Comprobar: gcloud scheduler jobs describe daily-backup --location=us-central1"
+    mimeType: "text/markdown"
+  conditions:
+    - displayName: "No backup in 36 hours"
+      conditionAbsent:
+        filter: |
+          metric.type="logging.googleapis.com/log_entry_count"
+          resource.type="cloud_run_revision"
+          resource.label.service_name="pastelhub-server"
+          metric.label."log"="cloudaudit.googleapis.com/activity"
+        aggregations:
+          - alignmentPeriod: 3600s
+            perSeriesAligner: ALIGN_RATE
+        duration: 129600s
+        trigger:
+          count: 1
+  alertStrategy:
+    autoClose: "43200s"
+  combiner: OR
+  enabled: true
+  notificationChannels:
+    - "projects/pastehub-2d2b2/notificationChannels/CHANNEL_ID_1"
+  severity: "WARNING"
+
+# ------------------------------------------------------------
+# Notification Channels (crear primero en GCP Console)
+# ------------------------------------------------------------
+# notificationChannels:
+#   - displayName: "PastelHub Email Alerts"
+#     type: email
+#     labels:
+#       email_address: "ops@pastelhub.com"
+#
+#   - displayName: "PastelHub Slack"
+#     type: slack
+#     labels:
+#       auth_token: "xoxb-..."
+#       channel_name: "#alerts"
+#
+# Reemplazar CHANNEL_ID_1 con el ID real después de crear los canales:
+#   gcloud alpha monitoring channels list

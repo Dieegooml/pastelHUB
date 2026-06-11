@@ -1,0 +1,420 @@
+{
+  "displayName": "PastelHub - Dashboard de Monitoreo",
+  "dashboardFilters": [],
+  "projectId": "pastehub-2d2b2",
+  "gridLayout": {
+    "columns": "2",
+    "widgets": [
+      {
+        "title": "Latencia P50/P95/P99",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_NONE",
+                    "perSeriesAligner": "ALIGN_PERCENTILE_50"
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "P50"
+            },
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_NONE",
+                    "perSeriesAligner": "ALIGN_PERCENTILE_95"
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "P95"
+            },
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_NONE",
+                    "perSeriesAligner": "ALIGN_PERCENTILE_99"
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "P99"
+            }
+          ],
+          "thresholds": [
+            {
+              "value": 5000,
+              "color": "RED",
+              "label": "5s P99 threshold",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "ms",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Tasa de Error por Endpoint",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\" metric.label.\"response_code\"=monitoring.regex.full_match(\"5[0-9][0-9]\")",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "perSeriesAligner": "ALIGN_SUM",
+                    "groupByFields": ["metric.label.\"response_code\""]
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "STACKED_BAR",
+              "legendTemplate": "5xx"
+            },
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\" metric.label.\"response_code\"=monitoring.regex.full_match(\"4[0-9][0-9]\")",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "perSeriesAligner": "ALIGN_SUM",
+                    "groupByFields": ["metric.label.\"response_code\""]
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "STACKED_BAR",
+              "legendTemplate": "4xx"
+            }
+          ],
+          "yAxis": {
+            "label": "requests/min",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Solicitudes por Ruta",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\"",
+                  "aggregation": {
+                    "alignmentPeriod": "300s",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "perSeriesAligner": "ALIGN_SUM",
+                    "groupByFields": ["metric.label.\"target_service\""]
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "BAR",
+              "legendTemplate": "{target_service}"
+            }
+          ],
+          "yAxis": {
+            "label": "requests",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Lecturas/Escrituras Firestore por Minuto",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"firestore.googleapis.com/document/reads\" resource.type=\"firestore_database\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "perSeriesAligner": "ALIGN_RATE"
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "Lecturas/s"
+            },
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"firestore.googleapis.com/document/writes\" resource.type=\"firestore_database\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "perSeriesAligner": "ALIGN_RATE"
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "Escrituras/s"
+            }
+          ],
+          "yAxis": {
+            "label": "ops/s",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Uso de CPU por Instancia",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/container/cpu/utilizations\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_MEAN",
+                    "perSeriesAligner": "ALIGN_MEAN"
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "CPU Promedio"
+            },
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/container/cpu/utilizations\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_MAX",
+                    "perSeriesAligner": "ALIGN_MAX"
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "CPU Max"
+            }
+          ],
+          "thresholds": [
+            {
+              "value": 0.8,
+              "color": "RED",
+              "label": "80% threshold",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "utilization",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Uso de Memoria por Instancia",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/container/memory/utilizations\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_MEAN",
+                    "perSeriesAligner": "ALIGN_MEAN"
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "Mem Promedio"
+            },
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/container/memory/utilizations\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_MAX",
+                    "perSeriesAligner": "ALIGN_MAX"
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "Mem Max"
+            }
+          ],
+          "thresholds": [
+            {
+              "value": 0.8,
+              "color": "RED",
+              "label": "80% threshold",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "utilization",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Instancias Activas",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/container/instance_count\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "perSeriesAligner": "ALIGN_MAX"
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "Instancias"
+            }
+          ],
+          "yAxis": {
+            "label": "instances",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Solicitudes Concurrentes",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "perSeriesAligner": "ALIGN_MAX"
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "Solicitudes"
+            }
+          ],
+          "yAxis": {
+            "label": "requests/s",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Distribución de Códigos de Respuesta",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\"",
+                  "aggregation": {
+                    "alignmentPeriod": "300s",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "perSeriesAligner": "ALIGN_SUM",
+                    "groupByFields": ["metric.label.\"response_code\""]
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "HTTP {response_code}"
+            }
+          ],
+          "yAxis": {
+            "label": "requests",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Endpoints Más Lentos (Top 10)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"pastelhub-server\"",
+                  "aggregation": {
+                    "alignmentPeriod": "300s",
+                    "crossSeriesReducer": "REDUCE_NONE",
+                    "perSeriesAligner": "ALIGN_PERCENTILE_99",
+                    "groupByFields": ["resource.label.\"revision_name\""]
+                  }
+                }
+              },
+              "targetAxis": "Y1",
+              "plotType": "LINE",
+              "legendTemplate": "{revision_name}"
+            }
+          ],
+          "yAxis": {
+            "label": "ms (P99)",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      }
+    ]
+  },
+  "etag": "default"
+}

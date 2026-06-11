@@ -8,85 +8,134 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
 - **Backend:** Node.js + Express 5 + Firebase Admin SDK
 - **Database:** Firestore (NoSQL)
 - **Auth:** Firebase Auth (email/password + Google) + Custom Claims for roles
-- **Testing:** Jest 30 + Supertest (unit/integration), k6 (load)
-- **Cloud Run:** `pastelhub-server` (us-central1, 8 CPU, 4GB RAM, 500 concurrency, 2-25 instances), backups + load tests
+- **Testing:** Jest 30 + Supertest (unit/integration), Vitest 4 (client), Playwright (E2E), k6 (load)
+- **Cloud Run:** `pastelhub-server` (us-central1, 8 CPU, 4GB RAM, 500 concurrency, **5-25 min-instances**), backups + load tests
 - **Cloud Storage:** `pastehub-2d2b2-backups` (us-central1, 30-day lifecycle)
 - **Cloud Scheduler:** `daily-backup` (0 3 * * * → POST /api/admin/backup)
 - **Artifact Registry:** `us-central1-docker.pkg.dev/pastehub-2d2b2/pastelhub/`
 - **Service Accounts:** `scheduler-sa` (run.invoker + storage.objectAdmin)
+- **Payments:** MercadoPago SDK integration (optional, falls back to simulated gateway)
+- **Chat:** WebSocket (ws) for real-time messaging + Gemini AI chatbot
+- **i18n:** Custom zero-dependency i18n (ES/EN) with 200+ translation keys
+- **PWA:** Service Worker with cache-first for static assets + push notifications
+- **Monitoring:** Cloud Monitoring dashboard + alert policies
 
 ## Project Structure
 ```
 /
   client/                     # React frontend (Vite)
+    e2e/                      # Playwright E2E tests (7 spec files, 42 tests)
+      flows/                  # health, auth, shops, cart, navigation, admin, 404
+      helpers/                # mock-auth.js, mock-data.js
+    public/
+      manifest.json           # PWA manifest
+      sw.js                   # Service Worker (cache + offline)
     src/
-      components/             # AuthLayout, ProtectedRoute, etc.
-      config/                 # firebase.js (auth + googleProvider)
-      context/                # AuthContext.jsx
+      components/             # AuthLayout, ProtectedRoute, Chatbot, ImageUploader, PaymentGateway, etc.
+      config/                 # firebase.js (auth + googleProvider + storage)
+      context/                # AuthContext.jsx, I18nContext.jsx
       pages/
-        admin/                # 11 pages: Dashboard, Users, Shops, Products, Orders, Reviews, Customers, Reports, Notifications, Payments, AdminNav
-        customer/             # 6 pages: Cart, Checkout, MyOrders, OrderDetail, Profile, Notifications
-        owner/                # 1 page: OwnerDashboard (749 lines, 5 tabs)
-        public/               # 4 pages: Login, Register, ShopsList, ShopDetail, NotFound
-      services/               # 12 services (apiService, authService, shopsService, ordersService, etc.)
+        admin/                # 14 pages: Dashboard, Users, Shops, Products, Orders, Reviews, Customers, Reports, Notifications, Payments, Promotions, Invoices, Chat, AdminNav
+        customer/             # 10 pages: Cart, Checkout, MyOrders, OrderDetail, Profile, Notifications, Invoices, Support, SupportNew, SupportDetail
+        moderator/            # 2 pages: ModeratorDashboard, ModeratorNav
+        owner/                # 8 files: OwnerDashboard + 5 tabs + constants
+        public/               # 6 pages: Login, Register, ShopsList, ShopDetail, ProductDetail, NotFound
+      services/               # 18 services (apiService, authService, shopsService, ordersService, etc.)
+      tests/                  # 13 Vitest test files (~175 tests)
+      utils/                  # i18n.js (ES/EN translations), slug.js, markdown.js
+      styles/                 # theme.js (inline style constants + CSS animation names)
   server/                     # Express backend
     src/
-      app.js                  # Express app (all routes mounted, rate limiters)
-      server.js               # Entry point (app.listen)
-      config/                 # firebase.js (admin SDK init)
-      middlewares/             # auth.js (6 middlewares), validate.js (Zod)
-      routes/                 # 11 routers: auth, users, shops, products, orders, reviews, payments, notifications, reports, customers, promotions
-      validators/             # 8 Zod validators: auth, user, review, payment, notification, report, customer, promotion
-      utils/                  # paginate.js
+      app.js                  # Express app (15 routers, cache middleware, trace ID, role-based rate limiting)
+      server.js               # Entry point (app.listen + WebSocket + cron backup)
+      config/                 # firebase.js (admin SDK init), mercadopago.js
+      middlewares/             # auth.js (7 middlewares), validate.js (Zod), rateLimiter.js (role-based)
+      routes/                 # 16 routers: auth, users, shops, products, orders, reviews, payments, notifications, reports, customers, promotions, support, invoices, chat, backups, uploads
+      validators/             # 15 Zod validators: auth, user, shop, product, order, review, payment, notification, report, customer, promotion, support, invoice, chat, upload
+      utils/                  # cache.js, mappers.js, paginate.js, backupService.js, restoreService.js, websocket.js, aiHelper.js, fcmService.js, autoNotify.js, auditLog.js, logger.js
     tests/
-      unit/                   # 12 test files (239 tests)
+      unit/                   # 17 test files (~450+ tests)
       load/                   # k6 + Node.js load test scripts
       rate-limit/             # Rate limit demo
       setup.js                # Jest setup (mocks firebase-admin)
+      setup-backup.js         # Backup test helpers
     TESTING.md
   assets/                     # diagramaPastelHUB.png
+  cloud-monitoring.json       # Cloud Monitoring dashboard (10 widgets)
+  deploy/                     # alert-policies.yaml (5 alerts)
   *.md                        # README, API_ENDPOINTS, CLOUD_SETUP, RATE_LIMITING
 ```
 
 ## Key Design Decisions
 1. **No `<form>` with onSubmit** — Use `onClick` on buttons instead
-2. **All styles inline** — JS objects, no external UI libraries
+2. **All styles inline** — JS objects, no external UI libraries (framer-motion removed, replaced with CSS)
 3. **Firebase Admin mocked in tests** — No `serviceAccountKey.json` dependency; mock in `tests/setup.js`
 4. **Login/Register use modular Firebase API** — `signInWithEmailAndPassword`, `createUserWithEmailAndPassword` directly from `firebase/auth`
 5. **`app.listen()` separated from `app.js`** — `server.js` handles listening so `app.js` can be imported by supertest
 6. **Multiple roles via array** — `roles: ['admin','moderator','owner','customer']` in Firestore + synced to Custom Claims
 7. **Auth handles password hashing** — Firebase Auth manages passwords, Firestore stores `password_hash: ''`
 8. **No bcrypt** — Firebase Auth handles hashing natively
-9. **Rate limiting** — 500 req/15min general, 50 req/15min auth endpoints (100k/20k en LOAD_TEST para 5000 VUs)
+9. **Rate limiting** — Role-based: admin 2000/15min, moderator 1000, owner 1000, customer 500, anonymous 200 (100k/20k en LOAD_TEST)
 10. **clearMocks: true** — Global in jest.config, no manual `beforeEach` in test files
 11. **Validation via Zod** — All mutation endpoints use Zod schemas via `validate()` middleware
 12. **Snake_case in Firestore** — Fields like `shop_id`, `is_active`, `owner_id`, `start_date`, `end_date`
-13. **Seed masivo** — `npm run seed-data` (o `seed-data:clean` para limpiar antes) genera ~285 documentos con @faker-js/faker: 1 admin, 2 mods, 6 owners, 20 customers, 6 shops, ~48 productos, ~33 órdenes, pagos, reseñas, promos, notificaciones y reportes
+13. **Seed masivo** — `npm run seed-data` (o `seed-data:clean` para limpiar antes) genera ~285 documentos con @faker-js/faker
+14. **Cache system** — In-memory TTL cache with LRU eviction, 5 named stores (shops, products, promotions, reviews, notificationCount), per-store stats, periodic cleanup
+15. **Backup history persisted** — Backup metadata stored in Firestore `backupHistory` collection, survives restarts
+16. **i18n internal** — Custom zero-dependency i18n with `t(key)` function and `I18nContext`
+17. **WebSocket** — Real-time chat + notifications via `ws` library, auto-reconnect, heartbeat
+18. **MercadoPago** — Real payment gateway with webhook HMAC verification, auto-fallback to simulated
 
-## Route Structure
+## Route Structure (16 routers)
 | Route | Mounted At | Auth Model | Notes |
 |-------|-----------|-----------|-------|
-| Auth | `/api/auth` | verifyToken (sync/me), admin (assign-role) | authLimiter applied |
+| Auth | `/api/auth` | verifyToken (sync/me), admin (assign-role) | Role-based rate limiter |
 | Users | `/api/users` | admin (list/create), self/admin (get/update), admin (delete/status) | Embedded addresses |
 | Shops | `/api/shops` | **PUBLIC** (GETs), ownerOrAdmin (POST/PUT/DELETE), admin (status) | Schedules + categories subcollections |
 | Products | `/api/products` | **PUBLIC** (GETs), ownerOrAdmin (POST/PUT/PATCH/DELETE) | Variants subcollection |
-| Orders | `/api/orders` | admin (list), ownerOrAdmin (shop/status), customer (create/my/cancel), self/owner/admin (get/:id) | Items subcollection |
-| Reviews | `/api/reviews` | **PUBLIC** (GET shop), moderator (status filter/status PATCH), customer (POST), self (PUT), owner/admin (reply) | Recalculates shop rating |
-| Payments | `/api/payments` | admin (list/status), customer (POST), customer/owner/admin (get by order) | 1:1 with orders |
-| Notifications | `/api/notifications` | admin (create/bulk), self/admin (read/delete) | Bulk create with batched writes |
+| Orders | `/api/orders` | admin (list), ownerOrAdmin (shop/status), customer (create/my/cancel), self/owner/admin (get) | Status machine |
+| Reviews | `/api/reviews` | **PUBLIC** (GET shop), moderator (status), customer (POST), self (PUT), owner/admin (reply) | Recalculates shop rating |
+| Payments | `/api/payments` | admin (list/status), customer (POST), owner/admin (update/delete/gateway) | MercadoPago integration |
+| Notifications | `/api/notifications` | admin (create/bulk), self/admin (read/delete) | WebSocket push |
 | Reports | `/api/reports` | authenticated (POST), moderator (list/assign/status), self (PUT/DELETE) | Moderation system |
 | Customers | `/api/customers` | admin (list), self/admin (get/addresses/delete) | Addresses subcollection |
-| Promotions | `/api/promotions` | **PUBLIC** (GET active by shop), ownerOrAdmin (CRUD/toggle) | Types: discount, combo, bogo |
+| Promotions | `/api/promotions` | **PUBLIC** (GET active), ownerOrAdmin (CRUD/toggle) | Types: discount, combo, bogo |
+| Support | `/api/support` | authenticated (tickets), moderator (status/assign) | Messages subcollection |
+| Invoices | `/api/invoices` | admin (generate), authenticated (list), ownerOrAdmin (by-shop) | PDF via PDFKit |
+| Chat | `/api/chat` | verifyToken, rate limited (10/min) | Gemini AI + WebSocket |
+| Backups | `/api/admin/backup` | admin only | GCS upload + Firestore history + restore |
+| Uploads | `/api/uploads` | verifyToken (self), admin | Firebase Storage images (base64) |
 
-## Middlewares (server/src/middlewares/auth.js)
+## Middlewares (server/src/middlewares/)
+### auth.js (7 middlewares)
 | Middleware | Logic | Used By |
 |-----------|-------|---------|
 | `verifyToken` | Verifies Firebase ID token, sets `req.user` | All protected routes |
 | `requireAdmin` | `roles.includes('admin')` | Admin-only endpoints |
-| `requireOwner` | `roles.includes('admin')` or `roles.includes('owner')` | Simple role gate — prefer `requireOwnerOrAdmin` for resource ownership |
+| `requireOwner` | `roles.includes('admin')` or `roles.includes('owner')` | Simple role gate |
 | `requireModerator` | `admin` or `moderator` roles | Reviews (status), Reports (list/assign) |
-| `requireCustomer` | `customer` or `admin` roles | Orders (create, my), Customers (create), Payments (create), Reviews (create) |
-| `requireOwnerOrAdmin(fn)` | Dynamic — calls `fn(req)` to get owner ID, allows if admin or matching owner | Shops, Products, Orders, Promotions CRUD |
+| `requireCustomer` | `customer` or `admin` roles | Orders (create, my), Customers (create), Payments (create) |
+| `requireOwnerOrAdmin(fn)` | Dynamic — calls `fn(req)` to get owner ID | Shops, Products, Orders, Promotions CRUD |
+| `requireSelfOrAdmin(param)` | Factory: admin or `uid === param` | Users, Customers, Notifications |
+
+### rateLimiter.js
+Role-based rate limiting: `createRoleLimiter({ auth: true })` for auth endpoints, `createRoleLimiter()` for general. Limits scale by role (admin=2000, moderator=1000, owner=1000, customer=500, anonymous=200). Uses `req.user.uid` as key (falls back to IP).
+
+## Cache System (server/src/utils/cache.js)
+- `createStore(name, { ttl, maxEntries })` — Creates a named cache store
+- `get(store, key)` / `set(store, key, data)` / `del(store, key)` / `clear(store)`
+- `invalidatePrefix(store, prefix)` — Invalidate by key prefix
+- `stats(store)` / `allStats()` — Per-store hit/miss/eviction stats
+- LRU eviction when max entries exceeded
+- 30s periodic cleanup of expired entries
+- Stores: `shops` (60s), `products` (60s), `promotions` (60s), `reviews` (30s), `notificationCount` (15s)
+
+## WebSocket (server/src/utils/websocket.js)
+- Attached to HTTP server, authenticated via `?token=` query (Firebase ID token)
+- Events: `chat:message`, `chat:typing`, `chat:read`, `notification:read`, `notification:new`
+- Rate limit: 10 messages/min per connection
+- Heartbeat: server ping every 30s, disconnect stale
+- `pushNotification(userId, data)` — Push to all user's WS connections
 
 ## Auth Flow
 1. Frontend: Firebase Auth `signInWithEmailAndPassword` / `signInWithPopup(googleProvider)`
@@ -97,180 +146,107 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
 6. `ProtectedRoute` checks `user.roles.includes(requiredRole)`, redirects to `/login` if unauthorized
 
 ## Firebase Collections
-- `users` — Auth users with roles array, embedded addresses, isActive status
+- `users` — Auth users with roles array, embedded addresses, isActive status, fcmTokens subcollection
 - `customers` — Customer profiles with `addresses` subcollection
 - `pastryShops` — Shops with `schedules` and `categories` subcollections
 - `products` — Products with `variants` subcollection
-- `orders` — Orders with `items` subcollection, status history
-- `payments` — 1:1 with orders, paymentStatus tracking
+- `orders` — Orders with items embedidos, status history, payment tracking
+- `payments` — 1:1 with orders, MercadoPago fields (mp_preference_id, mp_payment_id)
 - `reviews` — Moderated reviews, recalculates shop rating
-- `notifications` — Per-user notifications, bulk creation
+- `notifications` — Per-user notifications, bulk creation, WebSocket push
 - `reports` — Moderation reports (target: review, shop, product)
 - `promotions` — Discounts, combos, BOGO with date range
-- `chatSessions` — Dialogflow CX chatbot sessions (no routes built)
+- `chatSessions` — Chatbot sessions with `messages` subcollection (Gemini AI)
+- `supportTickets` — Support tickets with `messages` subcollection
+- `invoices` — Auto-generated PDF invoices with MercadoPago data
+- `backupHistory` — Persisted backup metadata (timestamp, total, collections)
 
-## Frontend Pages (23 total, all functional)
-### Public (4)
-- `/login` — Split-screen layout, email/password + Google, Firebase error mapping, password toggle
+## Frontend Pages (~28 total)
+### Public (6)
+- `/login` — Split-screen, email/password + Google, Firebase error mapping, password toggle
 - `/register` — Full validation, password strength meter, terms checkbox, Google auth
-- `/` (ShopsList) — Hero section, search bar, category filter, skeleton loading, shop cards
-- `/shops/:id` (ShopDetail) — Banner, logo, products grid, add-to-cart, reviews list, schedule
+- `/` (ShopsList) — Hero section, search, skeleton loading, shop cards (CSS animations)
+- `/shops/:id` (ShopDetail) — Banner, logo, products grid, add-to-cart, reviews, schedule
+- `/producto/:shop/:id` (ProductDetail) — Full product view with variants, add to cart
+- `*` (NotFound) — 404 page with link back to home
 
-### Customer (6)
+### Customer (10)
 - `/cart` — localStorage cart, quantity adjust, remove items, totals
-- `/checkout` — Form with address, payment method selection, order submission
-- `/my-orders` — Filter by status (pending/confirmed/preparing/delivered/cancelled), cancel pending
-- `/my-orders/:id` (OrderDetail) — Timeline view, status tracking, review submission
-- `/profile` — Edit name/phone/email, password change, address CRUD (add/edit/delete)
-- `/notifications` — List with type icons, mark as read, delete
+- `/checkout` — Address form + PaymentGateway (MercadoPago/Card/Yape/Plin/Cash)
+- `/my-orders`, `/my-orders/:id` — Order list + timeline detail with review submission
+- `/profile` — Edit profile, photo upload (ImageUploader), address CRUD, password change
+- `/notifications` — Real-time notifications via WebSocket, mark read, delete
+- `/invoices` — Invoice list with PDF download
+- `/support`, `/support/new`, `/support/:id` — Support tickets with messages
 
 ### Owner (1)
-- `/owner` (OwnerDashboard) — 5 tabs: shop info (edit), products (CRUD), orders (status filter), promotions (CRUD + toggle), summary (sales analytics with charts)
+- `/owner` (OwnerDashboard) — 5 tabs: shop info (edit + ImageUploader), products (CRUD + ImageUploader), orders (status filter), promotions (CRUD + toggle), summary (sales analytics)
 
-### Admin (11)
-- Dashboard — Stat cards, recent orders table
-- Users — Full CRUD, role toggles, address management
-- Shops — CRUD with schedules and categories
-- Products — CRUD with variant management
-- Orders — Status filter, payment status update, review management
-- Reviews — Moderation (approve/reject), reply to reviews
-- Customers — List and delete
-- Reports — List, filter by status/type, assign moderator
-- Notifications — Create single or bulk, list all
-- Payments — List, filter by status, update status
-- AdminNav — Sidebar navigation component
+### Moderator (1)
+- `/moderator` (ModeratorDashboard) — Review moderation + report management
+
+### Admin (14)
+- Dashboard, Users, Shops, Products, Orders, Reviews, Customers, Reports, Notifications, Payments, Promotions, Invoices, Chat, AdminNav
 
 ## Test Infrastructure
-- **Command (server):** `npm test` — 338 tests, 15 suites
-- **Command (load):** `npm run load-test` (Node.js) / `npm run load-test:k6` (k6)
-- **Command (client):** `npm test` (Vitest) / `npm run test:watch`
-- **Config (server):** `jest.config.js` — node env, setup file, clearMocks: true
-- **Config (client):** `vite.config.js` — jsdom env, setup file, globals: true
-- **Setup (server):** `tests/setup.js` — mocks firebase-admin, globals: `mockToken()`, `mockDocExists()`, `mockDocNotExists()`, `mockCollection()`, `mockFirestore`, `mockFirebaseAuth`
-- **Setup (client):** `src/tests/setup.js` — imports `@testing-library/jest-dom`
-- **13 test files (server):** health, middleware, auth, users, shops, products, orders, reviews, payments, notifications, reports, customers, promotions
-- **1 test file (client):** ProtectedRoute (6 tests)
-
-## Test Patterns (server)
-```js
-// Setup
-global.mockToken('admin-uid', ['admin']);
-global.mockDocExists({ email: 'test@test.com' });
-global.mockDocNotExists();           // For 404 scenarios
-global.mockCollection([{ id: 'r1', rating: 5 }]); // For list endpoints
-global.mockFirestore.add.mockResolvedValue({ id: 'new-id' });
-global.mockFirestore.update.mockResolvedValue();
-
-// Request
-const res = await request(app)
-  .get('/api/endpoint')
-  .set('Authorization', 'Bearer token-valido')
-  .send({ /* body */ });
-
-// Assert
-expect(res.status).toBe(200);
-expect(res.body.data).toHaveLength(1);
-```
-
-## Recent Git History
-```
-f6ab010 feat: rutas de productos con slug de pasteleria + id
-cc4ae98 perf: optimizar trafico de solicitudes con polling reducido, caché y ETag
-f656f8e fix: aumentar rate limits de 100/10 a 500/50 para evitar falsos 429 en produccion
-532c8de feat: agregar vista detalle de producto y footer con soporte
-2e79ad1 fix: VITE_API_URL=/api en produccion para coincidir con rewrite de Firebase Hosting
-a28ebe3 fix: eliminar indices de campo unico no necesarios en Firestore
-2c62404 fix: cambiar tags de imagenes Docker a versiones estables
-54ff668 feat: configurar despliegue a Firebase Hosting + Cloud Run
-e4a4aef feat: chatbot con Gemini AI y validacion de sesiones
-0e13809 test: actualizar health test con verificacion de Firestore
-b2a39de docs: agregar STATUS.md con estado real del proyecto
-f6f7a61 feat: UI para rate limit (429) en frontend
-1ee16d3 feat: sistema de backups automatizados con endpoint REST y cron
-4663a32 fix: corregir modelo Gemini y userRole en chat
-11b037d fix: corregir campo status por paymentStatus en paymentsService
-```
+- **Server tests:** `npm test` — 17 suites, ~450+ tests (Jest 30 + Supertest)
+- **Client tests:** `npm test` (Vitest) — 13 suites, ~175 tests
+- **E2E tests:** `npm run test:e2e` (Playwright) — 7 spec files, 42 tests
+- **Load tests:** `npm run load-test:k6:*` (k6, 100-50000 VUs) / `npm run load-test` (Node.js)
+- **Rate limit:** `npm run test:rate-limit` (Node.js, spawns servers)
 
 ## CI/CD Pipeline (Cloud Build)
-- **File:** `cloudbuild.yaml` — 10 pasos secuenciales
-- **Gating:** Pre-deploy tests (server unit + client lint + client unit) deben pasar antes de construir la imagen
-- **Staged rollout:** Nuevas revisiones se despliegan con `--no-traffic --tag=staging`
-- **Smoke tests:** Se ejecutan contra la URL de staging (5 tests: health, products, shops, 404, response time)
-- **Promoción:** Si smoke tests pasan → `update-traffic --to-latest` (promover a producción)
-- **Rollback automático:** Si smoke tests fallan → se restaura la revisión anterior y se elimina el tag staging
-- **Frontend:** Build + Firebase Hosting deploy solo si backend pasó smoke tests
-- **Disparador sugerido:** Push a rama `main`
-- **Sustituciones:** `_REGION=us-central1`
-- **Requisitos previos:** Otorgar roles a la SA de Cloud Build:
-  ```
-  gcloud projects add-iam-policy-binding pastehub-2d2b2 \
-    --member=serviceAccount:$(gcloud projects describe pastehub-2d2b2 --format='value(projectNumber)')@cloudbuild.gserviceaccount.com \
-    --role=roles/run.admin
-  gcloud projects add-iam-policy-binding pastehub-2d2b2 \
-    --member=... \
-    --role=roles/artifactregistry.admin
-  gcloud projects add-iam-policy-binding pastehub-2d2b2 \
-    --member=... \
-    --role=roles/iam.serviceAccountUser
-  gcloud projects add-iam-policy-binding pastehub-2d2b2 \
-    --member=... \
-    --role=roles/firebase.hosting.admin
-  ```
+- 10-step pipeline: test server → test client → build image → push → deploy staging → smoke tests → promote/rollback → build frontend → deploy hosting
+- **Rollback automático:** Restaura revisión anterior si smoke tests fallan
+- **Gating:** Pre-deploy tests (server + rate limit + client lint + client unit)
+- **Smoke tests:** 6 tests post-deploy (health, products, shops, 404, response time, frontend)
 
-## Pre-deployment Validation
-- **Script:** `pre-deploy.sh` — gating manual antes de deploy local
-- **Qué valida:** Server unit tests (Jest), rate limit test, client lint (ESLint), client unit tests (Vitest)
-- **Flags:** `--skip-client` (salta tests de cliente)
-- **Uso:** `bash pre-deploy.sh` (se integra automáticamente en `deploy.sh`)
-
-## Post-deployment Smoke Tests
-- **Script:** `smoke-test.sh <backend-url> [frontend-url]` — verifica que el servidor responde correctamente
-- **Tests:**
-  1. Health endpoint (HTTP 200 + Firestore connected)
-  2. Products endpoint (HTTP 200)
-  3. Shops endpoint (HTTP 200)
-  4. 404 handling (HTTP 404)
-  5. Response time (< 2s)
-  6. Frontend (HTTP 200, si se proporciona URL)
-- **Uso:** `bash smoke-test.sh https://pastelhub-server-xxxxx-uc.a.run.app https://pastehub-2d2b2.web.app`
-
-## Deployment (deploy.sh)
-- **Flags:** `--skip-tests` (salta validación pre-deploy), `--skip-build` (salta backend), `--skip-hosting` (salta frontend), `--skip-smoke` (salta smoke tests)
-- **Flujo:** pre-deploy tests → backend (Cloud Run) → frontend (Firebase Hosting) → smoke tests
-- **Uso:** `bash deploy.sh` (full), `bash deploy.sh --skip-tests --skip-smoke` (rápido)
-
-## Load Testing (k6)
-- **Script:** `server/tests/load/load-test.js` — 10 endpoints, stages progresivos, MAX_VUs configurable
-- **Dockerfile:** `server/tests/load/Dockerfile.k6` — `FROM grafana/k6:latest`, incluye `curl`, `sed`, `jq`
-- **Entrypoint:** `server/tests/load/entrypoint.sh` — ejecuta k6, sube reporte HTML a GCS via curl + metadata token, genera signed URL via IAM signBlob API
-- **Cloud Run Job:** `k6-load-test` (us-central1, 5 tasks, 4 CPU, 4Gi, timeout 10m)
-- **Ejecutar:** `gcloud run jobs execute k6-load-test --region=us-central1 --update-env-vars=MAX_VUS=1000`
-- **Variables:** TARGET_URL, MAX_VUS (default 1000), STEADY_MINUTES (default 5), QUICK (bool, stages mínimos), LOAD_TEST (bool), REPORT_DIR (default /tmp), REPORT_BUCKET (GCS bucket para reporte + signed URL)
-- **Signed URL:** Cada ejecución genera un signed URL (vigencia 1h) impresa en los logs y sube el reporte HTML a `gs://<REPORT_BUCKET>/load-reports/`
-- **Quick mode:** `gcloud run jobs execute k6-load-test --region=us-central1 --update-env-vars=QUICK=true,MAX_VUS=100` → ~45s
-- **Sign report locally:** `server/tests/load/sign-report-url.sh <filename.html> [duration]` (usa `gsutil signurl -i`)
-
-## Backups
+## Backups & Restore
 - **Endpoint:** POST `/api/admin/backup` (require admin)
-- **Local:** `server/src/utils/backupService.js` — exporta colecciones + subcolecciones, comprime con gzip
-- **GCS upload:** Via `uploadToGCS()` en backupService.js — opt-in con `BACKUP_BUCKET` env var
+- **Service:** `backupService.js` — exporta 12 colecciones + subcolecciones, comprime gzip, sube a GCS
+- **History:** Persistida en Firestore `backupHistory` (sobrevive reinicios)
+- **Restore:** `restoreService.js` — REST endpoints + CLI (`restore.js`), dry-run, conflict strategy, collection filter
 - **Bucket:** `pastehub-2d2b2-backups` (us-central1, lifecycle 30 días)
 - **Scheduler:** `daily-backup` — 0 3 * * * → POST /api/admin/backup (OIDC con scheduler-sa)
+- **Validate:** `POST /api/admin/backup/validate` + `GET /api/admin/backup/info/:filename`
 
-## Próximos Pasos
-1. ~~Agregar `handleSummary()` a load-test.js para reporte HTML subido a GCS~~ ✅
-2. ~~Aumentar CPU/Memoria de Cloud Run para 1000-5000 VUs~~ ✅ (8 CPU, 4GB RAM, 500 concurrency, 2-25 instances)
-3. ✅ Debuggear 404 de Express 5 en rutas (orders, notifications, reports no montadas; trailing slashes) — montado fix en app.js + middleware de normalización
-4. ✅ Auth bypass LOAD_TEST — movido check antes del header check en verifyToken
-5. ❌ P95 (5000 VUs con QUICK) = 15.6s > threshold 5s — ramp-up muy agresivo (0→5000 VUs en 30s); Cloud Run no escala tan rápido; usar ramp-up gradual de 60s o min-instances=5
-6. ✅ entrypoint.sh — arreglado `set -e` que impedía subir reporte a GCS cuando k6 fallaba thresholds (exit code 99)
-6. ✅ Subida de reporte HTML a GCS — instalados curl + sed + jq en Dockerfile; `entrypoint.sh` sube vía curl con token de metadata y genera signed URL via IAM `signBlob` API (scheduler-sa autofirmante)
-7. ✅ Script local `sign-report-url.sh` para generar signed URLs desde la máquina local con `gsutil signurl -i scheduler-sa`
-8. ✅ Pipeline CI/CD completo — cloudbuild.yaml con test gating, staged rollout (staging tag), smoke tests post-deploy, rollback automático, deploy frontend
-9. ✅ Pre-deployment validation — `pre-deploy.sh` con server unit tests, rate limit test, client lint + unit tests; integrado en `deploy.sh`
-10. ✅ Post-deployment smoke tests — `smoke-test.sh` con 6 tests (health, products, shops, 404, response time, frontend)
+## Deployment (deploy.sh)
+- `--min-instances=5` en Cloud Run para reducir cold start
+- Cache, rate limiting por rol, trace ID en headers/logs
+
+## Monitoring (cloud-monitoring.json)
+10 widgets: P50/P95/P99 latency, error rate by endpoint, request count, Firestore R/W, CPU/memory, active instances, concurrent requests, status distribution, top slowest endpoints.
+
+## Alert Policies (deploy/alert-policies.yaml)
+5 alerts: high latency (P99>5s/5min), high error rate (>5%/3min), instance surge (>20/5min), memory high (>80%/5min), backup missing (36h).
+
+## MercadoPago Integration
+- `mercadopago.js` — SDK config with access token
+- `paymentGateway.js` — `createPreference()`, `processPayment()`, `handleWebhook()`, `getPaymentStatus()`
+- Webhook with HMAC SHA256 signature verification (x-signature header)
+- Auto-fallback to simulated gateway if no token configured
+- Auto-generates invoice on payment confirmation
+
+## Image Upload
+- Client: `storageService.js` — compress (Canvas, max 1024px), upload via Admin SDK (secure)
+- Component: `ImageUploader.jsx` — drag & drop, preview, progress, validate (jpg/png/webp, max 5MB)
+- Server: `routes/uploads.js` — 3 endpoints (shop/product/profile), type/size validation
+- Admin SDK upload for production security
+
+## i18n
+- Custom zero-dependency i18n (no react-i18next)
+- 200+ translation keys across 16 domains (common, auth, nav, shops, products, cart, orders, admin, owner, error, notifications, checkout, support, reviews, promotions, payments, reports, customers, chat, footer)
+- Languages: ES (default), EN
+- `I18nContext` + `LanguageToggle` in Navbar
+- Persisted to localStorage
+
+## PWA
+- `manifest.json` — standalone display, theme/meta colors, icons
+- `sw.js` — cache-first for static assets, network-first for API, offline fallback
+- Merged with `firebase-messaging-sw.js` for push notifications + caching
 
 ## Known Gaps
-- No image upload (Firebase Storage)
-- No real payment gateway integration
-- `framer-motion` used in frontend despite "no external UI libs" convention (25 files)
+- No WebSocket fallback for server-less (Firebase Functions) deployments
+- No SQL database (Firestore-only, no relational queries)
+- No micro-frontends — single React SPA
+- No A/B testing infrastructure
