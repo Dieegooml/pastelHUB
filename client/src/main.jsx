@@ -3,6 +3,22 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      .then((reg) => {
+        if (import.meta.env.DEV) {
+          console.log('SW registered:', reg.scope);
+        }
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) {
+          console.error('SW registration failed:', err);
+        }
+      });
+  });
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />

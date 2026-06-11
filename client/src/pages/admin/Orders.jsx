@@ -1,10 +1,9 @@
 import { useEffect, useState, Fragment } from 'react';
-import { motion } from 'framer-motion';
 import { ordersService } from '../../services/ordersService';
 import { reviewsService } from '../../services/reviewsService';
 import Navbar from '../../components/Navbar';
 import AdminNav from './AdminNav';
-import { colors, font, inputStyle, selectStyle, badge as themeBadge, tableHeaderStyle, btnSmallPrimary, btnDanger } from '../../styles/theme';
+import { colors, font, inputStyle, selectStyle, badge as themeBadge, tableHeaderStyle, btnSmallPrimary, btnDanger, animStagger, animFadeIn, animFadeInLeft } from '../../styles/theme';
 import { useIsMobile } from '../../styles/useIsMobile';
 
 const STATUSES = ['all', 'pending', 'confirmed', 'preparing', 'on_the_way', 'delivered', 'cancelled'];
@@ -59,11 +58,6 @@ const filterTabStyle = (statusKey, active) => {
 
 const smallInput = { ...inputStyle, height: '36px', padding: '0 12px', fontSize: '13px' };
 const smallSelect = { ...selectStyle, height: '36px', padding: '0 12px', fontSize: '13px' };
-
-const stagger = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.35, ease: 'easeOut' } }),
-};
 
 const formatDate = (ts) => {
   if (!ts) return '—';
@@ -227,12 +221,7 @@ export default function Orders() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem 1rem 2rem' : '40px 2rem 2rem' }}
-      >
+      <div style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem 1rem 2rem' : '40px 2rem 2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '24px', flexWrap: 'wrap' }}>
           <h2 style={{ fontFamily: font.heading, fontSize: isMobile ? '22px' : '28px', fontWeight: 700, color: colors.primary, margin: 0 }}>
             Órdenes
@@ -251,31 +240,23 @@ export default function Orders() {
         <div style={{ marginBottom: '16px' }}><AdminNav /></div>
 
         {success && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            style={{
-            background: colors.successBg, color: colors.success, padding: '12px 16px',
+          <div style={{ ...animFadeInLeft, background: colors.successBg, color: colors.success, padding: '12px 16px',
             borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
             borderLeft: `4px solid ${colors.success}`,
           }}>
             {success}
-          </motion.div>
+          </div>
         )}
         {error && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            style={{
-            background: colors.errorBg, color: colors.error, padding: '12px 16px',
+          <div style={{ ...animFadeInLeft, background: colors.errorBg, color: colors.error, padding: '12px 16px',
             borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
             borderLeft: `4px solid ${colors.error}`,
           }}>
             {error}
-          </motion.div>
+          </div>
         )}
 
-        <motion.div variants={stagger} initial="hidden" animate="visible" custom={0} style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div style={{ ...animFadeIn, display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
           {STATUSES.map((s) => (
             <button
               key={s}
@@ -287,7 +268,7 @@ export default function Orders() {
               {s === 'all' ? 'Todas' : STATUS_TRANSLATIONS[s]}
             </button>
           ))}
-        </motion.div>
+        </div>
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
@@ -300,7 +281,7 @@ export default function Orders() {
             ))}
           </div>
         ) : (
-          <motion.div variants={stagger} initial="hidden" animate="visible" custom={1} style={{ background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
+          <div style={{ ...animStagger(0.04), background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
             {orders.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', gap: '12px' }}>
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -332,11 +313,9 @@ export default function Orders() {
                       const expanded = expandedId === o.id;
                       return (
                         <Fragment key={o.id}>
-                          <motion.tr
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: i * 0.03 }}
+                          <tr
                             style={{
+                              ...animStagger(i * 0.03),
                               borderTop: `1px solid ${colors.tableBorder}`,
                               background: i % 2 === 0 ? colors.white : colors.tableStripe,
                               cursor: 'pointer', transition: 'background 0.15s ease',
@@ -387,15 +366,11 @@ export default function Orders() {
                             <td style={cellStyle} onClick={(e) => e.stopPropagation()}>
                               <button onClick={() => handleDelete(o.id)} style={btnDanger}>Eliminar</button>
                             </td>
-                          </motion.tr>
+                          </tr>
                           {expanded && (
                             <tr key={`${o.id}-detail`}>
                               <td colSpan={HEADERS.length} style={{ padding: '0 16px 16px', background: colors.tableStripe }}>
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: 'auto' }}
-                                  transition={{ duration: 0.25 }}
-                                  style={{ borderTop: `1px solid ${colors.tableBorder}`, paddingTop: '16px' }}
+                                <div style={{ ...animFadeIn, borderTop: `1px solid ${colors.tableBorder}`, paddingTop: '16px' }}
                                 >
                                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', fontSize: '13px', fontFamily: font.body }}>
                                     <div style={{ lineHeight: 1.8 }}>
@@ -517,7 +492,7 @@ export default function Orders() {
                                     }
                                     return null;
                                   })()}
-                                </motion.div>
+                                </div>
                               </td>
                             </tr>
                           )}
@@ -528,9 +503,9 @@ export default function Orders() {
                 </table>
               </div>
             )}
-          </motion.div>
+          </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

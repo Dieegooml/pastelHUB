@@ -1,5 +1,4 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { colors, font } from '../../styles/theme';
 
 const links = [
@@ -51,16 +50,12 @@ export default function ModeratorNav() {
             }}
           >
             {active && (
-              <motion.div
-                layoutId="moderator-tab"
-                style={{
-                  position: 'absolute', inset: 0,
-                  background: colors.bgBeige,
-                  borderRadius: '99px',
-                  border: `1px solid ${colors.border}`,
-                }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              />
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: colors.bgBeige,
+                borderRadius: '99px',
+                border: `1px solid ${colors.border}`,
+              }} />
             )}
             <span style={{ position: 'relative', zIndex: 1 }}>{link.label}</span>
           </button>

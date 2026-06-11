@@ -1,0 +1,15 @@
+{
+  "name": "PastelHub - Pastelerías Artesanales",
+  "short_name": "PastelHub",
+  "description": "Descubre y ordena de las mejores pastelerías artesanales locales",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F9F4EE",
+  "theme_color": "#1D9E75",
+  "icons": [
+    { "src": "/favicon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "categories": ["food", "lifestyle"],
+  "lang": "es"
+}

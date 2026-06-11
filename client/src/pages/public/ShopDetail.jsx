@@ -1,8 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '../../components/Navbar';
-import { colors, font, badge as badgeStyle } from '../../styles/theme';
+import { colors, font, badge as badgeStyle, animFadeIn, animStagger } from '../../styles/theme';
 import { shopsService } from '../../services/shopsService';
 import { productsService } from '../../services/productsService';
 import { slugify } from '../../utils/slug';
@@ -120,11 +119,7 @@ export default function ShopDetail() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem 2rem' }}
-      >
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem 2rem', ...animFadeIn }}>
         <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: colors.accent, fontFamily: font.body, padding: 0, marginBottom: '16px', display: 'inline-block' }}>
           ← Volver a pastelerías
         </button>
@@ -206,12 +201,10 @@ export default function ShopDetail() {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
                 {filtered.map((p, i) => (
-                  <motion.div
+                  <div
                     key={p.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.04, duration: 0.3 }}
                     style={{
+                      ...animStagger(i * 0.04),
                       background: colors.white, borderRadius: '12px',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef',
                       overflow: 'hidden', display: 'flex', flexDirection: 'column',
@@ -257,7 +250,7 @@ export default function ShopDetail() {
                         </button>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             )}
@@ -396,25 +389,19 @@ export default function ShopDetail() {
             )}
           </div>
         </div>
-      </motion.div>
+      </div>
 
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            style={{
-              position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-              background: colors.primary, color: '#fff', padding: '12px 24px',
-              borderRadius: '99px', fontSize: '14px', fontFamily: font.body,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2)', zIndex: 1000,
-            }}
-          >
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+          background: colors.primary, color: '#fff', padding: '12px 24px',
+          borderRadius: '99px', fontSize: '14px', fontFamily: font.body,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.2)', zIndex: 1000,
+          transition: 'opacity 0.3s ease',
+        }}>
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

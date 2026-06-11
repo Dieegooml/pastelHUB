@@ -1,8 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
-import { colors, font } from '../../styles/theme';
+import { colors, font, animFadeIn } from '../../styles/theme';
 import { shopsService } from '../../services/shopsService';
 import OwnerTabInfo from './OwnerTabInfo';
 import OwnerTabProducts from './OwnerTabProducts';
@@ -69,7 +68,7 @@ export default function OwnerDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
+      <div style={{ ...animFadeIn, maxWidth: '1000px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
         <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '4px' }}>Panel de Dueño</h2>
         <p style={{ fontFamily: font.body, fontSize: '13px', color: colors.textMuted, margin: '0 0 24px' }}>Administra tus pastelerías, productos y órdenes</p>
         <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.5rem' }} />
@@ -114,7 +113,7 @@ export default function OwnerDashboard() {
             {tab === 'boletas' && <OwnerTabBoletas selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
           </>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

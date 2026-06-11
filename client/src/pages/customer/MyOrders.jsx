@@ -1,8 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
-import { colors, font, badge as badgeStyle, btnDanger, cardStyle } from '../../styles/theme';
+import { colors, font, badge as badgeStyle, btnDanger, cardStyle, animFadeIn, animStagger } from '../../styles/theme';
 import { ordersService } from '../../services/ordersService';
 
 const STATUS_TRANSLATIONS = {
@@ -70,10 +69,8 @@ export default function MyOrders() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 2rem 2rem' }}
+      <div
+        style={{ ...animFadeIn, maxWidth: '800px', margin: '0 auto', padding: '40px 2rem 2rem' }}
       >
         <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '24px' }}>Mis Órdenes</h2>
         <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.5rem' }} />
@@ -118,16 +115,13 @@ export default function MyOrders() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {filtered.map((o, i) => (
-              <motion.div
+              <div
                 key={o.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
                 onClick={() => navigate(`/my-orders/${o.id}`)}
                 style={{
                   ...cardStyle, cursor: 'pointer', padding: '16px 20px',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  transition: 'all 0.2s ease', marginBottom: 0,
+                  transition: 'all 0.2s ease', marginBottom: 0, ...animStagger(i * 0.03),
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; e.currentTarget.style.borderColor = colors.accent; }}
                 onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = colors.border; }}
@@ -151,11 +145,11 @@ export default function MyOrders() {
                   )}
                   <span style={{ color: colors.textMuted, fontSize: '18px' }}>→</span>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

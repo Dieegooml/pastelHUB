@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import AdminNav from './AdminNav';
-import { colors, font } from '../../styles/theme';
+import { colors, font, animStagger } from '../../styles/theme';
 import { usersService } from '../../services/usersService';
 import { shopsService } from '../../services/shopsService';
 import { ordersService } from '../../services/ordersService';
@@ -83,13 +82,10 @@ export default function AdminDashboard() {
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
               {cards.map((c, i) => (
-                <motion.div
+                <div
                   key={c.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.08, duration: 0.35 }}
                   onClick={() => navigate(c.path)}
-                  style={{
+                  style={{ ...animStagger(i * 0.08),
                     background: colors.white, borderRadius: '12px', padding: '24px',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef',
                     cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease',
@@ -99,7 +95,7 @@ export default function AdminDashboard() {
                 >
                   <div style={{ fontSize: '32px', fontWeight: 700, fontFamily: font.heading, color: c.color }}>{c.value}</div>
                   <div style={{ fontSize: '13px', color: colors.textSecondary, fontFamily: font.body, marginTop: '4px' }}>{c.label}</div>
-                </motion.div>
+                </div>
               ))}
             </div>
 

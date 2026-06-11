@@ -9,9 +9,17 @@ export default defineConfig({
       '/api': 'http://localhost:3001',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: './src/tests/setup.js',
     globals: true,
+    exclude: ['e2e/**', '**/node_modules/**'],
   },
 })

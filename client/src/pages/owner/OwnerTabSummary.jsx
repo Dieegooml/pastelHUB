@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import { colors, font } from '../../styles/theme';
 import { ordersService } from '../../services/ordersService';
 import { STATUS_TRANSLATIONS, STATUS_COLORS } from './ownerConstants';

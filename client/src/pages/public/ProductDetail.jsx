@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { productsService } from '../../services/productsService';
 import { shopsService } from '../../services/shopsService';
 import Navbar from '../../components/Navbar';
-import { colors, font, btnPrimary } from '../../styles/theme';
+import { colors, font, btnPrimary, animStagger, animFadeIn } from '../../styles/theme';
 
 export default function ProductDetail() {
   const { shop: shopSlug, id } = useParams();
@@ -116,17 +115,13 @@ export default function ProductDetail() {
           ← Volver a {shop?.name || 'la tienda'}
         </button>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          style={{
-            background: colors.white,
-            borderRadius: '16px',
-            overflow: 'hidden',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-          }}
-        >
+        <div style={{
+          ...animStagger(0.02),
+          background: colors.white,
+          borderRadius: '16px',
+          overflow: 'hidden',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+        }}>
           {product.image_url ? (
             <img
               src={product.image_url}
@@ -271,15 +266,12 @@ export default function ProductDetail() {
               {product.stock === 0 ? 'Agotado' : added ? '✓ Agregado' : 'Agregar al Carrito'}
             </button>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {toast && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          style={{
+        <div style={{
+          ...animFadeIn,
             position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
             background: colors.primary, color: colors.white,
             padding: '12px 24px', borderRadius: '99px',
@@ -289,7 +281,7 @@ export default function ProductDetail() {
           }}
         >
           {toast}
-        </motion.div>
+        </div>
       )}
     </div>
   );

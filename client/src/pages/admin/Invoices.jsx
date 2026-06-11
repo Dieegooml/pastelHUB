@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import AdminNav from './AdminNav';
 import { invoicesService } from '../../services/invoicesService';
-import { colors, font, badge as themeBadge, tableHeaderStyle, selectStyle } from '../../styles/theme';
+import { colors, font, badge as themeBadge, tableHeaderStyle, selectStyle, animFadeIn, animFadeInLeft } from '../../styles/theme';
 import { useIsMobile } from '../../styles/useIsMobile';
 
 const STATUSES = ['all', 'issued', 'cancelled'];
@@ -86,7 +85,7 @@ export default function Invoices() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem 1rem 2rem' : '40px 2rem 2rem' }}>
+      <div style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem 1rem 2rem' : '40px 2rem 2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '24px', flexWrap: 'wrap' }}>
           <h2 style={{ fontFamily: font.heading, fontSize: isMobile ? '22px' : '28px', fontWeight: 700, color: colors.primary, margin: 0 }}>Boletas</h2>
           <span style={{ background: '#f0f0f0', color: colors.primary, padding: '2px 10px', borderRadius: '12px', fontSize: '13px', fontWeight: 500, fontFamily: font.body }}>{invoices.length}</span>
@@ -94,8 +93,8 @@ export default function Invoices() {
         <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '24px' }} />
         <div style={{ marginBottom: '16px' }}><AdminNav /></div>
 
-        {success && <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</motion.div>}
-        {error && <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</motion.div>}
+        {success && <div style={{ ...animFadeInLeft, background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
+        {error && <div style={{ ...animFadeInLeft, background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
 
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'end', background: colors.white, padding: '16px', borderRadius: '12px', border: `1px solid ${colors.border}` }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -130,7 +129,7 @@ export default function Invoices() {
             {[1, 2, 3].map((i) => <div key={i} style={{ height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '8px', marginBottom: '8px', animation: 'shimmer 1.5s infinite' }} />)}
           </div>
         ) : (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
+          <div style={{ ...animFadeIn, background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
             {invoices.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', gap: '12px' }}>
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -182,9 +181,9 @@ export default function Invoices() {
                 </table>
               </div>
             )}
-          </motion.div>
+          </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

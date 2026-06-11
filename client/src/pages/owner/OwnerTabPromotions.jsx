@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { colors, font, inputStyle, selectStyle, badge, btnSmallPrimary, btnGhost, btnDanger } from '../../styles/theme';
+import { colors, font, inputStyle, selectStyle, badge, btnSmallPrimary, btnGhost, btnDanger, animStagger } from '../../styles/theme';
 import { promotionsService } from '../../services/promotionsService';
 import { smallInput, sectionTitle, formatDate, PROMO_TYPE_LABELS } from './ownerConstants';
 
@@ -155,8 +154,8 @@ export default function OwnerTabPromotions({ selectedShop, setError, setSuccess 
             const expired = end < now;
             const active = p.is_active && !expired;
             return (
-              <motion.div key={p.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                style={{
+              <div key={p.id} style={{
+                  ...animStagger(0.02),
                   background: colors.white, borderRadius: '12px', padding: '16px 20px',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: `1px solid ${colors.border}`,
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -188,7 +187,7 @@ export default function OwnerTabPromotions({ selectedShop, setError, setSuccess 
                   <button onClick={() => handleEditPromo(p)} style={btnGhost}>Editar</button>
                   <button onClick={() => handlePromoDelete(p.id)} style={btnDanger}>Eliminar</button>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>

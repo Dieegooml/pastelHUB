@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { colors, font, selectStyle, badge, btnSmallPrimary, tableHeaderStyle } from '../../styles/theme';
+import { colors, font, selectStyle, badge, btnSmallPrimary, tableHeaderStyle, animStagger } from '../../styles/theme';
 import { ordersService } from '../../services/ordersService';
 import { STATUS_TRANSLATIONS, STATUS_COLORS, ALL_STATUSES } from './ownerConstants';
 
@@ -41,8 +40,8 @@ export default function OwnerTabOrders({ selectedShop, setError, setSuccess }) {
             </tr></thead>
             <tbody>
               {orders.map((o, i) => (
-                <motion.tr key={o.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                  style={{ borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe }}
+                <tr
+                  style={{ ...animStagger(i * 0.03), borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }} onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
                 >
                   <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{o.id?.slice(0, 8)}</td>
@@ -59,7 +58,7 @@ export default function OwnerTabOrders({ selectedShop, setError, setSuccess }) {
                       <button onClick={() => handleOrderStatus(o.id)} style={btnSmallPrimary}>OK</button>
                     </div>
                   </td>
-                </motion.tr>
+                </tr>
               ))}
             </tbody>
           </table>

@@ -1,10 +1,9 @@
 import { useEffect, useState, Fragment } from 'react';
-import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import AdminNav from './AdminNav';
 import ModeratorNav from '../moderator/ModeratorNav';
 import { useAuth } from '../../context/AuthContext';
-import { colors, font, inputStyle, selectStyle, tableHeaderStyle, btnSmallPrimary, btnDanger, badge as badgeStyle, statusTab } from '../../styles/theme';
+import { colors, font, inputStyle, selectStyle, tableHeaderStyle, btnSmallPrimary, btnDanger, badge as badgeStyle, statusTab, animStagger, animFadeIn, animFadeInLeft } from '../../styles/theme';
 import { reportsService } from '../../services/reportsService';
 
 const STATUSES = ['all', 'open', 'resolved', 'dismissed'];
@@ -19,11 +18,6 @@ const STATUS_COLORS = {
   dismissed: { bg: '#fce4ec', color: '#c62828' },
 };
 const TARGET_TRANSLATIONS = { all: 'Todos', review: 'Reseña', shop: 'Pastelería', product: 'Producto' };
-
-const stagger = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.35, ease: 'easeOut' } }),
-};
 
 export default function Reports() {
   const { user } = useAuth();
@@ -74,7 +68,7 @@ export default function Reports() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
+      <div style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
         <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '24px' }}>Reportes</h2>
         <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.2rem' }} />
         <div style={{ marginBottom: '16px' }}>{isPureModerator ? <ModeratorNav /> : <AdminNav />}</div>
@@ -82,20 +76,20 @@ export default function Reports() {
         {success && <div style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
         {error && <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
 
-        <motion.div variants={stagger} initial="hidden" animate="visible" custom={0} style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div style={{ ...animFadeIn, display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
           {STATUSES.map((s) => (
             <button key={s} onClick={() => setStatusFilter(s)} style={statusTab(statusFilter === s)}>
               {s === 'all' ? 'Todos' : STATUS_TRANSLATIONS[s]}
             </button>
           ))}
-        </motion.div>
+        </div>
 
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {[1, 2, 3].map((i) => <div key={i} style={{ height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '8px', animation: 'shimmer 1.5s infinite' }} />)}
           </div>
         ) : (
-          <motion.div variants={stagger} initial="hidden" animate="visible" custom={1} style={{ background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
+          <div style={{ ...animStagger(0.04), background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
             {reports.length === 0 ? (
               <div style={{ padding: '60px 20px', textAlign: 'center', color: '#999', fontFamily: font.body, fontSize: '15px' }}>No hay reportes que mostrar</div>
             ) : (
@@ -114,9 +108,8 @@ export default function Reports() {
                   <tbody>
                     {reports.map((r, i) => (
                       <Fragment key={r.id}>
-                        <motion.tr
-                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                          style={{ borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, transition: 'background 0.15s ease', cursor: 'pointer' }}
+                        <tr
+                          style={{ ...animStagger(i * 0.03), borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, transition: 'background 0.15s ease', cursor: 'pointer' }}
                           onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
                           onClick={() => setDetail(detail === r.id ? null : r.id)}
@@ -144,15 +137,11 @@ export default function Reports() {
                               )}
                             </div>
                           </td>
-                        </motion.tr>
+                        </tr>
                         {detail === r.id && (
                           <tr key={`${r.id}-detail`}>
                             <td colSpan={6} style={{ padding: '0 16px 16px', background: colors.tableStripe }}>
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                transition={{ duration: 0.25 }}
-                                style={{ borderTop: `1px solid ${colors.tableBorder}`, paddingTop: '12px' }}
+                              <div style={{ ...animFadeIn, borderTop: `1px solid ${colors.tableBorder}`, paddingTop: '12px' }}
                               >
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '13px', fontFamily: font.body }}>
                                   <div>
@@ -188,7 +177,7 @@ export default function Reports() {
                                   <strong style={{ color: colors.textSecondary }}>Motivo completo:</strong>
                                   <div style={{ color: colors.text, marginTop: 4, padding: '8px 12px', background: colors.white, borderRadius: '8px', border: `1px solid ${colors.border}`, lineHeight: 1.6 }}>{r.reason}</div>
                                 </div>
-                              </motion.div>
+                              </div>
                             </td>
                           </tr>
                         )}
@@ -198,9 +187,9 @@ export default function Reports() {
                 </table>
               </div>
             )}
-          </motion.div>
+          </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

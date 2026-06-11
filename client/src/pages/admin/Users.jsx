@@ -1,10 +1,9 @@
 import { useEffect, useState, Fragment } from 'react';
-import { motion } from 'framer-motion';
 import { useIsMobile } from '../../styles/useIsMobile';
 import { usersService } from '../../services/usersService';
 import Navbar from '../../components/Navbar';
 import AdminNav from './AdminNav';
-import { colors, font, inputStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary, btnSmallSecondary, cardStyle, tableHeaderStyle, labelStyle } from '../../styles/theme';
+import { colors, font, inputStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary, btnSmallSecondary, cardStyle, tableHeaderStyle, labelStyle, animFadeIn, animFadeInLeft, animStagger } from '../../styles/theme';
 
 const ROLES = ['admin', 'moderator', 'owner', 'customer'];
 
@@ -21,11 +20,6 @@ const ROLE_BADGES = {
   moderator: { bg: '#e3f2fd', color: '#2196f3' },
   owner:     { bg: '#fff8e1', color: '#f59e0b' },
   customer:  { bg: '#e1f5ee', color: '#1D9E75' },
-};
-
-const stagger = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.35, ease: 'easeOut' } }),
 };
 
 export default function Users() {
@@ -189,11 +183,8 @@ export default function Users() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2rem' }}
+      <div
+        style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2rem' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
           <h2 style={{ fontFamily: font.heading, fontSize: isMobile ? '22px' : '28px', fontWeight: 700, color: colors.primary, margin: 0 }}>
@@ -213,31 +204,25 @@ export default function Users() {
         <AdminNav />
 
         {success && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            style={{
+          <div style={{ ...animFadeInLeft,
             background: colors.successBg, color: colors.success, padding: '12px 16px',
             borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
             borderLeft: `4px solid ${colors.success}`,
           }}>
             {success}
-          </motion.div>
+          </div>
         )}
         {error && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            style={{
+          <div style={{ ...animFadeInLeft,
             background: colors.errorBg, color: colors.error, padding: '12px 16px',
             borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
             borderLeft: `4px solid ${colors.error}`,
           }}>
             {error}
-          </motion.div>
+          </div>
         )}
 
-        <motion.div variants={stagger} initial="hidden" animate="visible" custom={0} style={{ ...cardStyle, marginTop: '1rem' }}>
+        <div style={{ ...cardStyle, marginTop: '1rem' }}>
           <h3 style={{ fontFamily: font.heading, fontSize: '18px', fontWeight: 700, color: colors.primary, margin: '0 0 0.5rem' }}>
             {editingId ? 'Editar usuario' : 'Nuevo usuario'}
           </h3>
@@ -306,7 +291,7 @@ export default function Users() {
               )}
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
@@ -319,7 +304,7 @@ export default function Users() {
             ))}
           </div>
         ) : (
-          <motion.div variants={stagger} initial="hidden" animate="visible" custom={1} style={{ ...cardStyle, marginTop: '1rem', padding: 0, overflow: 'hidden' }}>
+          <div style={{ ...cardStyle, marginTop: '1rem', padding: 0, overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -339,14 +324,12 @@ export default function Users() {
                   ) : (
                     users.map((u, i) => (
                       <Fragment key={u.id}>
-                        <motion.tr
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: i * 0.03 }}
+                        <tr
                           style={{
                             borderTop: `1px solid ${colors.tableBorder}`,
                             background: i % 2 === 0 ? colors.white : colors.tableStripe,
                             transition: 'background 0.15s ease',
+                            ...animStagger(i * 0.03),
                           }}
                           onMouseEnter={(e) => { if (i % 2 === 0) e.currentTarget.style.background = '#f5f5f5'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
@@ -408,7 +391,7 @@ export default function Users() {
                               <button onClick={() => handleDelete(u.id)} style={btnDanger}>Eliminar</button>
                             </div>
                           </td>
-                        </motion.tr>
+                        </tr>
                         {expandedUser === u.id && (
                           <tr key={`${u.id}-addr`}>
                             <td colSpan={isMobile ? 3 : 6} style={{ padding: '0 16px 16px', background: colors.grayLight }}>
@@ -482,9 +465,9 @@ export default function Users() {
                 </tbody>
               </table>
             </div>
-          </motion.div>
+          </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

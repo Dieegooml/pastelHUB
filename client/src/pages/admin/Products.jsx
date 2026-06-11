@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { productsService } from '../../services/productsService';
 import { shopsService } from '../../services/shopsService';
@@ -10,6 +9,7 @@ import {
   colors, font, cardStyle, inputStyle, selectStyle,
   textareaStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary,
   btnSmallSecondary, tableHeaderStyle, labelStyle, badge,
+  animStagger, animFadeIn, animFadeInLeft,
 } from '../../styles/theme';
 import ImageUploader from '../../components/ImageUploader';
 
@@ -23,11 +23,6 @@ const emptyVariant = { type: 'size', value: '', extra_price: '' };
 
 const TH = ['Nombre', 'Precio', 'Stock', 'Disponible', 'Acciones'];
 const TH_MOBILE = ['Producto', 'Precio', ''];
-
-const stagger = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.35, ease: 'easeOut' } }),
-};
 
 function ImagePreview({ url }) {
   if (!url) return null;
@@ -209,12 +204,7 @@ export default function Products() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2rem' }}
-      >
+      <div style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
           <button onClick={() => navigate('/admin/shops')} style={{ ...btnGhost, padding: '6px 14px', fontSize: '13px' }}>
             Volver
@@ -236,31 +226,23 @@ export default function Products() {
         <AdminNav />
 
         {success && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            style={{
-            background: colors.successBg, color: colors.success, padding: '12px 16px',
+          <div style={{ ...animFadeInLeft, background: colors.successBg, color: colors.success, padding: '12px 16px',
             borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
             borderLeft: `4px solid ${colors.success}`,
           }}>
             {success}
-          </motion.div>
+          </div>
         )}
         {error && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            style={{
-            background: colors.errorBg, color: colors.error, padding: '12px 16px',
+          <div style={{ ...animFadeInLeft, background: colors.errorBg, color: colors.error, padding: '12px 16px',
             borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
             borderLeft: `4px solid ${colors.error}`,
           }}>
             {error}
-          </motion.div>
+          </div>
         )}
 
-        <motion.div variants={stagger} initial="hidden" animate="visible" custom={0} style={{ ...cardStyle, marginTop: '1rem' }}>
+        <div style={{ ...animFadeIn, ...cardStyle, marginTop: '1rem' }}>
           <h3 style={{ fontFamily: font.heading, fontSize: '18px', fontWeight: 700, color: colors.primary, margin: '0 0 0.5rem' }}>
             {editingId ? 'Editar producto' : 'Nuevo producto'}
           </h3>
@@ -306,6 +288,7 @@ export default function Products() {
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <div style={{ flex: 1 }}>
                     <ImageUploader folder="products" currentUrl={form.image_url} onUpload={(url) => setForm(p => ({ ...p, image_url: url }))} label="Producto" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -331,14 +314,10 @@ export default function Products() {
               )}
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {showVariantPanel && editingId && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            style={{ ...cardStyle, marginTop: '1rem' }}
+          <div style={{ ...animStagger(0.02), ...cardStyle, marginTop: '1rem' }}
           >
             <h3 style={{ fontFamily: font.heading, fontSize: '18px', fontWeight: 700, color: colors.primary, margin: '0 0 0.5rem' }}>
               Variantes
@@ -408,7 +387,7 @@ export default function Products() {
               </div>
             )}
             {variants.length === 0 && <p style={{ color: colors.textMuted, fontSize: '13px', marginTop: '1rem', fontFamily: font.body }}>Sin variantes aún</p>}
-          </motion.div>
+          </div>
         )}
 
         {loading ? (
@@ -422,7 +401,7 @@ export default function Products() {
             ))}
           </div>
         ) : (
-          <motion.div variants={stagger} initial="hidden" animate="visible" custom={1} style={{ ...cardStyle, marginTop: '1rem', padding: 0, overflow: 'hidden' }}>
+          <div style={{ ...animStagger(0.06), ...cardStyle, marginTop: '1rem', padding: 0, overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '400px' }}>
                 <thead>
@@ -445,12 +424,10 @@ export default function Products() {
                         ? { bg: '#e1f5ee', color: '#1D9E75', label: 'Disponible' }
                         : { bg: '#fee2e2', color: '#ef4444', label: 'No disponible' };
                       return (
-                        <motion.tr
+                        <tr
                           key={p.id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: i * 0.03 }}
                           style={{
+                            ...animStagger(i * 0.03),
                             borderTop: `1px solid ${colors.tableBorder}`,
                             background: i % 2 === 0 ? colors.white : colors.tableStripe,
                             transition: 'background 0.15s ease',
@@ -481,16 +458,16 @@ export default function Products() {
                               <button onClick={() => handleDelete(p.id)} style={btnDanger}>Eliminar</button>
                             </div>
                           </td>
-                        </motion.tr>
+                        </tr>
                       );
                     })
                   )}
                 </tbody>
               </table>
             </div>
-          </motion.div>
+          </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

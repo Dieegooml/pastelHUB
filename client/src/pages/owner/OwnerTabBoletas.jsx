@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { colors, font, badge as badgeStyle } from '../../styles/theme';
+import { colors, font, badge as badgeStyle, animStagger, animFadeIn } from '../../styles/theme';
 import { invoicesService } from '../../services/invoicesService';
 
 const STATUS_COLORS = { issued: { bg: '#e8f5e9', color: '#2e7d32' }, cancelled: { bg: '#fee2e2', color: '#ef4444' } };
@@ -59,7 +58,7 @@ export default function OwnerTabBoletas({ selectedShop, setError, setSuccess }) 
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+    <div style={{ ...animFadeIn }}>
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
         {['all', 'issued', 'cancelled'].map((s) => (
           <button key={s} onClick={() => setFilter(s)} style={{
@@ -80,8 +79,8 @@ export default function OwnerTabBoletas({ selectedShop, setError, setSuccess }) 
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {filtered.map((inv, i) => (
-            <motion.div key={inv.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-              style={{
+            <div key={inv.id} style={{
+                ...animStagger(i * 0.03),
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '14px 18px', background: colors.white, borderRadius: '10px',
                 border: `1px solid ${colors.border}`, transition: 'all 0.2s ease',
@@ -109,10 +108,10 @@ export default function OwnerTabBoletas({ selectedShop, setError, setSuccess }) 
                   {downloading === inv.id ? '...' : 'PDF'}
                 </button>
               )}
-            </motion.div>
+            </div>
           ))}
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }

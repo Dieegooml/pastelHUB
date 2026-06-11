@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { colors, font } from '../../styles/theme';
+import { colors, font, animStagger, animFadeIn } from '../../styles/theme';
 import { supportService } from '../../services/supportService';
 import { reportsService } from '../../services/reportsService';
 import { reviewsService } from '../../services/reviewsService';
@@ -17,10 +16,7 @@ const cardStyle = {
   background: colors.white,
 };
 
-const stagger = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.35, ease: 'easeOut' } }),
-};
+
 
 export default function ModeratorDashboard() {
   const navigate = useNavigate();
@@ -76,23 +72,15 @@ export default function ModeratorDashboard() {
 
       <ModeratorNav />
 
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={stagger}
-        custom={0}
-        style={{ marginTop: 24 }}
-      >
+      <div style={{ ...animFadeIn, marginTop: 24 }}>
         <h2 style={{ fontFamily: font.heading, fontSize: '18px', marginBottom: 16, color: colors.text }}>
           Resumen
         </h2>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {cards.map((card, i) => (
-            <motion.div
+            <div
               key={card.label}
-              variants={stagger}
-              custom={i + 1}
-              style={cardStyle}
+              style={{ ...animStagger(i * 0.05), ...cardStyle }}
               onClick={() => navigate(card.path)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
@@ -109,10 +97,10 @@ export default function ModeratorDashboard() {
               <div style={{ fontSize: '14px', color: colors.textSecondary, fontFamily: font.body, marginTop: 4 }}>
                 {card.label}
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

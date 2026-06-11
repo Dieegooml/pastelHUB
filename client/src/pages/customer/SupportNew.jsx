@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import { supportService } from '../../services/supportService';
-import { colors, font, inputStyle, textareaStyle, btnPrimary } from '../../styles/theme';
+import { colors, font, inputStyle, textareaStyle, btnPrimary, animFadeIn } from '../../styles/theme';
 import { useIsMobile } from '../../styles/useIsMobile';
 
 const PRIORITY_OPTIONS = [
@@ -35,8 +34,7 @@ export default function SupportNew() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
-        style={{ maxWidth: '700px', margin: '0 auto', padding: isMobile ? '1rem' : '40px 2rem 2rem' }}
+      <div style={{ ...animFadeIn, maxWidth: '700px', margin: '0 auto', padding: isMobile ? '1rem' : '40px 2rem 2rem' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <button onClick={() => navigate('/support')} style={{ padding: '6px 12px', borderRadius: '99px', border: `1px solid ${colors.border}`, cursor: 'pointer', fontSize: '13px', fontFamily: font.body, background: colors.white }}>← Volver</button>
@@ -69,7 +67,7 @@ export default function SupportNew() {
             {loading ? 'Enviando...' : 'Enviar ticket'}
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

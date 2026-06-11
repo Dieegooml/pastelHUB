@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { supportService } from '../../services/supportService';
-import { colors, font, textareaStyle, btnPrimary, btnSmallPrimary, badge as badgeStyle } from '../../styles/theme';
+import { colors, font, textareaStyle, btnPrimary, btnSmallPrimary, badge as badgeStyle, animFadeIn, animStagger } from '../../styles/theme';
 import { useIsMobile } from '../../styles/useIsMobile';
 
 const STATUS_COLORS = {
@@ -122,8 +121,7 @@ export default function SupportDetail() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
-        style={{ maxWidth: '800px', margin: '0 auto', padding: isMobile ? '1rem' : '40px 2rem 2rem' }}
+      <div style={{ ...animFadeIn, maxWidth: '800px', margin: '0 auto', padding: isMobile ? '1rem' : '40px 2rem 2rem' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
           <button onClick={() => navigate('/support')} style={{ padding: '6px 12px', borderRadius: '99px', border: `1px solid ${colors.border}`, cursor: 'pointer', fontSize: '13px', fontFamily: font.body, background: colors.white }}>← Volver</button>
@@ -173,8 +171,7 @@ export default function SupportDetail() {
                         {new Date(m.createdAt).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                       </div>
                     )}
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                      style={{
+                    <div style={{ ...animStagger(i * 0.03),
                         display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start',
                       }}
                     >
@@ -195,11 +192,11 @@ export default function SupportDetail() {
                       }}>
                         {m.message}
                       </div>
-                    </motion.div>
+                    </div>
                   </div>
                 );
-              })
-            )}
+              }))
+            }
             <div ref={messagesEndRef} />
           </div>
         </div>
@@ -217,7 +214,7 @@ export default function SupportDetail() {
             </div>
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

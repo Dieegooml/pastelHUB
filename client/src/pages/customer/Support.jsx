@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { supportService } from '../../services/supportService';
-import { colors, font, inputStyle, textareaStyle, btnPrimary, btnSmallPrimary, badge as badgeStyle, tableHeaderStyle } from '../../styles/theme';
+import { colors, font, inputStyle, textareaStyle, btnPrimary, btnSmallPrimary, badge as badgeStyle, tableHeaderStyle, animFadeIn, animFadeInLeft, animStagger } from '../../styles/theme';
 import { useIsMobile } from '../../styles/useIsMobile';
 
 const STATUS_COLORS = {
@@ -88,8 +87,7 @@ export default function Support() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
-        style={{ maxWidth: '1000px', margin: '0 auto', padding: isMobile ? '1rem' : '40px 2rem 2rem' }}
+      <div style={{ ...animFadeIn, maxWidth: '1000px', margin: '0 auto', padding: isMobile ? '1rem' : '40px 2rem 2rem' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '24px' }}>
           <div>
@@ -127,9 +125,8 @@ export default function Support() {
         )}
 
         {error && (
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-            style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}
-          >{error}</motion.div>
+          <div style={{ ...animFadeInLeft, background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}
+          >{error}</div>
         )}
 
         {loading ? (
@@ -167,8 +164,8 @@ export default function Support() {
                     const pc = PRIORITY_COLORS[t.priority] || PRIORITY_COLORS.medium;
                     const sc = STATUS_COLORS[t.status] || STATUS_COLORS.open;
                     return (
-                      <motion.tr key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                        style={{ borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe }}
+                      <tr key={t.id}
+                        style={{ borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, ...animStagger(i * 0.03) }}
                         onMouseEnter={(e) => e.currentTarget.style.background = '#f0ede8'}
                         onMouseLeave={(e) => e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe}
                       >
@@ -200,7 +197,7 @@ export default function Support() {
                             )}
                           </div>
                         </td>
-                      </motion.tr>
+                      </tr>
                     );
                   })}
                 </tbody>
@@ -208,7 +205,7 @@ export default function Support() {
             </div>
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

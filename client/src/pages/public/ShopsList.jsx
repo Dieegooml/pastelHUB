@@ -1,9 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { shopsService } from '../../services/shopsService';
 import Navbar from '../../components/Navbar';
-import { colors, font } from '../../styles/theme';
+import { colors, font, animFadeIn, animStagger } from '../../styles/theme';
 
 const STATUS_CONFIG = {
   approved:  { bg: '#e1f5ee', color: '#1D9E75', label: 'Aprobado' },
@@ -20,22 +19,6 @@ const BANNER_PLACEHOLDERS = [
   'linear-gradient(135deg, #2D1F1F 0%, #E8DDD5 100%)',
   'linear-gradient(135deg, #1D9E75 0%, #2D1F1F 100%)',
 ];
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 },
-  },
-};
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1, y: 0,
-    transition: { duration: 0.5, ease: 'easeOut' },
-  },
-};
 
 function SkeletonCard() {
   return (
@@ -119,11 +102,7 @@ export default function ShopsList() {
         }} />
 
         <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
+          <div style={{ ...animFadeIn }}>
             <h1 style={{
               fontFamily: font.heading, fontSize: 'clamp(32px, 5vw, 52px)',
               fontWeight: 700, color: '#fff', margin: '0 0 12px',
@@ -140,14 +119,10 @@ export default function ShopsList() {
             }}>
               Explora una selección de las mejores pastelerías locales. Encuentra tu postre favorito y ordénalo con un clic.
             </p>
-          </motion.div>
+          </div>
 
           {/* Search */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
+          <div style={{ ...animFadeIn }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: '12px',
               background: 'rgba(255,255,255,0.12)',
@@ -177,7 +152,7 @@ export default function ShopsList() {
                 >✕</button>
               )}
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -241,32 +216,26 @@ export default function ShopsList() {
         </div>
       ) : (
         /* Cards Grid */
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          style={{
-            maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem 3rem',
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem',
-          }}
-        >
+        <div style={{
+          maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem 3rem',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem',
+        }}>
           {filtered.map((shop, index) => {
             const sc = STATUS_CONFIG[shop.approvalStatus] || STATUS_CONFIG.pending;
             const bannerBg = BANNER_PLACEHOLDERS[index % BANNER_PLACEHOLDERS.length];
             return (
-              <motion.div
+              <div
                 key={shop.id}
-                variants={cardVariants}
                 onClick={() => navigate(`/shops/${shop.id}`)}
-                whileHover={{ y: -6, transition: { duration: 0.25 } }}
                 style={{
+                  ...animStagger(index * 0.08),
                   background: colors.white, borderRadius: '16px', overflow: 'hidden',
                   boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
                   cursor: 'pointer',
-                  transition: 'box-shadow 0.25s ease',
+                  transition: 'box-shadow 0.25s ease, transform 0.25s ease',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.12)'}
-                onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'}
+                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.12)'; e.currentTarget.style.transform = 'translateY(-6px)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; }}
               >
                 {/* Banner */}
                 <div style={{
@@ -396,10 +365,10 @@ export default function ShopsList() {
                     </div>
                   )}
                 </div>
-              </motion.div>
+              </div>
             );
           })}
-        </motion.div>
+        </div>
       )}
     </div>
   );

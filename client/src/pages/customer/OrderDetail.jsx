@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
-import { colors, font, badge as badgeStyle, inputStyle, selectStyle } from '../../styles/theme';
+import { colors, font, badge as badgeStyle, inputStyle, selectStyle, animFadeIn } from '../../styles/theme';
 import { ordersService } from '../../services/ordersService';
 import { reviewsService } from '../../services/reviewsService';
 import { paymentsService } from '../../services/paymentsService';
@@ -120,10 +119,8 @@ export default function OrderDetail() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={{ maxWidth: '700px', margin: '0 auto', padding: '40px 2rem 2rem' }}
+      <div
+        style={{ ...animFadeIn, maxWidth: '700px', margin: '0 auto', padding: '40px 2rem 2rem' }}
       >
         <button onClick={() => navigate('/my-orders')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: colors.accent, fontFamily: font.body, padding: 0, marginBottom: '16px', display: 'inline-block' }}>
           ← Mis órdenes
@@ -327,7 +324,7 @@ export default function OrderDetail() {
             </button>
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

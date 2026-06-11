@@ -3,44 +3,35 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../context/I18nContext';
 import { colors, font } from '../styles/theme';
 import { notificationsService } from '../services/notificationsService';
 
 const TYPE_ICONS = {
-  order_update: '🛵',
-  new_review: '⭐',
-  shop_approved: '✅',
-  shop_rejected: '❌',
-  shop_suspended: '🚫',
-  report_resolved: '📋',
-  new_order: '🆕',
-  payment_confirmed: '💳',
-  review_approved: '👍',
-  review_rejected: '👎',
-};
-
-const TYPE_LABELS_SHORT = {
-  order_update: 'Estado de orden',
-  new_review: 'Nueva reseña',
-  shop_approved: 'Pastelería aprobada',
-  shop_rejected: 'Pastelería rechazada',
-  shop_suspended: 'Pastelería suspendida',
-  report_resolved: 'Reporte resuelto',
-  new_order: 'Nueva orden',
-  payment_confirmed: 'Pago confirmado',
-  review_approved: 'Reseña aprobada',
-  review_rejected: 'Reseña rechazada',
+  order_update: '\u{1F6F5}',
+  new_review: '\u{2B50}',
+  shop_approved: '\u{2705}',
+  shop_rejected: '\u{274C}',
+  shop_suspended: '\u{1F6AB}',
+  report_resolved: '\u{1F4CB}',
+  new_order: '\u{1F195}',
+  payment_confirmed: '\u{1F4B3}',
+  review_approved: '\u{1F44D}',
+  review_rejected: '\u{1F44E}',
 };
 
 export default function Navbar() {
   const { user } = useAuth();
+  const { t, lang, setLang } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentNotifs, setRecentNotifs] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showLang, setShowLang] = useState(false);
   const bellRef = useRef(null);
   const dropdownRef = useRef(null);
+  const langRef = useRef(null);
 
   const isAdmin = user?.roles?.includes('admin');
   const isOwner = user?.roles?.includes('owner');
@@ -91,6 +82,9 @@ export default function Navbar() {
         dropdownRef.current && !dropdownRef.current.contains(e.target) &&
         bellRef.current && !bellRef.current.contains(e.target)
       ) setShowDropdown(false);
+      if (
+        langRef.current && !langRef.current.contains(e.target)
+      ) setShowLang(false);
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
@@ -134,27 +128,27 @@ export default function Navbar() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         <button onClick={() => navigate('/')} style={btnStyle(location.pathname === '/')}>
-          Inicio
+          {t('nav.home')}
         </button>
 
         <button onClick={() => navigate('/cart')} style={btnStyle(location.pathname === '/cart')}>
-          Carrito
+          {t('nav.cart')}
         </button>
 
         <button onClick={() => navigate('/my-orders')} style={btnStyle(location.pathname.startsWith('/my-orders'))}>
-          Mis órdenes
+          {t('nav.orders')}
         </button>
 
         <button onClick={() => navigate('/invoices')} style={btnStyle(location.pathname.startsWith('/invoices'))}>
-          Mis boletas
+          {t('nav.invoices')}
         </button>
 
         <button onClick={() => navigate('/support')} style={btnStyle(location.pathname.startsWith('/support'))}>
-          Soporte
+          {t('nav.support')}
         </button>
 
         <button onClick={() => navigate('/profile')} style={btnStyle(location.pathname === '/profile')}>
-          Perfil
+          {t('nav.profile')}
         </button>
 
         {isOwner && (
@@ -164,7 +158,7 @@ export default function Navbar() {
             color: location.pathname === '/owner' ? '#fff' : colors.textSecondary,
             border: location.pathname === '/owner' ? 'none' : `1px solid ${colors.border}`,
           }}>
-            Dueño
+            {t('nav.owner')}
           </button>
         )}
 
@@ -177,7 +171,7 @@ export default function Navbar() {
             color: location.pathname.startsWith('/moderator') || location.pathname === '/support' ? '#fff' : colors.textSecondary,
             transition: 'all 0.2s ease',
           }}>
-            Moderar
+            {t('nav.moderate')}
           </button>
         )}
 
@@ -190,9 +184,50 @@ export default function Navbar() {
             color: location.pathname.startsWith('/admin') ? '#fff' : colors.textSecondary,
             transition: 'all 0.2s ease',
           }}>
-            Administrar
+            {t('nav.admin')}
           </button>
         )}
+
+        <div ref={langRef} style={{ position: 'relative' }}>
+          <button onClick={() => setShowLang((p) => !p)} style={{
+            padding: '8px 10px', borderRadius: '99px', border: `1px solid ${colors.border}`,
+            fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+            background: colors.white, color: colors.text,
+            fontFamily: font.body, transition: 'all 0.2s ease',
+          }}>
+            {lang === 'es' ? 'ES' : 'EN'}
+          </button>
+          {showLang && (
+            <div ref={langRef} style={{
+              position: 'absolute', top: 'calc(100% + 4px)', right: 0,
+              background: colors.white, borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              border: `1px solid ${colors.border}`, overflow: 'hidden',
+              zIndex: 1001, minWidth: '110px',
+            }}>
+              {[
+                { code: 'es', label: t('nav.spanish') },
+                { code: 'en', label: t('nav.english') },
+              ].map((l) => (
+                <div key={l.code}
+                  onClick={() => { setLang(l.code); setShowLang(false); }}
+                  style={{
+                    padding: '8px 14px', cursor: 'pointer',
+                    fontSize: '13px', fontFamily: font.body,
+                    background: lang === l.code ? '#f0fdf4' : colors.white,
+                    color: lang === l.code ? '#1D9E75' : colors.text,
+                    fontWeight: lang === l.code ? 600 : 400,
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#f9f9f9'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = lang === l.code ? '#f0fdf4' : colors.white}
+                >
+                  {l.label}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div ref={bellRef} style={{ position: 'relative' }}>
           <button onClick={handleBellClick} style={{
@@ -201,7 +236,7 @@ export default function Navbar() {
             background: colors.white, color: colors.text, transition: 'all 0.2s ease',
             position: 'relative',
           }}>
-            🔔
+            {'\u{1F514}'}
             {unreadCount > 0 && (
               <span style={{
                 position: 'absolute', top: '-4px', right: '-6px',
@@ -229,19 +264,19 @@ export default function Navbar() {
                 padding: '12px 16px', borderBottom: `1px solid ${colors.border}`,
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: colors.text }}>Notificaciones</span>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: colors.text }}>{t('notifications.title')}</span>
                 {unreadCount > 0 && (
                   <span style={{
                     fontSize: '11px', color: colors.textMuted,
                   }}>
-                    {unreadCount} sin leer
+                    {unreadCount} {t('notifications.unread')}
                   </span>
                 )}
               </div>
 
               {recentNotifs.length === 0 ? (
                 <div style={{ padding: '24px 16px', textAlign: 'center', color: colors.textMuted, fontSize: '13px' }}>
-                  No hay notificaciones nuevas
+                  {t('notifications.noNotifications')}
                 </div>
               ) : (
                 recentNotifs.map((n) => (
@@ -255,10 +290,10 @@ export default function Navbar() {
                     onMouseEnter={(e) => e.currentTarget.style.background = colors.grayLight}
                     onMouseLeave={(e) => e.currentTarget.style.background = n.isRead ? colors.white : '#fafffd'}
                   >
-                    <span style={{ fontSize: '16px', flexShrink: 0 }}>{TYPE_ICONS[n.type] || '🔔'}</span>
+                    <span style={{ fontSize: '16px', flexShrink: 0 }}>{TYPE_ICONS[n.type] || '\u{1F514}'}</span>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: '12px', fontWeight: 600, color: colors.text, marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {TYPE_LABELS_SHORT[n.type] || n.type}
+                        {t(`notifications.types.${n.type}`, n.type)}
                       </div>
                       <div style={{ fontSize: '12px', color: colors.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {n.message}
@@ -277,7 +312,7 @@ export default function Navbar() {
                 onMouseEnter={(e) => e.currentTarget.style.background = colors.grayLight}
                 onMouseLeave={(e) => e.currentTarget.style.background = colors.white}
               >
-                Ver todas las notificaciones
+                {t('notifications.viewAll')}
               </div>
             </div>
           )}
@@ -295,7 +330,7 @@ export default function Navbar() {
           }}
           onMouseEnter={(e) => e.target.style.background = '#fee2e2'}
           onMouseLeave={(e) => e.target.style.background = colors.errorBg}>
-          Cerrar sesión
+          {t('nav.logout')}
         </button>
       </div>
     </nav>

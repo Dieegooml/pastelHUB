@@ -1,14 +1,8 @@
 import { useEffect, useState, Fragment } from 'react';
-import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import AdminNav from './AdminNav';
-import { colors, font, tableHeaderStyle, btnDanger } from '../../styles/theme';
+import { colors, font, tableHeaderStyle, btnDanger, animStagger, animFadeIn, animFadeInLeft } from '../../styles/theme';
 import { customersService } from '../../services/customersService';
-
-const stagger = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.35, ease: 'easeOut' } }),
-};
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -54,7 +48,7 @@ export default function Customers() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
+      <div style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
         <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '24px' }}>Clientes</h2>
         <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.2rem' }} />
         <div style={{ marginBottom: '16px' }}><AdminNav /></div>
@@ -67,7 +61,7 @@ export default function Customers() {
             {[1, 2, 3].map((i) => <div key={i} style={{ height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '8px', animation: 'shimmer 1.5s infinite' }} />)}
           </div>
         ) : (
-          <motion.div variants={stagger} initial="hidden" animate="visible" custom={1} style={{ background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
+          <div style={{ ...animStagger(0.04), background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
             {customers.length === 0 ? (
               <div style={{ padding: '60px 20px', textAlign: 'center', color: '#999', fontFamily: font.body, fontSize: '15px' }}>
                 No hay clientes registrados
@@ -87,9 +81,8 @@ export default function Customers() {
                   <tbody>
                     {customers.map((c, i) => (
                       <Fragment key={c.id}>
-                        <motion.tr
-                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                          style={{ borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, transition: 'background 0.15s ease', cursor: 'pointer' }}
+                        <tr
+                          style={{ ...animStagger(i * 0.03), borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, transition: 'background 0.15s ease', cursor: 'pointer' }}
                           onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
                           onClick={() => toggleExpand(c.id)}
@@ -101,11 +94,10 @@ export default function Customers() {
                           <td style={{ padding: '12px 16px' }}>
                             <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }} style={btnDanger}>Eliminar</button>
                           </td>
-                        </motion.tr>
+                        </tr>
                         {expanded[c.id] && (
-                          <motion.tr
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                            style={{ background: colors.grayLight }}
+                          <tr
+                            style={{ ...animFadeIn, background: colors.grayLight }}
                           >
                             <td colSpan={5} style={{ padding: '16px 20px' }}>
                               {addrLoading[c.id] ? (
@@ -130,7 +122,7 @@ export default function Customers() {
                                 </div>
                               ) : null}
                             </td>
-                          </motion.tr>
+                          </tr>
                         )}
                       </Fragment>
                     ))}
@@ -138,9 +130,9 @@ export default function Customers() {
                 </table>
               </div>
             )}
-          </motion.div>
+          </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

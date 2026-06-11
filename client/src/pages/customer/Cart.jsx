@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
-import { colors, font, btnPrimary } from '../../styles/theme';
+import { colors, font, btnPrimary, animFadeIn, animStagger } from '../../styles/theme';
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -42,10 +41,8 @@ export default function Cart() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 2rem 2rem' }}
+      <div
+        style={{ ...animFadeIn, maxWidth: '800px', margin: '0 auto', padding: '40px 2rem 2rem' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div>
@@ -77,12 +74,9 @@ export default function Cart() {
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
               {items.map((item, i) => (
-                <motion.div
+                <div
                   key={item.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  style={{
+                  style={{ ...animStagger(i * 0.05),
                     display: 'flex', alignItems: 'center', gap: '16px',
                     background: colors.white, borderRadius: '12px', padding: '16px',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef',
@@ -117,7 +111,7 @@ export default function Cart() {
                     background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px',
                     color: colors.textMuted, padding: '4px',
                   }}>✕</button>
-                </motion.div>
+                </div>
               ))}
             </div>
 
@@ -136,7 +130,7 @@ export default function Cart() {
             </div>
           </>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

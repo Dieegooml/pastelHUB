@@ -173,3 +173,19 @@ export const statusTab = (active) => ({
   border: active ? 'none' : `1px solid ${colors.border}`,
   transition: 'all 0.2s ease',
 });
+
+export const animationStyles = `
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInLeft { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes fadeInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+`;
+
+export const animFadeIn = { animation: 'fadeIn 0.3s ease both' };
+export const animFadeInUp = { animation: 'fadeInUp 0.3s ease both' };
+export const animFadeInLeft = { animation: 'fadeInLeft 0.3s ease both' };
+export const animFadeInRight = { animation: 'fadeInRight 0.3s ease both' };
+export const animScaleIn = { animation: 'scaleIn 0.3s ease both' };
+export const animStagger = (delay) => ({ animation: 'fadeInUp 0.35s ease both', animationDelay: `${delay}s` });

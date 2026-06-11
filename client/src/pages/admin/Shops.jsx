@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { shopsService } from '../../services/shopsService';
 import { usersService } from '../../services/usersService';
@@ -9,7 +8,7 @@ import { useIsMobile } from '../../styles/useIsMobile';
 import {
   colors, font, pageStyle, cardStyle, inputStyle, selectStyle,
   textareaStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary,
-  tableHeaderStyle, labelStyle, badge,
+  tableHeaderStyle, labelStyle, badge, animFadeIn, animFadeInLeft, animStagger,
 } from '../../styles/theme';
 import ImageUploader from '../../components/ImageUploader';
 
@@ -29,11 +28,6 @@ const STATUS_CONFIG = {
 
 const TH = ['Nombre', 'Ciudad', 'Estado', 'Acciones'];
 const TH_MOBILE = ['Nombre', 'Estado', ''];
-
-const stagger = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.35, ease: 'easeOut' } }),
-};
 
 function ImagePreview({ url, alt }) {
   if (!url) return null;
@@ -150,11 +144,8 @@ export default function Shops() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2rem' }}
+      <div
+        style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2rem' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
           <h2 style={{ fontFamily: font.heading, fontSize: isMobile ? '22px' : '28px', fontWeight: 700, color: colors.primary, margin: 0 }}>
@@ -174,31 +165,25 @@ export default function Shops() {
         <AdminNav />
 
         {success && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            style={{
+          <div style={{ ...animFadeInLeft,
             background: colors.successBg, color: colors.success, padding: '12px 16px',
             borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
             borderLeft: `4px solid ${colors.success}`,
           }}>
             {success}
-          </motion.div>
+          </div>
         )}
         {error && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            style={{
+          <div style={{ ...animFadeInLeft,
             background: colors.errorBg, color: colors.error, padding: '12px 16px',
             borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
             borderLeft: `4px solid ${colors.error}`,
           }}>
             {error}
-          </motion.div>
+          </div>
         )}
 
-        <motion.div variants={stagger} initial="hidden" animate="visible" custom={0} style={{ ...cardStyle, marginTop: '1rem' }}>
+        <div style={{ ...cardStyle, marginTop: '1rem' }}>
           <h3 style={{ fontFamily: font.heading, fontSize: '18px', fontWeight: 700, color: colors.primary, margin: '0 0 0.5rem' }}>
             {editingId ? 'Editar pastelería' : 'Nueva pastelería'}
           </h3>
@@ -306,7 +291,7 @@ export default function Shops() {
               )}
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
@@ -319,7 +304,7 @@ export default function Shops() {
             ))}
           </div>
         ) : (
-          <motion.div variants={stagger} initial="hidden" animate="visible" custom={1} style={{ ...cardStyle, marginTop: '1rem', padding: 0, overflow: 'hidden' }}>
+          <div style={{ ...cardStyle, marginTop: '1rem', padding: 0, overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
                 <thead>
@@ -340,15 +325,13 @@ export default function Shops() {
                     shops.map((shop, i) => {
                       const sc = STATUS_CONFIG[shop.approvalStatus] || STATUS_CONFIG.pending;
                       return (
-                        <motion.tr
+                        <tr
                           key={shop.id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: i * 0.03 }}
                           style={{
                             borderTop: `1px solid ${colors.tableBorder}`,
                             background: i % 2 === 0 ? colors.white : colors.tableStripe,
                             transition: 'background 0.15s ease',
+                            ...animStagger(i * 0.03),
                           }}
                           onMouseEnter={(e) => { if (i % 2 === 0) e.currentTarget.style.background = '#f5f5f5'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
@@ -384,16 +367,16 @@ export default function Shops() {
                               <button onClick={() => handleDelete(shop.id)} style={btnDanger}>Eliminar</button>
                             </div>
                           </td>
-                        </motion.tr>
+                        </tr>
                       );
-                    })
-                  )}
+                    }))
+                  }
                 </tbody>
               </table>
             </div>
-          </motion.div>
+          </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }
