@@ -9,4 +9,6 @@ export const paymentsService = {
   delete: (id) => api.delete(`/payments/${id}`),
   updateStatus: (id, paymentStatus, transaction_ref) => api.patch(`/payments/${id}/status`, { paymentStatus, transaction_ref }),
   processGateway: (data) => api.post('/payments/gateway', data),
+  createPreference: (data) => api.post('/payments/create-preference', data),
+  processPayment: (id, data) => api.patch(`/payments/${id}/process`, data),
 };

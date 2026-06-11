@@ -4,13 +4,14 @@ const logger = require('../utils/logger');
 const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireCustomer } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
-const { createPaymentSchema, updatePaymentSchema, updatePaymentStatusSchema } = require('../validators/paymentValidator');
+const { createPaymentSchema, updatePaymentSchema, updatePaymentStatusSchema, createPreferenceSchema, processGatewayPaymentSchema } = require('../validators/paymentValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
 const { generateInvoiceFromPayment } = require('./invoices');
+const paymentGateway = require('../utils/paymentGateway');
 
 const col = db.collection('payments');
 
-const VALID_METHODS  = ['card', 'cash', 'yape', 'plin'];
+const VALID_METHODS  = ['card', 'cash', 'yape', 'plin', 'mercadopago'];
 const VALID_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
 
 // GET todos los pagos
@@ -263,6 +264,207 @@ router.post('/gateway', verifyToken, async (req, res) => {
     res.status(201).json({ success: true, id: ref.id, ...data });
   } catch (e) {
     res.status(500).json({ error: 'Error procesando el pago' });
+  }
+});
+
+// POST crear preferencia de MercadoPago
+router.post('/create-preference', verifyToken, requireCustomer, validate(createPreferenceSchema), async (req, res) => {
+  try {
+    const { orderId, backUrls } = req.body;
+
+    const orderDoc = await db.collection('orders').doc(orderId).get();
+    if (!orderDoc.exists) return res.status(404).json({ error: 'La orden no existe' });
+    if (orderDoc.data().customer?.user_id !== req.user.uid) {
+      return res.status(403).json({ error: 'Solo puedes pagar tus propias órdenes' });
+    }
+
+    const existing = await col.where('orderId', '==', orderId).limit(1).get();
+    if (!existing.empty && existing.docs[0].data().paymentStatus === 'paid') {
+      return res.status(400).json({ error: 'Esta orden ya está pagada' });
+    }
+
+    const order = { id: orderDoc.id, ...orderDoc.data() };
+    const userDoc = await db.collection('users').doc(req.user.uid).get();
+    const userData = userDoc.exists ? userDoc.data() : {};
+
+    const preference = await paymentGateway.createPreference({
+      orderId,
+      items: order.items || [],
+      total: order.totals?.total || 0,
+      payer: {
+        name: userData.name || req.user.name || '',
+        email: userData.email || req.user.email || '',
+        phone: userData.phone || '',
+      },
+      description: `Pedido PastelHub #${orderId.slice(-6)}`,
+      backUrls: backUrls || {},
+      notificationUrl: `${req.protocol}://${req.get('host')}/api/payments/webhook`,
+    });
+
+    // Guardar la preferencia en el pago
+    const paymentRef = existing.empty ? col.doc() : existing.docs[0].ref;
+    const paymentData = {
+      orderId,
+      paymentMethod: 'mercadopago',
+      paymentStatus: 'pending',
+      amount: order.totals?.total || 0,
+      transactionRef: preference.id,
+      mpPreferenceId: preference.id,
+      mpInitPoint: preference.initPoint,
+      createdAt: existing.empty ? new Date().toISOString() : undefined,
+    };
+
+    if (existing.empty) {
+      await paymentRef.set({ ...paymentData, createdAt: new Date().toISOString() });
+    } else {
+      await paymentRef.update({ mpPreferenceId: preference.id, mpInitPoint: preference.initPoint, transactionRef: preference.id });
+    }
+
+    res.json({
+      id: paymentRef.id,
+      preferenceId: preference.id,
+      initPoint: preference.initPoint,
+      sandboxInitPoint: preference.sandboxInitPoint,
+    });
+  } catch (e) {
+    logger.error('Error creando preferencia', { error: e.message });
+    res.status(500).json({ error: 'Error al crear preferencia de pago' });
+  }
+});
+
+// POST webhook de MercadoPago (sin auth, firma verificada)
+router.post('/webhook', (req, res, next) => {
+  let data = '';
+  req.setEncoding('utf8');
+  req.on('data', chunk => { data += chunk; });
+  req.on('end', () => {
+    req.rawBody = data;
+    try { req.webhookData = JSON.parse(data); } catch { req.webhookData = {}; }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const webhookData = req.webhookData || {};
+    const headers = {
+      'x-signature': req.headers['x-signature'] || '',
+      'x-request-id': req.headers['x-request-id'] || '',
+    };
+    const result = await paymentGateway.handleWebhook(webhookData, headers, req.rawBody);
+
+    if (!result.valid) {
+      return res.status(401).json({ error: 'Firma inválida' });
+    }
+
+    if (!result.handled) {
+      return res.status(200).json({ message: 'Evento ignorado' });
+    }
+
+    if (result.status === 'approved' || result.status === 'in_process') {
+      const paymentSnap = await col
+        .where('orderId', '==', result.orderId)
+        .limit(1)
+        .get();
+
+      if (!paymentSnap.empty) {
+        const paymentDoc = paymentSnap.docs[0];
+        const status = result.status === 'approved' ? 'paid' : 'pending';
+        const updates = {
+          paymentStatus: status,
+          transactionRef: result.transactionRef || paymentDoc.data().transactionRef,
+          mpPaymentId: result.paymentId,
+          paymentMethod: result.paymentMethod || 'mercadopago',
+          ...(status === 'paid' && { paidAt: new Date().toISOString() }),
+        };
+        await paymentDoc.ref.update(updates);
+        await db.collection('orders').doc(result.orderId).update({
+          'payment.status': status,
+          'payment.transaction_ref': result.transactionRef,
+          'payment.mp_payment_id': result.paymentId,
+        });
+
+        if (status === 'paid') {
+          try {
+            await generateInvoiceFromPayment(result.orderId);
+          } catch (e) {
+            logger.error('Error generando factura desde webhook', { error: e.message, orderId: result.orderId });
+          }
+        }
+      }
+    }
+
+    res.status(200).json({ message: 'Webhook procesado' });
+  } catch (e) {
+    logger.error('Error procesando webhook', { error: e.message });
+    res.status(200).json({ message: 'Webhook recibido' });
+  }
+});
+
+// PATCH procesar pago a través del gateway configurado
+router.patch('/:id/process', verifyToken, validate(processGatewayPaymentSchema), async (req, res) => {
+  try {
+    const doc = await col.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Pago no encontrado' });
+
+    const paymentData = doc.data();
+
+    // Verificar permiso del usuario
+    const orderDoc = await db.collection('orders').doc(paymentData.orderId).get();
+    if (!orderDoc.exists) return res.status(404).json({ error: 'Orden no encontrada' });
+    const roles = req.user?.roles || [];
+    if (!roles.includes('admin') && orderDoc.data().customer?.user_id !== req.user.uid) {
+      return res.status(403).json({ error: 'No tienes permiso para procesar este pago' });
+    }
+
+    if (paymentData.paymentStatus !== 'pending') {
+      return res.status(400).json({ error: 'Solo se pueden procesar pagos pendientes' });
+    }
+
+    const { transactionAmount, paymentMethodId, token, description, installments, issuerId, payer } = req.body;
+
+    const gatewayResult = await paymentGateway.processPayment({
+      transaction_amount: Number(transactionAmount || paymentData.amount),
+      token,
+      description: description || `Pedido PastelHub #${paymentData.orderId.slice(-6)}`,
+      installments: installments || 1,
+      payment_method_id: paymentMethodId || 'card',
+      issuer_id: issuerId,
+      payer: payer || { email: req.user.email || '' },
+    });
+
+    const status = gatewayResult.status === 'approved' ? 'paid' : gatewayResult.status === 'rejected' ? 'failed' : 'pending';
+    const updates = {
+      paymentStatus: status,
+      transactionRef: gatewayResult.transactionRef,
+      mpPaymentId: gatewayResult.id,
+      paymentMethod: gatewayResult.paymentMethodId || paymentData.paymentMethod,
+      cardLast4: gatewayResult.cardLast4 || paymentData.cardLast4 || '',
+      installments: gatewayResult.installments,
+      netAmount: gatewayResult.netAmount,
+      paidAt: status === 'paid' ? new Date().toISOString() : '',
+    };
+
+    await doc.ref.update(updates);
+
+    await db.collection('orders').doc(paymentData.orderId).update({
+      'payment.status': status,
+      'payment.transaction_ref': gatewayResult.transactionRef,
+      'payment.mp_payment_id': gatewayResult.id,
+    });
+
+    if (status === 'paid') {
+      try {
+        await generateInvoiceFromPayment(paymentData.orderId);
+      } catch (e) {
+        logger.error('Error generando factura al procesar pago', { error: e.message, orderId: paymentData.orderId });
+      }
+    }
+
+    res.json({ success: status === 'paid', id: req.params.id, ...updates });
+  } catch (e) {
+    const statusCode = e.statusCode || 500;
+    const message = e.code === 'insufficient_funds' ? 'Fondos insuficientes' : e.message;
+    logger.error('Error procesando pago', { error: e.message, paymentId: req.params.id });
+    res.status(statusCode >= 400 && statusCode < 500 ? statusCode : 500).json({ error: message });
   }
 });
 

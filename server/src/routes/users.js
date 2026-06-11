@@ -62,7 +62,7 @@ router.put('/:id', verifyToken, requireSelfOrAdmin(), validate(updateUserSchema)
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    const { full_name, phone, roles: newRoles } = req.body;
+    const { full_name, phone, photo_url, roles: newRoles } = req.body;
 
     if (newRoles && !userRoles.includes('admin')) {
       return res.status(403).json({ error: 'Solo admins pueden cambiar roles' });
@@ -79,6 +79,7 @@ router.put('/:id', verifyToken, requireSelfOrAdmin(), validate(updateUserSchema)
     const updates = {
       ...(full_name !== undefined && { full_name }),
       ...(phone     !== undefined && { phone }),
+      ...(photo_url !== undefined && { photo_url }),
       ...(newRoles  !== undefined && { roles: newRoles }),
       updatedAt: new Date().toISOString(),
     };
