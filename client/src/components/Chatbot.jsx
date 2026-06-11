@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { chatService } from '../services/chatService';
+import websocketService from '../services/websocketService';
 import { colors, font } from '../styles/theme';
 import { renderMarkdown } from '../utils/markdown';
 
@@ -15,8 +16,10 @@ export default function Chatbot() {
   const [creating, setCreating] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState('');
+  const [aiTyping, setAiTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const wsCleanups = useRef([]);
 
   const activeSession = sessions.find(s => s.id === activeSessionId);
 
@@ -26,13 +29,52 @@ export default function Chatbot() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, aiTyping]);
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen, activeSessionId]);
+
+  useEffect(() => {
+    wsCleanups.current.forEach(fn => fn());
+    wsCleanups.current = [];
+
+    if (!user) return;
+
+    const unsub1 = websocketService.onMessage((data) => {
+      if (!activeSessionId) return;
+      if (data.userMessage) {
+        setMessages(prev => {
+          const exists = prev.some(m => m.id === data.userMessage.id);
+          if (exists) return prev;
+          return [...prev.filter(m => !m.id.startsWith('temp-')), data.userMessage];
+        });
+      }
+      if (data.aiMessage) {
+        setMessages(prev => {
+          const exists = prev.some(m => m.id === data.aiMessage.id);
+          if (exists) return prev;
+          return [...prev, data.aiMessage];
+        });
+        setAiTyping(false);
+        setLoading(false);
+      }
+    });
+
+    const unsub2 = websocketService.onTyping((data) => {
+      if (data.sessionId === activeSessionId) {
+        setAiTyping(data.isTyping);
+      }
+    });
+
+    wsCleanups.current = [unsub1, unsub2];
+
+    return () => {
+      wsCleanups.current.forEach(fn => fn());
+    };
+  }, [user, activeSessionId]);
 
   async function loadSessions() {
     try {
@@ -90,23 +132,29 @@ export default function Chatbot() {
     setLoading(true);
     setError('');
 
-    const tempUserMsg = { id: `temp-${Date.now()}`, senderRole: 'user', message: text };
+    const tempId = `temp-${Date.now()}`;
+    const tempUserMsg = { id: tempId, senderRole: 'user', message: text };
     setMessages(prev => [...prev, tempUserMsg]);
 
-    try {
-      const res = await chatService.sendMessage(activeSessionId, text);
-      setMessages(prev => [
-        ...prev.filter(m => m.id !== tempUserMsg.id),
-        { id: res.userMessage?.id || tempUserMsg.id, senderRole: 'user', message: text },
-        { id: res.aiMessage?.id || `ai-${Date.now()}`, senderRole: 'ai', message: res.aiMessage?.message || '' },
-      ]);
-    } catch (e) {
-      setError(e.message || 'Error al enviar mensaje');
-      setMessages(prev => prev.map(m =>
-        m.id === tempUserMsg.id ? { ...m, failed: true } : m
-      ));
-    } finally {
-      setLoading(false);
+    const sent = websocketService.sendMessage(activeSessionId, text);
+    if (sent) {
+      setAiTyping(true);
+    } else {
+      try {
+        const res = await chatService.sendMessage(activeSessionId, text);
+        setMessages(prev => [
+          ...prev.filter(m => m.id !== tempId),
+          { id: res.userMessage?.id || tempId, senderRole: 'user', message: text },
+          { id: res.aiMessage?.id || `ai-${Date.now()}`, senderRole: 'ai', message: res.aiMessage?.message || '' },
+        ]);
+      } catch (e) {
+        setError(e.message || 'Error al enviar mensaje');
+        setMessages(prev => prev.map(m =>
+          m.id === tempId ? { ...m, failed: true } : m
+        ));
+      } finally {
+        setLoading(false);
+      }
     }
   }
 
@@ -114,6 +162,8 @@ export default function Chatbot() {
     setActiveSessionId(sessionId);
     setMessages([]);
     setShowHistory(false);
+    setAiTyping(false);
+    setError('');
     await loadMessages(sessionId);
   }
 
@@ -285,7 +335,7 @@ export default function Chatbot() {
                   ))
                 )}
 
-                {loading && (
+                {aiTyping && (
                   <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                     <div style={{
                       maxWidth: '80%', padding: '10px 14px', borderRadius: '14px',
@@ -298,6 +348,18 @@ export default function Chatbot() {
                         <span style={{ animationDelay: '0.3s' }}>.</span>
                         <span style={{ animationDelay: '0.6s' }}>.</span>
                       </span>
+                    </div>
+                  </div>
+                )}
+
+                {loading && !aiTyping && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                    <div style={{
+                      maxWidth: '80%', padding: '10px 14px', borderRadius: '14px',
+                      background: colors.grayBg, color: colors.text, fontSize: '13px',
+                      borderBottomLeftRadius: '4px',
+                    }}>
+                      <span style={{ opacity: 0.6 }}>Enviando...</span>
                     </div>
                   </div>
                 )}
@@ -325,7 +387,7 @@ export default function Chatbot() {
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Escribe un mensaje..."
-                    disabled={loading}
+                    disabled={loading || aiTyping}
                     style={{
                       flex: 1, height: '40px', padding: '0 12px', borderRadius: '99px',
                       border: `1.5px solid ${colors.border}`, outline: 'none',
@@ -333,11 +395,11 @@ export default function Chatbot() {
                       background: colors.white,
                     }}
                   />
-                  <button onClick={handleSend} disabled={loading || !input.trim()} style={{
+                  <button onClick={handleSend} disabled={loading || aiTyping || !input.trim()} style={{
                     width: '40px', height: '40px', borderRadius: '50%', border: 'none',
-                    background: loading || !input.trim() ? colors.grayBg : colors.accent,
-                    color: loading || !input.trim() ? colors.textMuted : '#fff',
-                    fontSize: '16px', cursor: loading || !input.trim() ? 'default' : 'pointer',
+                    background: loading || aiTyping || !input.trim() ? colors.grayBg : colors.accent,
+                    color: loading || aiTyping || !input.trim() ? colors.textMuted : '#fff',
+                    fontSize: '16px', cursor: loading || aiTyping || !input.trim() ? 'default' : 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'all 0.2s ease',
                   }}>

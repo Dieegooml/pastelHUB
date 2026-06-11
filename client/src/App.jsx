@@ -1,9 +1,12 @@
+import { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { auth } from "./config/firebase";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Chatbot from "./components/Chatbot";
 import RateLimitToast from "./components/RateLimitToast";
+import websocketService from "./services/websocketService";
 import Login from "./pages/public/Login";
 import Register from "./pages/public/Register";
 import NotFound from "./pages/public/NotFound";
@@ -37,12 +40,33 @@ import Promotions from "./pages/admin/Promotions";
 import ModeratorDashboard from "./pages/moderator/ModeratorDashboard";
 import AdminChat from "./pages/admin/Chat";
 
+function WebSocketInit() {
+  const { user } = useAuth();
+  const initRef = useRef(false);
+
+  useEffect(() => {
+    if (user && !initRef.current) {
+      initRef.current = true;
+      auth.currentUser?.getIdToken().then(token => {
+        websocketService.connect(token);
+      }).catch(() => {});
+    }
+    if (!user) {
+      initRef.current = false;
+      websocketService.disconnect();
+    }
+  }, [user]);
+
+  return null;
+}
+
 function AppContent() {
   const location = useLocation();
   const hideChat = ['/login', '/register'].includes(location.pathname);
 
   return (
     <>
+      <WebSocketInit />
       <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

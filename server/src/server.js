@@ -2,11 +2,14 @@ const cron = require('node-cron');
 const app = require('./app');
 const logger = require('./utils/logger');
 const { createBackup, ALL_COLLECTIONS } = require('./utils/backupService');
+const { createWebSocketServer } = require('./utils/websocket');
 
 const PORT = process.env.PORT || 3001;
 const server = app.listen(PORT, () => {
   logger.info('Servidor iniciado', { port: PORT, env: process.env.NODE_ENV || 'development' });
 });
+
+createWebSocketServer(server);
 
 if (process.env.NODE_ENV === 'production' && !process.env.LOAD_TEST) {
   const schedule = process.env.BACKUP_SCHEDULE || '0 3 * * *';

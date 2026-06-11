@@ -6,14 +6,15 @@ const { validate } = require('../middlewares/validate');
 const { createNotificationSchema, bulkNotificationSchema } = require('../validators/notificationValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
 const { sendPush } = require('../utils/fcmService');
+const { pushNotification } = require('../utils/websocket');
+const cache = require('../utils/cache');
 
 const col = db.collection('notifications');
 
-const countCache = new Map();
-const CACHE_TTL = 15000;
+const countCacheStore = cache.createStore('notificationCount', { ttl: 15000 });
 
 function invalidateCountCache(userId) {
-  countCache.delete(`unread_${userId}`);
+  cache.del(countCacheStore, `unread_${userId}`);
 }
 
 const VALID_TYPES = [
@@ -43,18 +44,15 @@ router.get('/user/:userId', verifyToken, requireSelfOrAdmin('userId'), async (re
 router.get('/user/:userId/unread/count', verifyToken, requireSelfOrAdmin('userId'), async (req, res) => {
   try {
     const key = `unread_${req.params.userId}`;
-    const cached = countCache.get(key);
-    if (cached && Date.now() - cached.ts < CACHE_TTL) {
-      return res.json({ count: cached.count });
-    }
+    const cached = cache.get(countCacheStore, key);
+    if (cached !== null) return res.json({ count: cached });
     const snap = await col
       .where('userId', '==', req.params.userId)
       .where('isRead', '==', false)
       .count()
       .get();
     const count = snap.data().count || 0;
-    countCache.set(key, { count, ts: Date.now() });
-    if (countCache.size > 5000) countCache.clear();
+    cache.set(countCacheStore, key, count);
     res.json({ count });
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener conteo de notificaciones' });
@@ -108,8 +106,10 @@ router.post('/', verifyToken, requireAdmin, validate(createNotificationSchema), 
     };
 
     const ref = await col.add(data);
+    const created = { id: ref.id, ...data };
+    pushNotification(userId, created);
     sendPush(userId, title || type, message, { type, notificationId: ref.id }).catch(() => {});
-    res.status(201).json({ id: ref.id, ...data });
+    res.status(201).json(created);
   } catch (e) {
     res.status(500).json({ error: 'Error al crear la notificación' });
   }
@@ -132,6 +132,7 @@ router.post('/bulk', verifyToken, requireAdmin, validate(bulkNotificationSchema)
     });
 
     await batch.commit();
+    created.forEach(n => pushNotification(n.userId, n));
     userIds.forEach(uid => sendPush(uid, title || type, message, { type }).catch(() => {}));
     res.status(201).json({ count: created.length, notifications: created });
   } catch (e) {

@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
-import { colors, font, badge as badgeStyle, btnDanger, btnSmallSecondary, cardStyle } from '../../styles/theme';
+import { colors, font, badge as badgeStyle, btnDanger, btnSmallSecondary, cardStyle, animFadeIn, animStagger } from '../../styles/theme';
 import { notificationsService } from '../../services/notificationsService';
+import websocketService from '../../services/websocketService';
 
 const TYPE_LABELS = {
   order_update: '🛵 Estado de orden',
@@ -16,11 +16,32 @@ const TYPE_LABELS = {
   payment_confirmed: '💳 Pago confirmado',
 };
 
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (e) {
+    /* audio not supported */
+  }
+}
+
 export default function Notifications() {
   const { user } = useAuth();
   const [notifs, setNotifs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+  const [newNotifIds, setNewNotifIds] = useState(new Set());
+  const toastTimer = useRef(null);
 
   const load = useCallback(async () => {
     if (!user?.uid) return;
@@ -32,6 +53,25 @@ export default function Notifications() {
   }, [user]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = websocketService.onNewNotification((data) => {
+      setNotifs(prev => {
+        const exists = prev.some(n => n.id === data.id);
+        if (exists) return prev;
+        return [data, ...prev];
+      });
+      setNewNotifIds(prev => new Set(prev).add(data.id));
+      playNotificationSound();
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setNewNotifIds(new Set()), 4000);
+    });
+    return () => {
+      unsub();
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, [user]);
 
   const handleMarkRead = async (id) => {
     try {
@@ -66,10 +106,8 @@ export default function Notifications() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
       <Navbar />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={{ maxWidth: '700px', margin: '0 auto', padding: '40px 2rem 2rem' }}
+      <div
+        style={{ ...animFadeIn, maxWidth: '700px', margin: '0 auto', padding: '40px 2rem 2rem' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div>
@@ -95,15 +133,14 @@ export default function Notifications() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {notifs.map((n) => (
-              <motion.div
+              <div
                 key={n.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
                 style={{
-                  ...cardStyle, padding: '14px 18px', marginBottom: 0,
+                  ...cardStyle, padding: '14px 18px', marginBottom: 0, ...animStagger(0),
                   display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
                   borderLeft: n.isRead ? `1px solid ${colors.border}` : `3px solid ${colors.accent}`,
                   background: n.isRead ? colors.white : '#fafffd',
+                  animation: newNotifIds.has(n.id) ? 'highlightFade 4s ease-out' : undefined,
                 }}
               >
                 <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => handleMarkRead(n.id)}>
@@ -117,11 +154,11 @@ export default function Notifications() {
                 <button onClick={() => handleDelete(n.id)} disabled={deleting === n.id} style={{ ...btnDanger, padding: '4px 10px', fontSize: '11px', marginLeft: '12px', flexShrink: 0 }}>
                   {deleting === n.id ? '...' : 'Eliminar'}
                 </button>
-              </motion.div>
+                </div>
             ))}
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

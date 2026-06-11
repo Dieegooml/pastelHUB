@@ -87,6 +87,13 @@ router.post('/', verifyToken, requireAdmin, validate(generateInvoiceSchema), asy
       deliveryType: order.delivery_type || 'delivery',
       paymentMethod: paymentData.paymentMethod || order.payment?.method || '',
       paymentStatus: paymentData.paymentStatus || order.payment?.status || '',
+      transactionRef: paymentData.transactionRef || order.payment?.transaction_ref || '',
+      mpPaymentId: paymentData.mpPaymentId || order.payment?.mp_payment_id || '',
+      mpPreferenceId: paymentData.mpPreferenceId || '',
+      cardLast4: paymentData.cardLast4 || '',
+      installments: paymentData.installments || 1,
+      netAmount: paymentData.netAmount || null,
+      paidAt: paymentData.paidAt || '',
       status: 'issued',
       issueDate: new Date().toISOString(),
       createdAt: new Date().toISOString(),
@@ -260,10 +267,34 @@ router.get('/:id/pdf', verifyToken, async (req, res) => {
     docPdf.moveTo(50, docPdf.y).lineTo(545, docPdf.y).stroke('#ccc');
     docPdf.moveDown(0.5);
 
-    // Método de pago
+    // Datos de pago con información de MercadoPago
+    const payMethodLabels = {
+      card: 'Tarjeta crédito/débito',
+      cash: 'Efectivo',
+      yape: 'Yape',
+      plin: 'Plin',
+      mercadopago: 'MercadoPago',
+    };
     docPdf.fontSize(9).font('Helvetica').fillColor('#666');
-    docPdf.text(`Método de pago: ${invoice.paymentMethod || 'N/A'}  |  Estado: ${invoice.paymentStatus === 'paid' ? 'Pagado' : invoice.paymentStatus}`);
+    docPdf.text(`Método de pago: ${payMethodLabels[invoice.paymentMethod] || invoice.paymentMethod || 'N/A'}  |  Estado: ${invoice.paymentStatus === 'paid' ? 'Pagado' : invoice.paymentStatus}`);
     docPdf.text(`Tipo de entrega: ${invoice.deliveryType === 'pickup' ? 'Recojo en tienda' : 'Delivery'}`);
+    docPdf.moveDown(0.3);
+
+    if (invoice.mpPaymentId) {
+      docPdf.text(`ID de pago MercadoPago: ${invoice.mpPaymentId}`);
+    }
+    if (invoice.transactionRef) {
+      docPdf.text(`Referencia: ${invoice.transactionRef}`);
+    }
+    if (invoice.paymentStatus === 'paid' && invoice.paidAt) {
+      docPdf.text(`Pagado el: ${new Date(invoice.paidAt).toLocaleString('es-PE')}`);
+    }
+    if (invoice.netAmount != null && invoice.netAmount !== invoice.total) {
+      docPdf.text(`Monto neto recibido: S/ ${Number(invoice.netAmount).toFixed(2)}`);
+    }
+    if (invoice.installments && invoice.installments > 1) {
+      docPdf.text(`Cuotas: ${invoice.installments}`);
+    }
 
     if (invoice.status === 'cancelled') {
       docPdf.moveDown(1);
@@ -338,6 +369,13 @@ async function generateInvoiceFromPayment(orderId) {
       deliveryType: order.delivery_type || 'delivery',
       paymentMethod: paymentData.paymentMethod || order.payment?.method || '',
       paymentStatus: paymentData.paymentStatus || order.payment?.status || '',
+      transactionRef: paymentData.transactionRef || order.payment?.transaction_ref || '',
+      mpPaymentId: paymentData.mpPaymentId || order.payment?.mp_payment_id || '',
+      mpPreferenceId: paymentData.mpPreferenceId || '',
+      cardLast4: paymentData.cardLast4 || '',
+      installments: paymentData.installments || 1,
+      netAmount: paymentData.netAmount || null,
+      paidAt: paymentData.paidAt || '',
       status: 'issued',
       issueDate: new Date().toISOString(),
       createdAt: new Date().toISOString(),
