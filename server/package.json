@@ -17,7 +17,10 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@faker-js/faker": "^10.4.0",
+    "eslint": "^10.5.0",
+    "globals": "^17.6.0",
     "javascript-obfuscator": "^5.4.2",
     "jest": "^30.4.2",
     "jest-html-reporter": "^4.4.0",
@@ -54,6 +57,7 @@
     "test:rate-limit": "set LOAD_TEST=true&& node tests/rate-limit/rate-limit-test.js && start rate-limit-test-report.html",
     "build:prod": "node obfuscate.js",
     "start:prod": "node prod.js",
+    "lint": "eslint src/",
     "seed": "node seed.js",
     "seed-data": "node seed-data.js",
     "seed-data:clean": "node seed-data.js --clean",
