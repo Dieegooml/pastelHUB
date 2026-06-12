@@ -1,6 +1,6 @@
 # 📊 PastelHub — Estado del Proyecto
 
-> Documento generado: 09/06/2026
+> Documento generado: 12/06/2026
 
 ---
 
@@ -10,34 +10,56 @@
 
 | Módulo | Endpoints | Tests |
 |--------|-----------|:-----:|
-| **Auth** | `POST /sync`, `GET /me`, `POST /assign-role` | 8 |
-| **Users** | CRUD + direcciones embebidas + activar/desactivar | 18 |
-| **Shops** | CRUD + schedules + categorías + cambio de status | 21 |
-| **Products** | CRUD + variantes + disponibilidad | 22 |
-| **Orders** | CRUD + status history + payment status + summary | 27 |
-| **Reviews** | CRUD + moderación + responder + recálculo rating | 22 |
-| **Payments** | CRUD + filtros + auto-generación de facturas | 18 |
-| **Notifications** | CRUD + bulk create + marcar leídas + conteo | 18 |
-| **Reports** | CRUD + asignar moderador + cambiar estado | 28 |
-| **Customers** | CRUD + subcolección addresses | 24 |
-| **Promotions** | CRUD + toggle activo + filtro público activas | — |
+| **Auth** | `POST /sync`, `GET /me`, `POST /assign-role` | 11 |
+| **Users** | CRUD + direcciones embebidas + activar/desactivar | 20 |
+| **Shops** | CRUD + schedules + categorías + cambio de status | 32 |
+| **Products** | CRUD + variantes + disponibilidad | 23 |
+| **Orders** | CRUD + status history + payment status + summary | 33 |
+| **Reviews** | CRUD + moderación + responder + recálculo rating | 24 |
+| **Payments** | CRUD + filtros + auto-generación de facturas | 22 |
+| **Notifications** | CRUD + bulk create + marcar leídas + conteo | 20 |
+| **Reports** | CRUD + asignar moderador + cambiar estado | 29 |
+| **Customers** | CRUD + subcolección addresses | 31 |
+| **Promotions** | CRUD + toggle activo + filtro público activas | 15 |
 | **Invoices** | CRUD + PDF generation + auto-generación al pagar | — |
-| **Chat** | Sessions + messages + AI (Gemini + fallback) | — |
-| **Support** | Tickets + messages + asignación + estados | — |
-| **Health** | `GET /api/health` + 404 handler | 3 |
-| **Middleware** | verifyToken + requireAdmin/Owner/Moderator/Customer/OwnerOrAdmin/SelfOrAdmin | 5 |
+| **Chat** | Sessions + messages + AI (Gemini + fallback) | 31 |
+| **Support** | Tickets + messages + asignación + estados | 25 |
+ | **Health** | `GET /api/health` + 404 handler | 3 |
+| **Middleware** | verifyToken + requireAdmin/Owner/Moderator/Customer/OwnerOrAdmin/SelfOrAdmin | 19 |
+| **Backup/Restore** | Export/import colecciones, validación, dry-run | 12 |
+| **Invoices** | CRUD + PDF generation + auto-generación al pagar | 12 |
+| **Chat** | Sessions + messages + AI (Gemini + fallback) | 31 |
+| **Support** | Tickets + messages + asignación + estados | 25 |
+| **Uploads** | Upload de imágenes shop/product/profile | 8 |
+| **Cache** | In-memory LRU cache con TTL y stats | 11 |
+| **FCM Service** | Push notifications, save/remove tokens | 5 |
+| **Payment Gateway** | Simulado + MercadoPago, preferencias, webhooks | 6 |
+| **WebSocket** | Conexiones, pushNotification, broadcastToUser | 4 |
+| **AI Helper** | Role rules, rate limit, catalog formatting | 14 |
 
-**Total: 338 tests unitarios** — 15 suites, todos pasando.
+**Total: 433 tests unitarios** — 23 suites, todos pasando.
 
-### Frontend — React (Vite) — 23 páginas funcionales
+### Frontend — React (Vite) + Vitest — 19 ficheros, ~175 tests
 
 | Rol | Páginas |
 |-----|---------|
-| **Público** | Login, Register, ShopsList, ShopDetail, NotFound |
-| **Cliente** | Cart, Checkout, MyOrders, OrderDetail, Profile, Notifications, Support, SupportNew, SupportDetail, Invoices |
-| **Dueño** | OwnerDashboard (5 tabs: info, productos, órdenes, promociones, resumen), OwnerTabBoletas |
+| **Público** | Login, Register, ShopsList, ShopDetail, ProductDetail, NotFound |
+| **Cliente** | Cart, Checkout, MyOrders, OrderDetail, Profile, Notifications, Invoices, Support, SupportNew, SupportDetail |
+| **Dueño** | OwnerDashboard (6 tabs: info, productos, órdenes, promociones, boletas, resumen) |
 | **Moderador** | ModeratorDashboard, ModeratorNav |
-| **Admin** | Dashboard, Users, Shops, Products, Orders, Reviews, Customers, Reports, Notifications, Payments, Promotions, Invoices, AdminNav |
+| **Admin** | Dashboard, Users, Shops, Products, Orders, Reviews, Customers, Reports, Notifications, Payments, Promotions, Invoices, Chat, AdminNav |
+
+### E2E — Playwright — 7 specs, 42 tests
+
+| Spec | Descripción |
+|------|-------------|
+| `01-health` | Health check del servidor |
+| `02-auth` | Flujos de autenticación |
+| `03-shops` | Navegación de tiendas |
+| `04-cart` | Operaciones del carrito |
+| `05-navigation` | Navegación general |
+| `06-admin` | Panel de administración |
+| `07-404` | Página no encontrada |
 
 ### Infraestructura
 
@@ -65,44 +87,35 @@
 
 ## 2. LO QUE FALTA ❌
 
-### Load Testing
-- ❌ P95=6.6s con 5000 VUs desde Windows local (threshold <5s). Ejecutar desde GCP (Cloud Run Job) debería resolverlo.
-- ❌ Rate limiting forzó 429 en un punto del test de 5000 VUs — ajustado a 100k/5s, monitorizar si es suficiente.
-- ❌ Docker Desktop no corriendo localmente impidió usar deploy.sh con docker build.
-- ✅ Thresholds dinámicos para altas cargas (>10000 VUs: p95<10000, failed<5%)
-- ✅ Stages de ramp-up más graduales (15s/30s/45s en quick, hasta 120s en completo)
-- ✅ Scripts npm para 10000 y 50000 VUs con variantes quick
-
-### Funcionalidades Pendientes
-
-| Funcionalidad | Prioridad | Descripción |
-|---------------|-----------|-------------|
-| 🖼️ **Firebase Storage** | Media | Subida de imágenes no implementada (solo URLs externas) |
-| 🔔 **FCM Notifications** | Media | Firebase Cloud Messaging no integrado |
-| 💳 **Pasarela de pagos real** | Baja | No integrada (payments es solo registro) |
-| 🤖 **Chatbot con sesiones persistentes** | Baja | Chat funciona pero sin UI completa en frontend |
-
 ### Testing
 
-- **Pruebas E2E** — No existen (Cypress/Playwright)
-- **Pruebas de integración real contra Firestore** — Todas mockeadas
+- **Pruebas de integración real contra Firestore** — Todas mockeadas (Firebase Admin mockeado en Jest setup)
 - **Snapshot tests** — No existen
-- **Tests para chat, support, invoices, promotions** — Faltan tests unitarios
+- **Tests de utilerías server faltantes** — `auditLog`, `autoNotify`, `logger`, `mappers`, `paginate` no tienen tests dedicados
+- **Tests de middlewares server** — `validate` y `rateLimiter` no tienen tests unitarios dedicados
+- **Tests de config server** — `mercadopago.js` no tiene tests
+- **Tests de páginas client** — 14 admin + 7 owner/moderator + 5 públicas + 7 customer pages sin tests (~56/75 archivos)
+- **Tests de servicios client** — 9 servicios sin tests (chat, customers, invoices, promotions, reports, storage, support, users, websocket)
 
 ### Infraestructura
 
 | Aspecto | Estado |
 |---------|--------|
-| Load testing hasta 5000 VUs | ✅ 0.0% fallos, P95=1.1s (pasa <5s) — 2,234 req/s desde Cloud Run Job. Opción QUICK mode (~75s) disponible |
-| CI/CD | ❌ No configurado |
+| Load testing hasta 5000 VUs | ✅ 0.0% fallos, P95=1.1s (pasa <5s) — 2,234 req/s desde Cloud Run Job |
+| CI/CD | ✅ Configurado (Cloud Build, 10 pasos, smoke tests, rollback automático) |
+| E2E Tests | ✅ 7 specs Playwright (42 tests) |
 | Dominio/SSL | ❌ No configurado |
-| Firestore Storage rules | ❌ No configuradas |
+| Firestore Storage rules | ✅ Configuradas en `storage.rules` |
+| MercadoPago real | ✅ Código listo, pendiente: configurar `MERCADOPAGO_ACCESS_TOKEN` |
+| FCM Push | ✅ Código listo server + client, pendiente: configurar VAPID key |
+| Chatbot con sesiones | ✅ Implementado (Chatbot.jsx + aiHelper.js + sesiones persistentes) |
 
 ---
 
 ## 3. ASPECTOS A MEJORAR 🔧
 
-1. **Consistencia en nombres de campos** — Backend usa snake_case en shops/products/promotions, pero camelCase en reviews/notifications. Unificar a snake_case.
-2. **Sin store de estado global** — Solo AuthContext. Carrito usa localStorage. Considerar Zustand.
-3. **Estilos inline** — framer-motion usado extensivamente a pesar de la convención "sin UI libs".
-4. **Tests faltantes** — chat, support, invoices, promotions no tienen tests unitarios.
+1. **Consistencia en nombres de campos** — Backend usa snake_case en shops/products/promotions, pero camelCase en reviews/notifications. Unificar a snake_case vía mappers.
+2. **Sin store de estado global** — Solo AuthContext. Carrito usa localStorage. Considerar Zustand con persist.
+3. **Estilos inline** — Todos los estilos en JS objects. Considerar CSS Modules o Tailwind para mantenibilidad.
+4. **PropTypes faltantes** — Ningún componente valida props. Agregar en componentes críticos (PaymentGateway, ImageUploader, OwnerDashboard).
+5. **Tests de integración** — Todos los tests mockean Firestore. Considerar Firebase Emulator para tests reales.
