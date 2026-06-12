@@ -72,13 +72,6 @@ const authFailRateLimiter = rateLimit({
   },
 });
 
-function securityHeaders(req, res, next) {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  next();
-}
-
 function blockIPs(req, res, next) {
   const ip = req.ip;
   if (blockedIPs.has(ip)) {
@@ -124,13 +117,12 @@ app.use(compression());
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(createTraceMiddleware());
-app.use(securityHeaders);
 app.use(blockIPs);
 app.use(ipRateLimiter);
 app.use(authFailRateLimiter);
 app.use(suspiciousRequestLogger);
 app.use(createRoleLimiter());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
 
 app.use((req, res, next) => {
   if (req.path.length > 1 && req.path.endsWith('/')) {
