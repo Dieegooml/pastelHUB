@@ -1,7 +1,13 @@
 import { Component } from 'react';
+import PropTypes from 'prop-types';
 import { colors, font } from '../styles/theme';
 
 export default class ErrorBoundary extends Component {
+  static propTypes = {
+    children: PropTypes.node,
+    fallback: PropTypes.node,
+  };
+
   constructor(props) {
     super(props);
     this.state = { error: null };

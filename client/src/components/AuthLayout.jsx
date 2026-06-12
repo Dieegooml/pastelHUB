@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { colors, font } from '../styles/theme';
 
 const styles = {
@@ -105,7 +106,8 @@ const bullets = [
   { text: 'Reseñas verificadas' },
 ];
 
-export default function AuthLayout({ children }) {
+function AuthLayout({ children }) {
+
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -149,3 +151,9 @@ export default function AuthLayout({ children }) {
     </div>
   );
 }
+
+AuthLayout.propTypes = {
+  children: PropTypes.node,
+};
+
+export default AuthLayout;

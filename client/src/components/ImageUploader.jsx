@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { storageService } from '../services/storageService';
 import { colors, font } from '../styles/theme';
 
@@ -7,13 +8,14 @@ const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 const MAX_SIZE = 5 * 1024 * 1024;
 const MAX_PREVIEW_WIDTH = 1024;
 
-export default function ImageUploader({
+function ImageUploader({
   currentImageUrl = '',
   onUploadComplete,
   folder = 'uploads',
   label = 'Imagen',
   aspectRatio,
 }) {
+
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState(currentImageUrl || '');
@@ -276,3 +278,13 @@ export default function ImageUploader({
     </div>
   );
 }
+
+ImageUploader.propTypes = {
+  currentImageUrl: PropTypes.string,
+  onUploadComplete: PropTypes.func,
+  folder: PropTypes.string,
+  label: PropTypes.string,
+  aspectRatio: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+};
+
+export default ImageUploader;

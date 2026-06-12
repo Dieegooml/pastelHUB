@@ -1,7 +1,9 @@
 import { Navigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import { useAuth } from '../context/AuthContext';
 
-export default function ProtectedRoute({ children, role }) {
+function ProtectedRoute({ children, role }) {
+
   const { user, loading } = useAuth();
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><p>Cargando...</p></div>;
   if (!user) return <Navigate to="/login" />;
@@ -11,3 +13,13 @@ export default function ProtectedRoute({ children, role }) {
   }
   return children;
 }
+
+ProtectedRoute.propTypes = {
+  children: PropTypes.node,
+  role: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.arrayOf(PropTypes.string),
+  ]),
+};
+
+export default ProtectedRoute;

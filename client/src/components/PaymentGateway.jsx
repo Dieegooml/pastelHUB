@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { colors, font, btnPrimary, inputStyle } from '../styles/theme';
 import { paymentsService } from '../services/paymentsService';
 
@@ -23,7 +24,8 @@ function loadMercadoPagoScript() {
   });
 }
 
-export default function PaymentGateway({ orderIds, total, onSuccess, onError, onBack, email }) {
+function PaymentGateway({ orderIds, total, onSuccess, onError, onBack, email }) {
+
   const [method, setMethod] = useState('mercadopago');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -232,3 +234,14 @@ export default function PaymentGateway({ orderIds, total, onSuccess, onError, on
     </div>
   );
 }
+
+PaymentGateway.propTypes = {
+  orderIds: PropTypes.arrayOf(PropTypes.string).isRequired,
+  total: PropTypes.number.isRequired,
+  onSuccess: PropTypes.func.isRequired,
+  onError: PropTypes.func,
+  onBack: PropTypes.func,
+  email: PropTypes.string,
+};
+
+export default PaymentGateway;
