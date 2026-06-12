@@ -334,6 +334,7 @@ router.get('/shop/:shopId', verifyToken, requireOwnerOrAdmin(async (req) => {
 });
 
 async function generateInvoiceFromPayment(orderId) {
+  let paymentData = {};
   try {
     const existing = await col.where('orderId', '==', orderId).limit(1).get();
     if (!existing.empty) return null;
@@ -350,7 +351,7 @@ async function generateInvoiceFromPayment(orderId) {
     const customerData = customerDoc.exists ? customerDoc.data() : {};
 
     const paymentSnap = await db.collection('payments').where('orderId', '==', orderId).limit(1).get();
-    const paymentData = paymentSnap.empty ? {} : paymentSnap.docs[0].data();
+    paymentData = paymentSnap.empty ? {} : paymentSnap.docs[0].data();
 
     const invoiceNumber = await getNextInvoiceNumber();
 
