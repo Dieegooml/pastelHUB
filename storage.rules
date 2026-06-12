@@ -1,0 +1,61 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && role in request.auth.token.roles;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isOwner() {
+      return hasRole('owner');
+    }
+
+    // Public read access for all images
+    match /{allPaths=**} {
+      allow read: if true;
+    }
+
+    // Shop images: owners of the shop or admins can write
+    match /shops/{shopId}/{fileName} {
+      allow write: if isAuthenticated()
+        && (isAdmin()
+          || (isOwner()
+            && firestore.exists(/databases/(default)/documents/pastryShops/{shopId})
+            && firestore.get(/databases/(default)/documents/pastryShops/{shopId}).data.owner_id == request.auth.uid));
+      allow delete: if isAdmin();
+    }
+
+    // Product images: owners of the shop or admins can write
+    match /products/{shopId}/{fileName} {
+      allow write: if isAuthenticated()
+        && (isAdmin()
+          || (isOwner()
+            && firestore.exists(/databases/(default)/documents/pastryShops/{shopId})
+            && firestore.get(/databases/(default)/documents/pastryShops/{shopId}).data.owner_id == request.auth.uid));
+      allow delete: if isAdmin();
+    }
+
+    // Profile images: only the user or admin can write
+    match /profiles/{fileName} {
+      allow write: if isAuthenticated()
+        && (isAdmin() || fileName.startsWith(request.auth.uid));
+      allow delete: if isAdmin() || fileName.startsWith(request.auth.uid);
+    }
+
+    // Generic uploads: authenticated users can write to their own folder
+    match /uploads/{userId}/{fileName} {
+      allow write: if isAuthenticated() && (isAdmin() || userId == request.auth.uid);
+      allow delete: if isAdmin() || userId == request.auth.uid;
+    }
+  }
+}

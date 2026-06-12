@@ -41,7 +41,7 @@ steps:
         echo "Revision actual: $(cat /workspace/current-revision.txt 2>/dev/null || echo 'ninguna')"
 
   # ==========================================================
-  # PASO 1: Tests unitarios del servidor
+  # PASO 1: Tests unitarios del servidor + audit
   # ==========================================================
   - name: 'node:20-alpine'
     id: 'server-unit-tests'
@@ -52,6 +52,7 @@ steps:
       - |
         npm ci --include=dev
         npm test
+        npm audit --audit-level=high || echo "[AUDIT] Se encontraron vulnerabilidades (no bloqueante)"
     timeout: 300s
 
   # ==========================================================
@@ -70,7 +71,24 @@ steps:
     timeout: 300s
 
   # ==========================================================
-  # PASO 3: Construir imagen Docker del servidor
+  # PASO 3: E2E tests (Playwright)
+  # ==========================================================
+  - name: 'mcr.microsoft.com/playwright:v1.52.0-jammy'
+    id: 'e2e-tests'
+    dir: 'client'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        npm ci --include=dev
+        npx playwright install --with-deps chromium 2>/dev/null
+        npm run test:e2e
+    timeout: 300s
+    waitFor:
+      - 'client-tests'
+
+  # ==========================================================
+  # PASO 4: Construir imagen Docker del servidor
   # ==========================================================
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-image'
@@ -85,7 +103,7 @@ steps:
     timeout: 300s
     waitFor:
       - 'server-unit-tests'
-      - 'client-tests'
+      - 'e2e-tests'
 
   # ==========================================================
   # PASO 4: Pushear imagen a Artifact Registry
