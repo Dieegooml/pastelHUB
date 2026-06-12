@@ -7,6 +7,7 @@ const { createReportSchema, assignReportSchema, updateReportStatusSchema, editRe
 const { paginate, tryPaginate } = require('../utils/paginate');
 const { createAuditLog } = require('../utils/auditLog');
 const { notifyUser } = require('../utils/autoNotify');
+const { mapReportFromRequest, mapReportToResponse } = require('../utils/mappers');
 
 const col = db.collection('reports');
 
@@ -15,7 +16,7 @@ const VALID_STATUSES     = ['open', 'resolved', 'dismissed'];
 
 // GET todos los reportes (admin/moderator)
 router.get('/', verifyToken, requireModerator, async (req, res) => {
-  await tryPaginate(res, col, req.query, { orderBy: 'createdAt' }, 'Error al obtener reportes');
+  await tryPaginate(res, col, req.query, { orderBy: 'created_at' }, 'Error al obtener reportes');
 });
 
 // GET reportes por estado (admin/moderator)
@@ -24,7 +25,7 @@ router.get('/status/:status', verifyToken, requireModerator, async (req, res) =>
     return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
   }
   await tryPaginate(res, col, req.query, {
-    orderBy: 'createdAt', filters: [{ field: 'status', value: req.params.status }],
+    orderBy: 'created_at', filters: [{ field: 'status', value: req.params.status }],
   }, 'Error al filtrar reportes por estado');
 });
 
@@ -34,7 +35,7 @@ router.get('/target/:targetType', verifyToken, requireModerator, async (req, res
     return res.status(400).json({ error: `Tipo inválido. Válidos: ${VALID_TARGET_TYPES.join(', ')}` });
   }
   await tryPaginate(res, col, req.query, {
-    orderBy: 'createdAt', filters: [{ field: 'targetType', value: req.params.targetType }],
+    orderBy: 'created_at', filters: [{ field: 'target_type', value: req.params.targetType }],
   }, 'Error al filtrar reportes por tipo');
 });
 
@@ -45,7 +46,7 @@ router.get('/moderator/:moderatorId', verifyToken, async (req, res) => {
     return res.status(403).json({ error: 'No tienes permiso' });
   }
   await tryPaginate(res, col, req.query, {
-    orderBy: 'createdAt', filters: [{ field: 'assignedTo', value: req.params.moderatorId }],
+    orderBy: 'created_at', filters: [{ field: 'assigned_to', value: req.params.moderatorId }],
   }, 'Error al obtener reportes del moderador');
 });
 
@@ -56,7 +57,7 @@ router.get('/user/:userId', verifyToken, async (req, res) => {
     return res.status(403).json({ error: 'Solo puedes ver tus propios reportes' });
   }
   await tryPaginate(res, col, req.query, {
-    orderBy: 'createdAt', filters: [{ field: 'reportedBy', value: req.params.userId }],
+    orderBy: 'created_at', filters: [{ field: 'reported_by', value: req.params.userId }],
   }, 'Error al obtener reportes del usuario');
 });
 
@@ -67,10 +68,10 @@ router.get('/:id', verifyToken, async (req, res) => {
     if (!doc.exists) return res.status(404).json({ error: 'Reporte no encontrado' });
     const roles = req.user?.roles || [];
     const data = doc.data();
-    if (!roles.includes('admin') && !roles.includes('moderator') && data.reportedBy !== req.user.uid) {
+    if (!roles.includes('admin') && !roles.includes('moderator') && data.reported_by !== req.user.uid) {
       return res.status(403).json({ error: 'No tienes permiso para ver este reporte' });
     }
-    res.json({ id: doc.id, ...data });
+    res.json({ id: doc.id, ...mapReportToResponse(data) });
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener el reporte' });
   }
@@ -102,27 +103,26 @@ router.post('/', verifyToken, validate(createReportSchema), async (req, res) => 
 
     // Verificar que el usuario no haya reportado ya el mismo objetivo
     const existing = await col
-      .where('reportedBy', '==', reportedBy)
-      .where('targetId',   '==', targetId)
+      .where('reported_by', '==', reportedBy)
+      .where('target_id',   '==', targetId)
       .limit(1)
       .get();
     if (!existing.empty) {
       return res.status(400).json({ error: 'Ya has reportado este contenido anteriormente' });
     }
 
+    const snake = mapReportFromRequest({ targetType, targetId, reason });
     const data = {
-      reportedBy,
-      targetType,
-      targetId,
-      reason,
+      ...snake,
+      reported_by: reportedBy,
       status:      'open',
-      assignedTo:  '',
-      createdAt:   new Date().toISOString(),
-      resolvedAt:  '',
+      assigned_to: '',
+      created_at:  new Date().toISOString(),
+      resolved_at: '',
     };
 
     const ref = await col.add(data);
-    res.status(201).json({ id: ref.id, ...data });
+    res.status(201).json({ id: ref.id, ...mapReportToResponse(data) });
   } catch (e) {
     res.status(500).json({ error: 'Error al crear el reporte' });
   }
@@ -154,7 +154,7 @@ router.patch('/:id/assign', verifyToken, validate(assignReportSchema), async (re
       return res.status(400).json({ error: 'El usuario no tiene rol de moderador' });
     }
 
-    await col.doc(req.params.id).update({ assignedTo: moderatorId });
+    await col.doc(req.params.id).update({ assigned_to: moderatorId });
 
     await createAuditLog({
       action: 'report.assigned',
@@ -190,7 +190,7 @@ router.patch('/:id/status', verifyToken, validate(updateReportStatusSchema), asy
 
     const updates = {
       status,
-      resolvedAt: new Date().toISOString(),
+      resolved_at: new Date().toISOString(),
     };
 
     await col.doc(req.params.id).update(updates);
@@ -207,7 +207,7 @@ router.patch('/:id/status', verifyToken, validate(updateReportStatusSchema), asy
 
     // Notificar al reporter
     await notifyUser({
-      userId: doc.data().reportedBy,
+      userId: doc.data().reported_by,
       type: 'report_resolved',
       message: `Tu reporte ha sido ${status === 'resolved' ? 'resuelto' : 'desestimado'}`,
     });
@@ -230,7 +230,7 @@ router.put('/:id', verifyToken, validate(editReportSchema), async (req, res) => 
     }
 
     const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && data.reportedBy !== req.user.uid) {
+    if (!roles.includes('admin') && data.reported_by !== req.user.uid) {
       return res.status(403).json({ error: 'Solo el autor puede editar su reporte' });
     }
 
@@ -255,7 +255,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
     }
 
     const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && data.reportedBy !== req.user.uid) {
+    if (!roles.includes('admin') && data.reported_by !== req.user.uid) {
       return res.status(403).json({ error: 'Solo el autor puede eliminar su reporte' });
     }
 

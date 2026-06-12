@@ -8,6 +8,7 @@ const { createReviewSchema, updateReviewSchema, replySchema, reviewStatusSchema 
 const { paginate, tryPaginate } = require('../utils/paginate');
 const { createAuditLog } = require('../utils/auditLog');
 const { notifyUser } = require('../utils/autoNotify');
+const { mapReviewFromRequest, mapReviewToResponse } = require('../utils/mappers');
 
 const col = db.collection('reviews');
 
@@ -15,15 +16,15 @@ const VALID_STATUSES = ['pending', 'approved', 'rejected'];
 
 // GET todas las reseñas
 router.get('/', verifyToken, requireModerator, async (req, res) => {
-  await tryPaginate(res, col, req.query, { orderBy: 'createdAt' }, 'Error al obtener reseñas');
+  await tryPaginate(res, col, req.query, { orderBy: 'created_at' }, 'Error al obtener reseñas');
 });
 
 // GET reseñas por pastelería (público)
 router.get('/shop/:shopId', async (req, res) => {
   await tryPaginate(res, col, req.query, {
-    orderBy: 'createdAt',
+    orderBy: 'created_at',
     filters: [
-      { field: 'shopId', value: req.params.shopId },
+      { field: 'shop_id', value: req.params.shopId },
       { field: 'status', value: 'approved' },
     ],
   }, 'Error al obtener reseñas de la pastelería');
@@ -32,7 +33,7 @@ router.get('/shop/:shopId', async (req, res) => {
 // GET reseñas por cliente (propio usuario o admin)
 router.get('/customer/:customerId', verifyToken, requireSelfOrAdmin('customerId'), async (req, res) => {
   await tryPaginate(res, col, req.query, {
-    orderBy: 'createdAt', filters: [{ field: 'customerId', value: req.params.customerId }],
+    orderBy: 'created_at', filters: [{ field: 'customer_id', value: req.params.customerId }],
   }, 'Error al obtener reseñas del cliente');
 });
 
@@ -42,17 +43,17 @@ router.get('/status/:status', verifyToken, requireModerator, async (req, res) =>
     return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
   }
   await tryPaginate(res, col, req.query, {
-    orderBy: 'createdAt', filters: [{ field: 'status', value: req.params.status }],
+    orderBy: 'created_at', filters: [{ field: 'status', value: req.params.status }],
   }, 'Error al filtrar reseñas por estado');
 });
 
 // GET reseña por ID de orden
 router.get('/by-order/:orderId', verifyToken, async (req, res) => {
   try {
-    const snap = await col.where('orderId', '==', req.params.orderId).limit(1).get();
+    const snap = await col.where('order_id', '==', req.params.orderId).limit(1).get();
     if (snap.empty) return res.status(404).json({ error: 'Reseña no encontrada para esta orden' });
     const doc = snap.docs[0];
-    res.json({ id: doc.id, ...doc.data() });
+    res.json({ id: doc.id, ...mapReviewToResponse(doc.data()) });
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener la reseña' });
   }
@@ -66,15 +67,15 @@ router.get('/:id', verifyToken, async (req, res) => {
     const roles = req.user?.roles || [];
     if (!roles.includes('admin')) {
       const data = doc.data();
-      const isAuthor = data.customerId === req.user.uid;
-      const isShopOwner = data.shopId
-        ? await db.collection('pastryShops').doc(data.shopId).get().then(s => s.exists && s.data().owner_id === req.user.uid)
+      const isAuthor = data.customer_id === req.user.uid;
+      const isShopOwner = data.shop_id
+        ? await db.collection('pastryShops').doc(data.shop_id).get().then(s => s.exists && s.data().owner_id === req.user.uid)
         : false;
       if (!isAuthor && !isShopOwner) {
         return res.status(403).json({ error: 'No tienes permiso para ver esta reseña' });
       }
     }
-    res.json({ id: doc.id, ...doc.data() });
+    res.json({ id: doc.id, ...mapReviewToResponse(doc.data()) });
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener la reseña' });
   }
@@ -102,21 +103,19 @@ router.post('/', verifyToken, requireCustomer, validate(createReviewSchema), asy
     }
 
     // Verificar que la orden no tenga ya una reseña
-    const existing = await col.where('orderId', '==', orderId).limit(1).get();
+    const existing = await col.where('order_id', '==', orderId).limit(1).get();
     if (!existing.empty) {
       return res.status(400).json({ error: 'Esta orden ya tiene una reseña registrada' });
     }
 
+    const snake = mapReviewFromRequest({ shopId, orderId, rating, comment: comment || '' });
     const data = {
-      customerId:  req.user.uid,
-      shopId,
-      orderId,
-      rating,
-      comment:     comment || '',
-      ownerReply:  '',
-      repliedAt:   '',
-      status:      'pending',
-      createdAt:   new Date().toISOString(),
+      ...snake,
+      customer_id:  req.user.uid,
+      owner_reply:  '',
+      replied_at:   '',
+      status:       'pending',
+      created_at:   new Date().toISOString(),
     };
 
     const ref = await col.add(data);
@@ -124,7 +123,7 @@ router.post('/', verifyToken, requireCustomer, validate(createReviewSchema), asy
     // Recalcular rating promedio de la pastelería
     await recalcShopRating(shopId);
 
-    res.status(201).json({ id: ref.id, ...data });
+    res.status(201).json({ id: ref.id, ...mapReviewToResponse(data) });
   } catch (e) {
     res.status(500).json({ error: 'Error al crear la reseña' });
   }
@@ -141,7 +140,7 @@ router.patch('/:id/status', verifyToken, requireModerator, validate(reviewStatus
     await col.doc(req.params.id).update({ status });
 
     // Si se aprueba o rechaza, recalcular el rating de la pastelería
-    await recalcShopRating(doc.data().shopId);
+    await recalcShopRating(doc.data().shop_id);
 
     // Auditoría
     const action = status === 'approved' ? 'review.approved' : 'review.rejected';
@@ -157,7 +156,7 @@ router.patch('/:id/status', verifyToken, requireModerator, validate(reviewStatus
     // Notificar al autor de la reseña
     const notifType = status === 'approved' ? 'review_approved' : 'review_rejected';
     await notifyUser({
-      userId: doc.data().customerId,
+      userId: doc.data().customer_id,
       type: notifType,
       message: `Tu reseña ha sido ${status === 'approved' ? 'aprobada' : 'rechazada'} por un moderador`,
     });
@@ -177,7 +176,7 @@ router.patch('/:id/reply', verifyToken, validate(replySchema), async (req, res) 
     const roles = req.user?.roles || [];
     let authorized = roles.includes('admin');
     if (!authorized) {
-      const shopId = doc.data().shopId;
+      const shopId = doc.data().shop_id;
       if (shopId) {
         const shopDoc = await db.collection('pastryShops').doc(shopId).get();
         if (shopDoc.exists && shopDoc.data().owner_id === req.user.uid) {
@@ -193,12 +192,12 @@ router.patch('/:id/reply', verifyToken, validate(replySchema), async (req, res) 
     const { ownerReply } = req.body;
 
     const updates = {
-      ownerReply,
-      repliedAt: new Date().toISOString(),
+      owner_reply: ownerReply,
+      replied_at: new Date().toISOString(),
     };
 
     await col.doc(req.params.id).update(updates);
-    res.json({ id: req.params.id, ...updates });
+    res.json({ id: req.params.id, ...mapReviewToResponse(updates) });
   } catch (e) {
     res.status(500).json({ error: 'Error al responder la reseña' });
   }
@@ -211,7 +210,7 @@ router.put('/:id', verifyToken, validate(updateReviewSchema), async (req, res) =
     if (!doc.exists) return res.status(404).json({ error: 'Reseña no encontrada' });
 
     const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && doc.data().customerId !== req.user.uid) {
+    if (!roles.includes('admin') && doc.data().customer_id !== req.user.uid) {
       return res.status(403).json({ error: 'Solo puedes editar tus propias reseñas' });
     }
 
@@ -226,7 +225,7 @@ router.put('/:id', verifyToken, validate(updateReviewSchema), async (req, res) =
       ...(comment !== undefined && { comment }),
     };
 
-    const shopId = doc.data().shopId;
+    const shopId = doc.data().shop_id;
     await col.doc(req.params.id).update(updates);
 
     // Recalcular rating de la pastelería tras editar la reseña
@@ -245,11 +244,11 @@ router.delete('/:id', verifyToken, async (req, res) => {
     if (!doc.exists) return res.status(404).json({ error: 'Reseña no encontrada' });
 
     const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && doc.data().customerId !== req.user.uid) {
+    if (!roles.includes('admin') && doc.data().customer_id !== req.user.uid) {
       return res.status(403).json({ error: 'Solo puedes eliminar tus propias reseñas' });
     }
 
-    const { shopId } = doc.data();
+    const { shop_id: shopId } = doc.data();
     await col.doc(req.params.id).delete();
 
     // Recalcular rating de la pastelería tras eliminar
@@ -270,7 +269,7 @@ async function recalcShopRating(shopId) {
     await db.runTransaction(async (txn) => {
       const snap = await txn.get(
         col
-          .where('shopId', '==', shopId)
+          .where('shop_id', '==', shopId)
           .where('status', '==', 'approved')
       );
 

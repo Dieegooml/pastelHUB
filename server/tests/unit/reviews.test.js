@@ -21,7 +21,7 @@ describe('GET /api/reviews', () => {
 describe('GET /api/reviews/shop/:shopId', () => {
   it('responde 200 con resenas de la pasteleria', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockCollection([{ id: 'r1', shopId: 's1', rating: 4 }]);
+    global.mockCollection([{ id: 'r1', shop_id: 's1', rating: 4 }]);
     const res = await request(app)
       .get('/api/reviews/shop/s1')
       .set('Authorization', 'Bearer token-valido');
@@ -32,7 +32,7 @@ describe('GET /api/reviews/shop/:shopId', () => {
 describe('GET /api/reviews/customer/:customerId', () => {
   it('responde 200 con resenas del cliente', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockCollection([{ id: 'r1', customerId: 'c1' }]);
+    global.mockCollection([{ id: 'r1', customer_id: 'c1' }]);
     const res = await request(app)
       .get('/api/reviews/customer/c1')
       .set('Authorization', 'Bearer token-valido');
@@ -150,7 +150,7 @@ describe('POST /api/reviews', () => {
 describe('PATCH /api/reviews/:id/status', () => {
   it('modera resena correctamente', async () => {
     global.mockToken('admin-uid', ['admin']);
-    const reviewDoc = { exists: true, data: () => ({ shopId: 's1', status: 'pending', rating: 5 }), id: 'r-1' };
+    const reviewDoc = { exists: true, data: () => ({ shop_id: 's1', status: 'pending', rating: 5 }), id: 'r-1' };
     const recalcResult = { docs: [{ data: () => ({ rating: 5 }) }], empty: false };
     global.mockFirestore.get.mockResolvedValueOnce(reviewDoc);
     global.mockFirestore.get.mockResolvedValueOnce(recalcResult);
@@ -165,7 +165,7 @@ describe('PATCH /api/reviews/:id/status', () => {
 
   it('responde 400 con estado invalido', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockDocExists({ shopId: 's1', status: 'pending' });
+    global.mockDocExists({ shop_id: 's1', status: 'pending' });
     const res = await request(app)
       .patch('/api/reviews/r-1/status')
       .set('Authorization', 'Bearer token-valido')
@@ -177,7 +177,7 @@ describe('PATCH /api/reviews/:id/status', () => {
 describe('PATCH /api/reviews/:id/reply', () => {
   it('responde a la resena correctamente', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockDocExists({ rating: 5, ownerReply: '' });
+    global.mockDocExists({ rating: 5, owner_reply: '' });
     global.mockFirestore.update.mockResolvedValue();
     const res = await request(app)
       .patch('/api/reviews/r-1/reply')
@@ -247,7 +247,7 @@ describe('PUT /api/reviews/:id', () => {
 describe('DELETE /api/reviews/:id', () => {
   it('elimina resena correctamente', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ shopId: 's1', rating: 5 }), id: 'r-1' });
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ shop_id: 's1', rating: 5 }), id: 'r-1' });
     global.mockFirestore.get.mockResolvedValue({ docs: [{ data: () => ({ rating: 5 }) }], empty: false });
     global.mockFirestore.delete.mockResolvedValue();
     global.mockFirestore.update.mockResolvedValue();

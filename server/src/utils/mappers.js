@@ -68,22 +68,46 @@ const CUSTOMER_SNAKE_TO_CAMEL = {
 };
 
 const NOTIFICATION_CAMEL_TO_SNAKE = {
-  userId: 'userId',
-  isRead: 'isRead',
+  userId: 'user_id',
+  isRead: 'is_read',
+};
+
+const NOTIFICATION_SNAKE_TO_CAMEL = {
+  user_id: 'userId',
+  is_read: 'isRead',
 };
 
 const REVIEW_CAMEL_TO_SNAKE = {
-  shopId: 'shopId',
-  orderId: 'orderId',
-  customerId: 'customerId',
-  ownerReply: 'ownerReply',
+  shopId: 'shop_id',
+  orderId: 'order_id',
+  customerId: 'customer_id',
+  ownerReply: 'owner_reply',
+  createdAt: 'created_at',
+};
+
+const REVIEW_SNAKE_TO_CAMEL = {
+  shop_id: 'shopId',
+  order_id: 'orderId',
+  customer_id: 'customerId',
+  owner_reply: 'ownerReply',
+  replied_at: 'repliedAt',
+  created_at: 'createdAt',
 };
 
 const REPORT_CAMEL_TO_SNAKE = {
-  targetType: 'targetType',
-  targetId: 'targetId',
-  reportedBy: 'reportedBy',
-  assignedTo: 'assignedTo',
+  targetType: 'target_type',
+  targetId: 'target_id',
+  reportedBy: 'reported_by',
+  assignedTo: 'assigned_to',
+};
+
+const REPORT_SNAKE_TO_CAMEL = {
+  target_type: 'targetType',
+  target_id: 'targetId',
+  reported_by: 'reportedBy',
+  assigned_to: 'assignedTo',
+  resolved_at: 'resolvedAt',
+  created_at: 'createdAt',
 };
 
 function mapKeys(obj, keyMap) {
@@ -129,6 +153,30 @@ function mapCustomerToResponse(doc) {
   return mapKeys(doc, CUSTOMER_SNAKE_TO_CAMEL);
 }
 
+function mapNotificationFromRequest(body) {
+  return mapKeys(body, NOTIFICATION_CAMEL_TO_SNAKE);
+}
+
+function mapNotificationToResponse(doc) {
+  return mapKeys(doc, NOTIFICATION_SNAKE_TO_CAMEL);
+}
+
+function mapReviewFromRequest(body) {
+  return mapKeys(body, REVIEW_CAMEL_TO_SNAKE);
+}
+
+function mapReviewToResponse(doc) {
+  return mapKeys(doc, REVIEW_SNAKE_TO_CAMEL);
+}
+
+function mapReportFromRequest(body) {
+  return mapKeys(body, REPORT_CAMEL_TO_SNAKE);
+}
+
+function mapReportToResponse(doc) {
+  return mapKeys(doc, REPORT_SNAKE_TO_CAMEL);
+}
+
 module.exports = {
   mapShopFromRequest,
   mapShopToResponse,
@@ -138,6 +186,12 @@ module.exports = {
   mapOrderToResponse,
   mapCustomerFromRequest,
   mapCustomerToResponse,
+  mapNotificationFromRequest,
+  mapNotificationToResponse,
+  mapReviewFromRequest,
+  mapReviewToResponse,
+  mapReportFromRequest,
+  mapReportToResponse,
   mapKeys,
   SHOP_CAMEL_TO_SNAKE,
   SHOP_SNAKE_TO_CAMEL,
@@ -147,4 +201,10 @@ module.exports = {
   ORDER_SNAKE_TO_CAMEL,
   CUSTOMER_CAMEL_TO_SNAKE,
   CUSTOMER_SNAKE_TO_CAMEL,
+  NOTIFICATION_CAMEL_TO_SNAKE,
+  NOTIFICATION_SNAKE_TO_CAMEL,
+  REVIEW_CAMEL_TO_SNAKE,
+  REVIEW_SNAKE_TO_CAMEL,
+  REPORT_CAMEL_TO_SNAKE,
+  REPORT_SNAKE_TO_CAMEL,
 };

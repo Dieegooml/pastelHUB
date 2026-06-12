@@ -21,7 +21,7 @@ describe('GET /api/notifications', () => {
 describe('GET /api/notifications/user/:userId', () => {
   it('responde 200 con notificaciones del usuario', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockCollection([{ id: 'n1', userId: 'u1', message: 'Test' }]);
+    global.mockCollection([{ id: 'n1', user_id: 'u1', message: 'Test' }]);
     const res = await request(app)
       .get('/api/notifications/user/u1')
       .set('Authorization', 'Bearer token-valido');
@@ -32,7 +32,7 @@ describe('GET /api/notifications/user/:userId', () => {
 describe('GET /api/notifications/user/:userId/unread', () => {
   it('responde 200 con no leidas', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockCollection([{ id: 'n1', userId: 'u1', isRead: false }]);
+    global.mockCollection([{ id: 'n1', user_id: 'u1', is_read: false }]);
     const res = await request(app)
       .get('/api/notifications/user/u1/unread')
       .set('Authorization', 'Bearer token-valido');
@@ -147,7 +147,7 @@ describe('POST /api/notifications/bulk', () => {
 describe('PATCH /api/notifications/:id/read', () => {
   it('marca notificacion como leida', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockDocExists({ isRead: false });
+    global.mockDocExists({ is_read: false });
     global.mockFirestore.update.mockResolvedValue();
     const res = await request(app)
       .patch('/api/notifications/n-1/read')

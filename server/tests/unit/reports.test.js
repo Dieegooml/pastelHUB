@@ -40,7 +40,7 @@ describe('GET /api/reports/status/:status', () => {
 describe('GET /api/reports/target/:targetType', () => {
   it('responde 200 filtrando por tipo valido', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockCollection([{ id: 'r1', targetType: 'review' }]);
+    global.mockCollection([{ id: 'r1', target_type: 'review' }]);
     const res = await request(app)
       .get('/api/reports/target/review')
       .set('Authorization', 'Bearer token-valido');
@@ -59,7 +59,7 @@ describe('GET /api/reports/target/:targetType', () => {
 describe('GET /api/reports/moderator/:moderatorId', () => {
   it('responde 200 con reportes del moderador', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockCollection([{ id: 'r1', assignedTo: 'mod-1' }]);
+    global.mockCollection([{ id: 'r1', assigned_to: 'mod-1' }]);
     const res = await request(app)
       .get('/api/reports/moderator/mod-1')
       .set('Authorization', 'Bearer token-valido');
@@ -70,7 +70,7 @@ describe('GET /api/reports/moderator/:moderatorId', () => {
 describe('GET /api/reports/user/:userId', () => {
   it('responde 200 con reportes del usuario', async () => {
     global.mockToken('admin-uid', ['admin']);
-    global.mockCollection([{ id: 'r1', reportedBy: 'u1' }]);
+    global.mockCollection([{ id: 'r1', reported_by: 'u1' }]);
     const res = await request(app)
       .get('/api/reports/user/u1')
       .set('Authorization', 'Bearer token-valido');

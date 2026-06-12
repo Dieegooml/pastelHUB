@@ -8,6 +8,7 @@ const { paginate, tryPaginate } = require('../utils/paginate');
 const { sendPush } = require('../utils/fcmService');
 const { pushNotification } = require('../utils/websocket');
 const cache = require('../utils/cache');
+const { mapNotificationFromRequest, mapNotificationToResponse } = require('../utils/mappers');
 
 const col = db.collection('notifications');
 
@@ -30,13 +31,13 @@ const VALID_TYPES = [
 
 // GET todas las notificaciones
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
-  await tryPaginate(res, col, req.query, { orderBy: 'createdAt' }, 'Error al obtener notificaciones');
+  await tryPaginate(res, col, req.query, { orderBy: 'created_at' }, 'Error al obtener notificaciones');
 });
 
 // GET notificaciones por usuario (propio usuario o admin)
 router.get('/user/:userId', verifyToken, requireSelfOrAdmin('userId'), async (req, res) => {
   await tryPaginate(res, col, req.query, {
-    orderBy: 'createdAt', filters: [{ field: 'userId', value: req.params.userId }],
+    orderBy: 'created_at', filters: [{ field: 'user_id', value: req.params.userId }],
   }, 'Error al obtener notificaciones del usuario');
 });
 
@@ -47,8 +48,8 @@ router.get('/user/:userId/unread/count', verifyToken, requireSelfOrAdmin('userId
     const cached = cache.get(countCacheStore, key);
     if (cached !== null) return res.json({ count: cached });
     const snap = await col
-      .where('userId', '==', req.params.userId)
-      .where('isRead', '==', false)
+      .where('user_id', '==', req.params.userId)
+      .where('is_read', '==', false)
       .count()
       .get();
     const count = snap.data().count || 0;
@@ -62,10 +63,10 @@ router.get('/user/:userId/unread/count', verifyToken, requireSelfOrAdmin('userId
 // GET notificaciones no leídas por usuario (propio usuario o admin)
 router.get('/user/:userId/unread', verifyToken, requireSelfOrAdmin('userId'), async (req, res) => {
   await tryPaginate(res, col, req.query, {
-    orderBy: 'createdAt',
+    orderBy: 'created_at',
     filters: [
-      { field: 'userId', value: req.params.userId },
-      { field: 'isRead', value: false },
+      { field: 'user_id', value: req.params.userId },
+      { field: 'is_read', value: false },
     ],
   }, 'Error al obtener notificaciones no leídas');
 });
@@ -76,10 +77,10 @@ router.get('/:id', verifyToken, async (req, res) => {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Notificación no encontrada' });
     const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && doc.data().userId !== req.user.uid) {
+    if (!roles.includes('admin') && doc.data().user_id !== req.user.uid) {
       return res.status(403).json({ error: 'No tienes permiso para ver esta notificación' });
     }
-    res.json({ id: doc.id, ...doc.data() });
+    res.json({ id: doc.id, ...mapNotificationToResponse(doc.data()) });
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener la notificación' });
   }
@@ -96,17 +97,15 @@ router.post('/', verifyToken, requireAdmin, validate(createNotificationSchema), 
       return res.status(404).json({ error: 'El usuario no existe' });
     }
 
+    const snake = mapNotificationFromRequest({ userId, type, message, title: title || '' });
     const data = {
-      userId,
-      type,
-      message,
-      title:     title || '',
-      isRead:    false,
-      createdAt: new Date().toISOString(),
+      ...snake,
+      is_read:    false,
+      created_at: new Date().toISOString(),
     };
 
     const ref = await col.add(data);
-    const created = { id: ref.id, ...data };
+    const created = { id: ref.id, ...mapNotificationToResponse(data) };
     pushNotification(userId, created);
     sendPush(userId, title || type, message, { type, notificationId: ref.id }).catch(() => {});
     res.status(201).json(created);
@@ -126,9 +125,10 @@ router.post('/bulk', verifyToken, requireAdmin, validate(bulkNotificationSchema)
 
     userIds.forEach(userId => {
       const ref = col.doc();
-      const data = { userId, type, message, title: title || '', isRead: false, createdAt: now };
+      const snake = mapNotificationFromRequest({ userId, type, message, title: title || '' });
+      const data = { ...snake, is_read: false, created_at: now };
       batch.set(ref, data);
-      created.push({ id: ref.id, ...data });
+      created.push({ id: ref.id, ...mapNotificationToResponse(data) });
     });
 
     await batch.commit();
@@ -147,12 +147,12 @@ router.patch('/:id/read', verifyToken, async (req, res) => {
     if (!doc.exists) return res.status(404).json({ error: 'Notificación no encontrada' });
 
     const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && doc.data().userId !== req.user.uid) {
+    if (!roles.includes('admin') && doc.data().user_id !== req.user.uid) {
       return res.status(403).json({ error: 'No tienes permiso para modificar esta notificación' });
     }
 
-    await col.doc(req.params.id).update({ isRead: true });
-    invalidateCountCache(doc.data().userId);
+    await col.doc(req.params.id).update({ is_read: true });
+    invalidateCountCache(doc.data().user_id);
     res.json({ id: req.params.id, isRead: true });
   } catch (e) {
     res.status(500).json({ error: 'Error al marcar como leída' });
@@ -163,8 +163,8 @@ router.patch('/:id/read', verifyToken, async (req, res) => {
 router.patch('/user/:userId/read-all', verifyToken, requireSelfOrAdmin('userId'), async (req, res) => {
   try {
     const snap = await col
-      .where('userId', '==', req.params.userId)
-      .where('isRead', '==', false)
+      .where('user_id', '==', req.params.userId)
+      .where('is_read', '==', false)
       .get();
 
     if (snap.empty) {
@@ -172,7 +172,7 @@ router.patch('/user/:userId/read-all', verifyToken, requireSelfOrAdmin('userId')
     }
 
     const batch = db.batch();
-    snap.docs.forEach(d => batch.update(d.ref, { isRead: true }));
+    snap.docs.forEach(d => batch.update(d.ref, { is_read: true }));
     await batch.commit();
 
     invalidateCountCache(req.params.userId);
@@ -190,12 +190,12 @@ router.delete('/:id', verifyToken, async (req, res) => {
     if (!doc.exists) return res.status(404).json({ error: 'Notificación no encontrada' });
 
     const roles = req.user?.roles || [];
-    if (!roles.includes('admin') && doc.data().userId !== req.user.uid) {
+    if (!roles.includes('admin') && doc.data().user_id !== req.user.uid) {
       return res.status(403).json({ error: 'No tienes permiso para eliminar esta notificación' });
     }
 
     await col.doc(req.params.id).delete();
-    invalidateCountCache(doc.data().userId);
+    invalidateCountCache(doc.data().user_id);
     res.json({ message: 'Notificación eliminada correctamente' });
   } catch (e) {
     res.status(500).json({ error: 'Error al eliminar la notificación' });
@@ -205,7 +205,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
 // DELETE eliminar todas las notificaciones de un usuario (propio usuario o admin)
 router.delete('/user/:userId', verifyToken, requireSelfOrAdmin('userId'), async (req, res) => {
   try {
-    const snap = await col.where('userId', '==', req.params.userId).get();
+    const snap = await col.where('user_id', '==', req.params.userId).get();
 
     if (snap.empty) {
       return res.json({ message: 'No hay notificaciones para eliminar', count: 0 });
