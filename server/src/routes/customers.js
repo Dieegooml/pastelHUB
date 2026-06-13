@@ -56,7 +56,7 @@ router.put('/:id', verifyToken, requireSelfOrAdmin(), validate(updateCustomerSch
 });
 
 // POST crear customer (auto-creación: usa req.user.uid)
-router.post('/', verifyToken, requireCustomer, validate(createCustomerSchema), async (req, res) => {
+router.post('/', verifyToken, validate(createCustomerSchema), async (req, res) => {
   try {
     const uid = req.user.uid;
 
