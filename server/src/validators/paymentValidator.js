@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { PAYMENT_STATUSES } = require('../constants');
 
 const VALID_METHODS = ['card', 'cash', 'yape', 'plin', 'mercadopago'];
 
@@ -22,8 +23,8 @@ const updatePaymentSchema = z.object({
 });
 
 const updatePaymentStatusSchema = z.object({
-  paymentStatus: z.enum(['pending', 'paid', 'failed', 'refunded'], {
-    errorMap: () => ({ message: 'Estado inválido. Válidos: pending, paid, failed, refunded' }),
+  paymentStatus: z.enum(PAYMENT_STATUSES, {
+    errorMap: () => ({ message: `Estado inválido. Válidos: ${PAYMENT_STATUSES.join(', ')}` }),
   }),
 });
 

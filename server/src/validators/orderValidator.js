@@ -1,6 +1,5 @@
 const { z } = require('zod');
-
-const VALID_PAYMENT_METHODS = ['card', 'cash', 'yape', 'plin'];
+const { ORDER_STATUSES, ORDER_PAYMENT_STATUSES, PAYMENT_METHODS } = require('../constants');
 
 const createOrderSchema = z.object({
   customer: z.object({
@@ -21,25 +20,22 @@ const createOrderSchema = z.object({
     delivery_fee: z.union([z.number(), z.string()]).optional().default(0),
   }).optional(),
   payment: z.object({
-    method: z.enum(VALID_PAYMENT_METHODS, {
-      errorMap: () => ({ message: `Método de pago inválido. Válidos: ${VALID_PAYMENT_METHODS.join(', ')}` }),
+    method: z.enum(PAYMENT_METHODS, {
+      errorMap: () => ({ message: `Método de pago inválido. Válidos: ${PAYMENT_METHODS.join(', ')}` }),
     }),
     transaction_ref: z.string().optional().default(''),
   }),
 });
 
-const VALID_STATUSES = ['pending', 'confirmed', 'preparing', 'on_the_way', 'delivered', 'cancelled'];
-const VALID_PAYMENT_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
-
 const updateOrderStatusSchema = z.object({
-  status: z.enum(VALID_STATUSES, {
-    errorMap: () => ({ message: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` }),
+  status: z.enum(ORDER_STATUSES, {
+    errorMap: () => ({ message: `Estado inválido. Válidos: ${ORDER_STATUSES.join(', ')}` }),
   }),
 });
 
 const updateOrderPaymentStatusSchema = z.object({
-  status: z.enum(VALID_PAYMENT_STATUSES, {
-    errorMap: () => ({ message: `Estado inválido. Válidos: ${VALID_PAYMENT_STATUSES.join(', ')}` }),
+  status: z.enum(ORDER_PAYMENT_STATUSES, {
+    errorMap: () => ({ message: `Estado inválido. Válidos: ${ORDER_PAYMENT_STATUSES.join(', ')}` }),
   }),
   transaction_ref: z.string().optional(),
 });

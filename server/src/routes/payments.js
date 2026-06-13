@@ -8,11 +8,9 @@ const { createPaymentSchema, updatePaymentSchema, updatePaymentStatusSchema, cre
 const { paginate, tryPaginate } = require('../utils/paginate');
 const { generateInvoiceFromPayment } = require('./invoices');
 const paymentGateway = require('../utils/paymentGateway');
+const { PAYMENT_STATUSES } = require('../constants');
 
 const col = db.collection('payments');
-
-const VALID_METHODS  = ['card', 'cash', 'yape', 'plin', 'mercadopago'];
-const VALID_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
 
 // GET todos los pagos
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
@@ -21,8 +19,8 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
 
 // GET pagos por estado
 router.get('/status/:status', verifyToken, requireAdmin, async (req, res) => {
-  if (!VALID_STATUSES.includes(req.params.status)) {
-    return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
+    if (!PAYMENT_STATUSES.includes(req.params.status)) {
+      return res.status(400).json({ error: `Estado inválido. Válidos: ${PAYMENT_STATUSES.join(', ')}` });
   }
   await tryPaginate(res, col, req.query, {
     orderBy: 'createdAt', filters: [{ field: 'paymentStatus', value: req.params.status }],

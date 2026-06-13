@@ -5,21 +5,9 @@ const { verifyToken, requireAdmin, requireCustomer, requireOwnerOrAdmin, require
 const { validate } = require('../middlewares/validate');
 const { createOrderSchema, updateOrderStatusSchema, updateOrderPaymentStatusSchema } = require('../validators/orderValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
+const { ORDER_STATUSES, ORDER_PAYMENT_STATUSES, PAYMENT_METHODS, ORDER_TRANSITIONS } = require('../constants');
 
 const col = db.collection('orders');
-
-const VALID_STATUSES = ['pending', 'confirmed', 'preparing', 'on_the_way', 'delivered', 'cancelled'];
-const VALID_PAYMENT_METHODS  = ['card', 'cash', 'yape', 'plin'];
-const VALID_PAYMENT_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
-
-const VALID_TRANSITIONS = {
-  pending:    ['confirmed', 'cancelled'],
-  confirmed:  ['preparing', 'cancelled'],
-  preparing:  ['on_the_way', 'cancelled'],
-  on_the_way: ['delivered'],
-  delivered:  [],
-  cancelled:  [],
-};
 
 // GET todas las órdenes
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
@@ -155,8 +143,8 @@ router.get('/customer/:userId', verifyToken, requireSelfOrAdmin('userId'), async
 
 // GET órdenes por estado
 router.get('/status/:status', verifyToken, requireAdmin, async (req, res) => {
-  if (!VALID_STATUSES.includes(req.params.status)) {
-    return res.status(400).json({ error: `Estado inválido. Válidos: ${VALID_STATUSES.join(', ')}` });
+  if (!ORDER_STATUSES.includes(req.params.status)) {
+    return res.status(400).json({ error: `Estado inválido. Válidos: ${ORDER_STATUSES.join(', ')}` });
   }
   await tryPaginate(res, col, req.query, {
     orderBy: 'createdAt', filters: [{ field: 'status', value: req.params.status }],
@@ -202,7 +190,7 @@ router.get('/:id', verifyToken, async (req, res) => {
 });
 
 // POST crear orden
-router.post('/', verifyToken, validate(createOrderSchema), requireCustomer, async (req, res) => {
+router.post('/', verifyToken, requireCustomer, validate(createOrderSchema), async (req, res) => {
   try {
     const {
       customer, shop, items,
@@ -215,8 +203,8 @@ router.post('/', verifyToken, validate(createOrderSchema), requireCustomer, asyn
       });
     }
 
-    if (!VALID_PAYMENT_METHODS.includes(payment.method)) {
-      return res.status(400).json({ error: `Método de pago inválido. Válidos: ${VALID_PAYMENT_METHODS.join(', ')}` });
+    if (!PAYMENT_METHODS.includes(payment.method)) {
+      return res.status(400).json({ error: `Método de pago inválido. Válidos: ${PAYMENT_METHODS.join(', ')}` });
     }
 
     // Verificar que el usuario autenticado es el dueño de la orden
@@ -327,7 +315,7 @@ router.patch('/:id/status', verifyToken, requireOwnerOrAdmin(async (req) => {
     const currentStatus = doc.data().status || 'pending';
     const { status } = req.body;
 
-    const allowed = VALID_TRANSITIONS[currentStatus] || [];
+    const allowed = ORDER_TRANSITIONS[currentStatus] || [];
     if (!allowed.includes(status)) {
       return res.status(400).json({ error: `Transición inválida de ${currentStatus} a ${status}` });
     }

@@ -1,12 +1,11 @@
 const { z } = require('zod');
-
-const VALID_TYPES = ['discount', 'combo', 'bogo'];
+const { PROMOTION_TYPES } = require('../constants');
 
 const createPromotionSchema = z.object({
   shop_id: z.string().min(1, 'shop_id es requerido'),
   name: z.string().min(1, 'name es requerido'),
-  type: z.enum(VALID_TYPES, {
-    errorMap: () => ({ message: `type inválido. Válidos: ${VALID_TYPES.join(', ')}` }),
+  type: z.enum(PROMOTION_TYPES, {
+    errorMap: () => ({ message: `type inválido. Válidos: ${PROMOTION_TYPES.join(', ')}` }),
   }),
   description: z.string().optional().default(''),
   discount_percentage: z.number().min(0).max(100).optional().nullable(),
@@ -21,8 +20,8 @@ const createPromotionSchema = z.object({
 
 const updatePromotionSchema = z.object({
   name: z.string().optional(),
-  type: z.enum(VALID_TYPES, {
-    errorMap: () => ({ message: `type inválido. Válidos: ${VALID_TYPES.join(', ')}` }),
+  type: z.enum(PROMOTION_TYPES, {
+    errorMap: () => ({ message: `type inválido. Válidos: ${PROMOTION_TYPES.join(', ')}` }),
   }).optional(),
   description: z.string().optional(),
   discount_percentage: z.number().min(0).max(100).optional().nullable(),
@@ -37,4 +36,8 @@ const updatePromotionSchema = z.object({
   message: 'Debe enviar al menos un campo para actualizar',
 });
 
-module.exports = { createPromotionSchema, updatePromotionSchema };
+const togglePromotionSchema = z.object({
+  is_active: z.boolean('is_active debe ser true o false'),
+});
+
+module.exports = { createPromotionSchema, updatePromotionSchema, togglePromotionSchema };
