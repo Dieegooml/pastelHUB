@@ -45,15 +45,15 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST crear producto
-router.post('/', verifyToken, (req, res, next) => {
-  req.body = mapProductFromRequest(req.body);
-  next();
-}, validate(createProductSchema), requireOwnerOrAdmin(async (req) => {
+router.post('/', verifyToken, requireOwnerOrAdmin(async (req) => {
   const shopDoc = await db.collection('pastryShops').doc(req.body.shop_id).get();
   if (!shopDoc.exists) throw Object.assign(new Error('La pastelería no existe'), { status: 404 });
   req.resourceDoc = shopDoc;
   return shopDoc.data().owner_id;
-}), async (req, res) => {
+}), (req, res, next) => {
+  req.body = mapProductFromRequest(req.body);
+  next();
+}, validate(createProductSchema), async (req, res) => {
   try {
     const {
       shop_id, category_id, name,
@@ -89,17 +89,17 @@ router.post('/', verifyToken, (req, res, next) => {
 });
 
 // PUT actualizar producto
-router.put('/:id', verifyToken, (req, res, next) => {
-  req.body = mapProductFromRequest(req.body);
-  next();
-}, validate(updateProductSchema), requireOwnerOrAdmin(async (req) => {
+router.put('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw Object.assign(new Error('Producto no encontrado'), { status: 404 });
   req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw Object.assign(new Error('La pastelería no existe'), { status: 404 });
   return shopDoc.data().owner_id;
-}), async (req, res) => {
+}), (req, res, next) => {
+  req.body = mapProductFromRequest(req.body);
+  next();
+}, validate(updateProductSchema), async (req, res) => {
   try {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });

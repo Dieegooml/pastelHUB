@@ -34,10 +34,10 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST crear pastelería
-router.post('/', verifyToken, (req, res, next) => {
+router.post('/', verifyToken, requireOwnerOrAdmin(async (req) => req.body.owner_id), (req, res, next) => {
   req.body = mapShopFromRequest(req.body);
   next();
-}, validate(createShopSchema), requireOwnerOrAdmin(async (req) => req.body.owner_id), async (req, res) => {
+}, validate(createShopSchema), async (req, res) => {
   try {
     const { owner_id, name, description, logo_url, banner_url, status } = req.body;
 
@@ -72,15 +72,15 @@ router.post('/', verifyToken, (req, res, next) => {
 });
 
 // PUT actualizar pastelería
-router.put('/:id', verifyToken, (req, res, next) => {
-  req.body = mapShopFromRequest(req.body);
-  next();
-}, validate(updateShopSchema), requireOwnerOrAdmin(async (req) => {
+router.put('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   return doc.data().owner_id;
-}), async (req, res) => {
+}), (req, res, next) => {
+  req.body = mapShopFromRequest(req.body);
+  next();
+}, validate(updateShopSchema), async (req, res) => {
   try {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });

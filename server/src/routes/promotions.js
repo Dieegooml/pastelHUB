@@ -53,11 +53,11 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST crear promoción (solo owner de la pastelería o admin)
-router.post('/', verifyToken, validate(createPromotionSchema), requireOwnerOrAdmin(async (req) => {
+router.post('/', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await db.collection('pastryShops').doc(req.body.shop_id).get();
   if (!doc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   return doc.data().owner_id;
-}), async (req, res) => {
+}), validate(createPromotionSchema), async (req, res) => {
   try {
     const {
       shop_id, name, type, description,
@@ -91,14 +91,14 @@ router.post('/', verifyToken, validate(createPromotionSchema), requireOwnerOrAdm
 });
 
 // PUT actualizar promoción
-router.put('/:id', verifyToken, validate(updatePromotionSchema), requireOwnerOrAdmin(async (req) => {
+router.put('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
   const doc = await col.doc(req.params.id).get();
   if (!doc.exists) throw Object.assign(new Error('Promoción no encontrada'), { status: 404 });
   req.resourceDoc = doc;
   const shopDoc = await db.collection('pastryShops').doc(doc.data().shop_id).get();
   if (!shopDoc.exists) throw Object.assign(new Error('Pastelería no encontrada'), { status: 404 });
   return shopDoc.data().owner_id;
-}), async (req, res) => {
+}), validate(updatePromotionSchema), async (req, res) => {
   try {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Promoción no encontrada' });
