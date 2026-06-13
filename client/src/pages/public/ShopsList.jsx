@@ -2,7 +2,9 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { shopsService } from '../../services/shopsService';
 import Navbar from '../../components/Navbar';
+import Tooltip from '../../components/Tooltip';
 import { colors, font, animFadeIn, animStagger } from '../../styles/theme';
+import { useDebounce } from '../../utils/useDebounce';
 
 const STATUS_CONFIG = {
   approved:  { bg: '#e1f5ee', color: '#1D9E75', label: 'Aprobado' },
@@ -45,6 +47,7 @@ export default function ShopsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 250);
 
   useEffect(() => {
     const load = async () => {
@@ -63,14 +66,14 @@ export default function ShopsList() {
 
   const filtered = useMemo(() => {
     const approved = shops.filter(s => s.approvalStatus === 'approved');
-    if (!search.trim()) return approved;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return approved;
+    const q = debouncedSearch.toLowerCase();
     return approved.filter(s =>
       (s.shopName || '').toLowerCase().includes(q) ||
       (s.city || '').toLowerCase().includes(q) ||
       (s.shopDescription || s.description || '').toLowerCase().includes(q)
     );
-  }, [shops, search]);
+  }, [shops, debouncedSearch]);
 
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
@@ -142,14 +145,16 @@ export default function ShopsList() {
                 }}
               />
               {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  style={{
-                    background: 'rgba(255,255,255,0.15)', border: 'none',
-                    borderRadius: '8px', padding: '6px 10px',
-                    cursor: 'pointer', fontSize: '14px', lineHeight: 1, color: '#fff',
-                  }}
-                >✕</button>
+                <Tooltip text="Limpiar búsqueda">
+                  <button
+                    onClick={() => setSearch('')}
+                    style={{
+                      background: 'rgba(255,255,255,0.15)', border: 'none',
+                      borderRadius: '8px', padding: '6px 10px',
+                      cursor: 'pointer', fontSize: '14px', lineHeight: 1, color: '#fff',
+                    }}
+                  >✕</button>
+                </Tooltip>
               )}
             </div>
           </div>
