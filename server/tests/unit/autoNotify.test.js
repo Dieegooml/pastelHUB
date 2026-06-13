@@ -31,12 +31,12 @@ describe('notifyUser', () => {
 
     expect(addFn).toHaveBeenCalledTimes(1);
     const data = addFn.mock.calls[0][0];
-    expect(data.userId).toBe('user-1');
+    expect(data.user_id).toBe('user-1');
     expect(data.type).toBe('review_approved');
     expect(data.title).toBe('Reseña aprobada');
     expect(data.message).toBe('Tu reseña fue aprobada');
-    expect(data.isRead).toBe(false);
-    expect(data.createdAt).toBeDefined();
+    expect(data.is_read).toBe(false);
+    expect(data.created_at).toBeDefined();
   });
 
   it('usa el type como title si no hay label', async () => {

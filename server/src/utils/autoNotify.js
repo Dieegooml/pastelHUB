@@ -16,12 +16,12 @@ async function notifyUser({ userId, type, message }) {
 
   try {
     await db.collection('notifications').add({
-      userId,
+      user_id: userId,
       type,
       title: TYPE_LABELS[type] || type,
       message,
-      isRead: false,
-      createdAt: new Date().toISOString(),
+      is_read: false,
+      created_at: new Date().toISOString(),
     });
   } catch (e) {
     logger.error('Error al crear notificación automática', { error: e.message, userId, type });

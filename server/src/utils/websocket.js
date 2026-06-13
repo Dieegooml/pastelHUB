@@ -225,10 +225,10 @@ async function handleNotificationRead(ws, msg) {
       return ws.send(JSON.stringify({ type: 'error', message: 'Notificación no encontrada' }));
     }
     const roles = ws.roles || [];
-    if (!roles.includes('admin') && doc.data().userId !== ws.userId) {
+    if (!roles.includes('admin') && doc.data().user_id !== ws.userId) {
       return ws.send(JSON.stringify({ type: 'error', message: 'No tienes permiso' }));
     }
-    await doc.ref.update({ isRead: true });
+    await doc.ref.update({ is_read: true });
     ws.send(JSON.stringify({ type: 'notification:read', notificationId, status: 'ok' }));
   } catch (e) {
     logger.error('WS notification:read error', { error: e.message });
