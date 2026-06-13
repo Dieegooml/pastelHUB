@@ -1,14 +1,15 @@
 # TESTING — PastelHub
 
-Cinco tipos de pruebas implementadas en el proyecto:
+Seis tipos de pruebas implementadas en el proyecto:
 
 | Tipo | Herramienta | Propósito | Archivos |
 |---|---|---|---|
-| **Unitarias / Integración** | Jest + Supertest | Verificar que cada endpoint funcione correctamente | `tests/unit/*.test.js` |
+| **Unitarias / Integración** | Jest + Supertest | Verificar que cada endpoint funcione correctamente | `tests/unit/*.test.js` (31 archivos, ~480 tests) |
+| **Unitarias (Frontend)** | Vitest + jsdom | Renderizado e interacciones de componentes React | `client/src/tests/*.test.jsx` (40 archivos, 391 tests) |
 | **Carga (Node.js)** | Node.js fetch | Simular 50-100 usuarios concurrentes | `tests/load/load-test-runner-*.js` |
 | **Carga (k6)** | k6 | Script alternativo de carga profesional | `tests/load/load-test.js` |
 | **Rate Limiting** | Node.js + fetch | Verificar limitadores | `tests/rate-limit/rate-limit-test.js` |
-| **E2E (Client)** | Playwright | Flujos críticos del frontend | `client/e2e/flows/*.spec.js` |
+| **E2E (Client)** | Playwright | Flujos críticos del frontend | `client/e2e/flows/*.spec.js` (7 archivos, 42 tests) |
 
 ---
 
@@ -20,7 +21,7 @@ Prueban la API REST directamente: disparan peticiones HTTP reales contra Express
 
 Firebase Admin SDK está **mockeado** — no requiere `serviceAccountKey.json` ni conexión real a Firestore.
 
-### Tests disponibles (17 archivos, ~450+ tests)
+### Tests disponibles (31 archivos, ~480 tests)
 
 | Archivo | Tests | Lo que cubre |
 |---|---|---|
@@ -30,23 +31,38 @@ Firebase Admin SDK está **mockeado** — no requiere `serviceAccountKey.json` n
 | `tests/unit/users.test.js` | 18 | CRUD usuarios + direcciones |
 | `tests/unit/shops.test.js` | 28 | CRUD pastelerías + schedules + categorías |
 | `tests/unit/products.test.js` | 22 | CRUD productos + variantes |
-| `tests/unit/orders.test.js` | 27 | CRUD órdenes + estados + cancelación + resumen |
+| `tests/unit/orders.test.js` | 28 | CRUD órdenes + estados + cancelación + resumen + **orden cancelada no transiciona** |
 | `tests/unit/reviews.test.js` | 22 | CRUD reseñas + moderación + respuestas + recálculo rating |
 | `tests/unit/payments.test.js` | 18 | CRUD pagos + gateway simulado |
-| `tests/unit/notifications.test.js` | 16 | CRUD notificaciones + bulk + push |
+| `tests/unit/notifications.test.js` | 17 | CRUD notificaciones + bulk + push + **FCM null safety** |
 | `tests/unit/reports.test.js` | 28 | CRUD reportes + asignación + resolución |
-| `tests/unit/customers.test.js` | 20 | CRUD customers + direcciones subcollection |
+| `tests/unit/customers.test.js` | 21 | CRUD customers + direcciones subcollection + **addresses vacío retorna []** |
 | `tests/unit/promotions.test.js` | 14 | CRUD promociones + toggle |
 | `tests/unit/support.test.js` | 18 | CRUD tickets + mensajes + asignación |
 | `tests/unit/chat.test.js` | 20 | Sesiones + mensajes + rate limit + fallback AI |
 | `tests/unit/backupRestore.test.js` | 12 | Validación + restauración de backups |
-| **Total** | **~450+** | |
+| `tests/unit/aiHelper.test.js` | 18 | AI helper, prompts, respuestas |
+| `tests/unit/auditLog.test.js` | 10 | Auditoría de eventos |
+| `tests/unit/autoNotify.test.js` | 12 | Auto-notificaciones (snake_case) |
+| `tests/unit/cache.test.js` | 22 | Cache stores, TTL, LRU eviction |
+| `tests/unit/fcmService.test.js` | 8 | FCM push notifications, null safety |
+| `tests/unit/invoices.test.js` | 14 | Generación de facturas PDF |
+| `tests/unit/logger.test.js` | 12 | Logging, niveles, formato |
+| `tests/unit/mappers.test.js` | 16 | Mapeo camelCase/snake_case |
+| `tests/unit/mercadopago.test.js` | 10 | MercadoPago SDK mock |
+| `tests/unit/paginate.test.js` | 8 | Paginación Firestore |
+| `tests/unit/paymentGateway.test.js` | 14 | Gateway simulado + procesos de pago |
+| `tests/unit/rateLimiter.test.js` | 16 | Rate limiting por rol |
+| `tests/unit/uploads.test.js` | 10 | Upload de imágenes, validación |
+| `tests/unit/validate.test.js` | 22 | Schemas Zod, errores de validación |
+| `tests/unit/websocket.test.js` | 12 | Conexión WebSocket, eventos, heartbeats |
+| **Total** | **~480** | |
 
 ### Ejecutar
 
 ```bash
 cd server
-npm test                          # Una vez (~450+ tests)
+npm test                          # Una vez (~480 tests)
 npm run test:coverage             # Con reporte de cobertura HTML
 npm run test:watch                # Modo watch
 ```
@@ -110,7 +126,34 @@ npx playwright show-report       # Ver reporte HTML
 
 ---
 
-## 3. PRUEBAS DE CARGA — Node.js nativo
+## 3. PRUEBAS UNITARIAS — Vitest (Frontend)
+
+### Descripción
+
+Pruebas de componentes React con Vitest + jsdom. Cubren renderizado, interacciones, estados de carga/error/vacío, y lógica de negocio del frontend.
+
+### Tests disponibles (40 archivos, 391 tests)
+
+| Categoría | Archivos | Tests | Lo que cubre |
+|-----------|----------|-------|-------------|
+| Auth | Login, Register, AuthLayout, AuthContext, ProtectedRoute | 85 | Login/register flows, validación, roles, redirect |
+| Layout | Navbar, Footer | 24 | Navegación por rol, enlaces, idioma |
+| Pages | ShopsList, ShopDetail, ProductDetail, Cart, Checkout, Profile, NotFound | 96 | Renderizado, filtros, carrito, checkout |
+| Admin | AdminUsers, AdminOrders, AdminShops | 52 | CRUD, estados, tabla de datos |
+| Owner | OwnerDashboard | 28 | Tabs, productos, órdenes, promociones |
+| Components | Chatbot, ImageUploader, PaymentGateway, ErrorBoundary, RateLimitDemo | 106 | Upload, pagos, chat, errores, rate limit |
+
+### Ejecutar
+
+```bash
+cd client
+npm test                              # 391 tests (40 archivos)
+npm run test:watch                    # Modo watch
+```
+
+---
+
+## 4. PRUEBAS DE CARGA — Node.js nativo
 
 ### Descripción
 
@@ -136,7 +179,7 @@ npm run load-test:real-auth       # Automático (100 VUs con auth real)
 
 ---
 
-## 4. PRUEBAS DE CARGA — k6 (alternativa)
+## 5. PRUEBAS DE CARGA — k6 (alternativa)
 
 ### Soporte: 100 a 50000 VUs con stages progresivos y thresholds dinámicos.
 
@@ -158,7 +201,7 @@ npm run load-test:k6:50000        # 50000 VUs completo
 
 ---
 
-## 5. PRUEBAS DE RATE LIMITING
+## 6. PRUEBAS DE RATE LIMITING
 
 Verifica que los rate limiters bloqueen en el número esperado.
 
@@ -173,13 +216,13 @@ npm run test:rate-limit           # Spawnea servidores, genera reporte HTML
 
 ```bash
 # Backend
-cd server && npm test                              # ~450+ tests unitarios
+cd server && npm test                              # ~480 tests unitarios (31 suites)
 cd server && npm run test:coverage                 # Con cobertura
 cd server && npm run test:rate-limit               # Rate limiting
 cd server && npm run load-test:k6:quick            # Carga k6 100 VUs
 
 # Frontend
-cd client && npm test                              # ~175+ tests Vitest
+cd client && npm test                              # 391 tests Vitest (40 archivos)
 cd client && npm run test:e2e                      # 42 tests E2E Playwright
 cd client && npm run test:watch                    # Modo watch Vitest
 ```
@@ -190,8 +233,9 @@ cd client && npm run test:watch                    # Modo watch Vitest
 
 | Reporte | Comando | Ruta |
 |---|---|---|
-| Unit tests HTML | `npm test` | `server/test-report.html` |
-| Cobertura | `npm run test:coverage` | `server/coverage/` |
+| Unit tests (server) HTML | `npm test` | `server/test-report.html` |
+| Cobertura (server) | `npm run test:coverage` | `server/coverage/` |
+| Unit tests (client) | `npm test` | `client/vitest-report.html` |
 | Load test | `npm run load-test` | `server/load-test-report.html` |
 | Rate limit | `npm run test:rate-limit` | `server/rate-limit-test-report.html` |
 | E2E Playwright | `npm run test:e2e` | `client/playwright-report/` |

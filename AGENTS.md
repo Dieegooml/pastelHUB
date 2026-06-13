@@ -48,6 +48,7 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
     src/
       app.js                  # Express app (15 routers, cache middleware, trace ID, role-based rate limiting)
       server.js               # Entry point (app.listen + WebSocket + cron backup)
+      constants.js            # Constantes centralizadas (ORDER_STATUSES, PAYMENT_METHODS, PROMOTION_TYPES, etc.)
       config/                 # firebase.js (admin SDK init), mercadopago.js
       middlewares/             # auth.js (7 middlewares), validate.js (Zod), rateLimiter.js (role-based)
       routes/                 # 16 routers: auth, users, shops, products, orders, reviews, payments, notifications, reports, customers, promotions, support, invoices, chat, backups, uploads

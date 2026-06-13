@@ -318,7 +318,20 @@ PastelHub implementa una API REST completa con **11 módulos principales** y **8
 
 ---
 
-## 1️⃣3️⃣ METRICS — Monitoreo Interno
+## 1️⃣3️⃣ ADMIN — Administración
+
+### Endpoints
+
+| Método | Ruta | Descripción | Auth | Status |
+|--------|------|-------------|------|--------|
+| GET | `/admin/cache/stats` | Estadísticas del sistema de caché (hits, misses, evicciones por store) | ✅ Admin | 200 |
+| POST | `/admin/backup` | Generar backup completo (GCS + Firestore history) | ✅ Admin | 200 |
+| POST | `/admin/backup/validate` | Validar integridad de un backup | ✅ Admin | 200 |
+| GET | `/admin/backup/info/:filename` | Obtener metadatos de un backup | ✅ Admin | 200 |
+
+---
+
+## 1️⃣4️⃣ METRICS — Monitoreo Interno
 
 | Método | Ruta | Descripción | Auth | Status |
 |--------|------|-------------|------|--------|
@@ -362,6 +375,6 @@ Todos los endpoints están consumidos por servicios en `client/src/services/`:
 
 ---
 
-**Documento generado:** 09/06/2026  
-**Total de Endpoints:** 85+  
+**Documento generado:** 13/06/2026  
+**Total de Endpoints:** 90+  
 **Estado:** ✅ Implementados y Documentados
