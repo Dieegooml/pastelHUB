@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { I18nProvider } from "./context/I18nContext";
 import { auth } from "./config/firebase";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -111,9 +112,11 @@ export default function App() {
   return (
     <ErrorBoundary>
     <AuthProvider>
+      <I18nProvider>
       <BrowserRouter>
         <AppContent />
       </BrowserRouter>
+      </I18nProvider>
     </AuthProvider>
     </ErrorBoundary>
   );
