@@ -59,8 +59,25 @@ async function handleResponse(res) {
   return data;
 }
 
+const RETRY_DELAYS = [200, 400, 800];
+const MAX_RETRIES = 3;
+
+async function retryableFetch(url, options, attempt = 0) {
+  try {
+    const res = await fetch(url, options);
+    if (res.status < 500 && res.status !== 429) return res;
+    if (attempt >= MAX_RETRIES) return res;
+    await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+    return retryableFetch(url, options, attempt + 1);
+  } catch (err) {
+    if (attempt >= MAX_RETRIES) throw err;
+    await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+    return retryableFetch(url, options, attempt + 1);
+  }
+}
+
 async function apiFetch(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await retryableFetch(`${BASE}${path}`, {
     ...options,
     headers: { ...(await getHeaders()), ...options.headers },
   });
