@@ -23,14 +23,14 @@ describe('NotFound (404)', () => {
     expect(screen.getByText('404')).toBeInTheDocument();
   });
 
-  it('muestra boton Volver al inicio', () => {
+  it('muestra boton Ir al inicio', () => {
     renderNotFound();
-    expect(screen.getByText('Volver al inicio')).toBeInTheDocument();
+    expect(screen.getByText('Ir al inicio')).toBeInTheDocument();
   });
 
-  it('navega a / al hacer click en Volver al inicio', () => {
+  it('navega a / al hacer click en Ir al inicio', () => {
     renderNotFound();
-    fireEvent.click(screen.getByText('Volver al inicio'));
+    fireEvent.click(screen.getByText('Ir al inicio'));
     expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 });
