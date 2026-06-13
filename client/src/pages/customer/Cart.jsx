@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
+import Tooltip from '../../components/Tooltip';
 import { colors, font, btnPrimary, animFadeIn, animStagger } from '../../styles/theme';
 
 export default function Cart() {
@@ -36,7 +37,28 @@ export default function Cart() {
 
   const total = items.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
 
-  if (!loaded) return null;
+  if (!loaded) return (
+    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
+      <Navbar />
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
+        <div style={{ height: '28px', width: '120px', background: '#e0e0e0', borderRadius: '4px', marginBottom: '12px', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)' }} />
+        <div style={{ height: '3px', width: '60px', background: '#e0e0e0', borderRadius: '99px', marginBottom: '1.5rem', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)' }} />
+        {[1, 2, 3].map(i => (
+          <div key={i} style={{
+            display: 'flex', alignItems: 'center', gap: '16px',
+            background: colors.white, borderRadius: '12px', padding: '16px',
+            marginBottom: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '8px', background: '#e0e0e0', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ height: '15px', width: '60%', background: '#e0e0e0', borderRadius: '4px', marginBottom: '8px', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)' }} />
+              <div style={{ height: '13px', width: '30%', background: '#e0e0e0', borderRadius: '4px', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)' }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
@@ -92,25 +114,31 @@ export default function Cart() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button onClick={() => updateQuantity(item.id, -1)} style={{
-                      width: '30px', height: '30px', borderRadius: '50%', border: `1px solid ${colors.border}`,
-                      background: colors.white, cursor: 'pointer', fontSize: '16px', fontWeight: 600,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text,
-                    }}>−</button>
+                    <Tooltip text="Disminuir cantidad">
+                      <button onClick={() => updateQuantity(item.id, -1)} style={{
+                        width: '30px', height: '30px', borderRadius: '50%', border: `1px solid ${colors.border}`,
+                        background: colors.white, cursor: 'pointer', fontSize: '16px', fontWeight: 600,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text,
+                      }}>−</button>
+                    </Tooltip>
                     <span style={{ fontSize: '15px', fontWeight: 600, fontFamily: font.body, minWidth: '24px', textAlign: 'center' }}>{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.id, 1)} style={{
-                      width: '30px', height: '30px', borderRadius: '50%', border: `1px solid ${colors.border}`,
-                      background: colors.white, cursor: 'pointer', fontSize: '16px', fontWeight: 600,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text,
-                    }}>+</button>
+                    <Tooltip text="Aumentar cantidad">
+                      <button onClick={() => updateQuantity(item.id, 1)} style={{
+                        width: '30px', height: '30px', borderRadius: '50%', border: `1px solid ${colors.border}`,
+                        background: colors.white, cursor: 'pointer', fontSize: '16px', fontWeight: 600,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text,
+                      }}>+</button>
+                    </Tooltip>
                   </div>
                   <div style={{ fontSize: '15px', fontWeight: 700, fontFamily: font.body, color: colors.primary, minWidth: '80px', textAlign: 'right' }}>
                     S/ {((item.price || 0) * item.quantity).toFixed(2)}
                   </div>
-                  <button onClick={() => removeItem(item.id)} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px',
-                    color: colors.textMuted, padding: '4px',
-                  }}>✕</button>
+                  <Tooltip text="Eliminar producto">
+                    <button onClick={() => removeItem(item.id)} style={{
+                      background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px',
+                      color: colors.textMuted, padding: '4px',
+                    }}>✕</button>
+                  </Tooltip>
                 </div>
               ))}
             </div>

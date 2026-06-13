@@ -47,9 +47,21 @@ function AddressForm({ initial, onSave, onCancel }) {
   );
 }
 
+function SkeletonBlock({ height, width, mb }) {
+  return (
+    <div style={{
+      height: height || '16px', width: width || '100%',
+      background: '#e0e0e0', borderRadius: '6px', marginBottom: mb || '12px',
+      animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%',
+      backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+    }} />
+  );
+}
+
 export default function Profile() {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [fullName, setFullName] = useState('');
@@ -64,6 +76,7 @@ export default function Profile() {
 
   const loadProfile = useCallback(async () => {
     if (!user?.uid) return;
+    setLoading(true);
     try {
       const u = await usersService.getById(user.uid);
       if (u) {
@@ -73,6 +86,7 @@ export default function Profile() {
         setAddresses(u.addresses || []);
       }
     } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   }, [user]);
 
   useEffect(() => { loadProfile(); }, [loadProfile]);
@@ -180,6 +194,34 @@ export default function Profile() {
         <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '24px' }}>Mi Perfil</h2>
         <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.5rem' }} />
 
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#e0e0e0', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <SkeletonBlock height="18px" width="50%" mb="8px" />
+                  <SkeletonBlock height="13px" width="35%" mb="0" />
+                </div>
+              </div>
+              <SkeletonBlock height="80px" mb="12px" />
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <SkeletonBlock height="22px" width="80px" mb="0" />
+                <SkeletonBlock height="22px" width="60px" mb="0" />
+              </div>
+            </div>
+            <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+              <SkeletonBlock height="16px" width="40%" mb="16px" />
+              <SkeletonBlock height="42px" mb="14px" />
+              <SkeletonBlock height="42px" mb="0" />
+            </div>
+            <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+              <SkeletonBlock height="16px" width="30%" mb="16px" />
+              <SkeletonBlock height="14px" width="80%" mb="0" />
+            </div>
+          </div>
+        ) : (
+          <>
         {error && <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
         {success && <div style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
 
@@ -321,6 +363,8 @@ export default function Profile() {
             <p style={{ fontFamily: font.body, fontSize: '13px', color: colors.textSecondary, margin: '0 0 12px' }}>Administra tus pastelerías, productos y órdenes desde el panel de dueño.</p>
             <button onClick={() => navigate('/owner')} style={btnPrimary}>Ir al panel de dueño</button>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>
