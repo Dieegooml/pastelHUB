@@ -2,14 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { admin, bucket } = require('../config/firebase');
 const { verifyToken } = require('../middlewares/auth');
-
-const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_SIZE = 5 * 1024 * 1024;
-const MIME_EXT = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-};
+const { ALLOWED_MIMES, MAX_IMAGE_SIZE, MIME_EXT } = require('../constants');
 
 function extractBase64Data(dataUrl) {
   const match = dataUrl.match(/^data:(image\/(jpeg|png|webp));base64,(.+)$/);
@@ -41,7 +34,7 @@ router.post('/shop-image', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'image y shop_id son requeridos' });
     }
     const { mime, buffer, size } = extractBase64Data(image);
-    if (size > MAX_SIZE) {
+    if (size > MAX_IMAGE_SIZE) {
       return res.status(400).json({ error: 'La imagen no debe superar 5MB' });
     }
     const imgType = type === 'banner' ? 'banner' : 'logo';
@@ -60,7 +53,7 @@ router.post('/product-image', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'image y shop_id son requeridos' });
     }
     const { mime, buffer, size } = extractBase64Data(image);
-    if (size > MAX_SIZE) {
+    if (size > MAX_IMAGE_SIZE) {
       return res.status(400).json({ error: 'La imagen no debe superar 5MB' });
     }
     const suffix = product_id || Date.now().toString();
@@ -82,7 +75,7 @@ router.post('/profile-image', verifyToken, async (req, res) => {
       return res.status(403).json({ error: 'No puedes subir foto para otro usuario' });
     }
     const { mime, buffer, size } = extractBase64Data(image);
-    if (size > MAX_SIZE) {
+    if (size > MAX_IMAGE_SIZE) {
       return res.status(400).json({ error: 'La imagen no debe superar 5MB' });
     }
     const url = await uploadToStorage(buffer, mime, `profiles/${user_id}`);
@@ -90,6 +83,10 @@ router.post('/profile-image', verifyToken, async (req, res) => {
   } catch (e) {
     res.status(400).json({ error: e.message || 'Error al subir imagen de perfil' });
   }
+});
+
+router.use((req, res) => {
+  res.status(404).json({ error: 'Ruta no encontrada' });
 });
 
 module.exports = router;
