@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { chatService } from '../services/chatService';
 import websocketService from '../services/websocketService';
+import Tooltip from './Tooltip';
 import { colors, font } from '../styles/theme';
 import { renderMarkdown } from '../utils/markdown';
 
@@ -217,15 +218,17 @@ export default function Chatbot() {
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        style={bubbleStyle}
-        onMouseEnter={e => e.target.style.transform = 'scale(1.08)'}
-        onMouseLeave={e => e.target.style.transform = 'scale(1)'}
-        aria-label="Chatbot"
-      >
-        {isOpen ? '✕' : '💬'}
-      </button>
+      <Tooltip text={isOpen ? 'Cerrar chat' : 'Abrir chat'} position="left">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          style={bubbleStyle}
+          onMouseEnter={e => e.target.style.transform = 'scale(1.08)'}
+          onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+          aria-label="Chatbot"
+        >
+          {isOpen ? '✕' : '💬'}
+        </button>
+      </Tooltip>
 
       {isOpen && (
         <div style={panelStyle}>
@@ -246,13 +249,15 @@ export default function Chatbot() {
               }}>
                 {showHistory ? 'Chat' : 'Historial'}
               </button>
-              <button onClick={handleNewSession} disabled={creating} style={{
-                padding: '4px 8px', borderRadius: '6px', border: 'none',
-                background: 'rgba(255,255,255,0.2)', color: '#fff',
-                fontSize: '16px', cursor: 'pointer', lineHeight: '1',
-              }}>
-                +
-              </button>
+              <Tooltip text="Nueva conversación">
+                <button onClick={handleNewSession} disabled={creating} style={{
+                  padding: '4px 8px', borderRadius: '6px', border: 'none',
+                  background: 'rgba(255,255,255,0.2)', color: '#fff',
+                  fontSize: '16px', cursor: 'pointer', lineHeight: '1',
+                }}>
+                  +
+                </button>
+              </Tooltip>
             </div>
           </div>
 
@@ -274,10 +279,12 @@ export default function Chatbot() {
                       <div style={{ fontWeight: 500 }}>{s.context || 'Chat ' + s.createdAt?.slice(0, 10)}</div>
                       <div style={{ fontSize: '11px', color: colors.textMuted }}>{s.createdAt ? new Date(s.createdAt).toLocaleDateString() : ''}</div>
                     </div>
-                    <button onClick={e => { e.stopPropagation(); handleDeleteSession(s.id); }} style={{
-                      padding: '2px 6px', borderRadius: '4px', border: 'none',
-                      background: 'transparent', color: colors.textMuted, cursor: 'pointer', fontSize: '14px',
-                    }}>🗑️</button>
+                    <Tooltip text="Eliminar chat">
+                      <button onClick={e => { e.stopPropagation(); handleDeleteSession(s.id); }} style={{
+                        padding: '2px 6px', borderRadius: '4px', border: 'none',
+                        background: 'transparent', color: colors.textMuted, cursor: 'pointer', fontSize: '14px',
+                      }}>🗑️</button>
+                    </Tooltip>
                   </div>
                 ))
               )}
@@ -395,16 +402,18 @@ export default function Chatbot() {
                       background: colors.white,
                     }}
                   />
-                  <button onClick={handleSend} disabled={loading || aiTyping || !input.trim()} style={{
-                    width: '40px', height: '40px', borderRadius: '50%', border: 'none',
-                    background: loading || aiTyping || !input.trim() ? colors.grayBg : colors.accent,
-                    color: loading || aiTyping || !input.trim() ? colors.textMuted : '#fff',
-                    fontSize: '16px', cursor: loading || aiTyping || !input.trim() ? 'default' : 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s ease',
-                  }}>
-                    ➤
-                  </button>
+                  <Tooltip text="Enviar mensaje">
+                    <button onClick={handleSend} disabled={loading || aiTyping || !input.trim()} style={{
+                      width: '40px', height: '40px', borderRadius: '50%', border: 'none',
+                      background: loading || aiTyping || !input.trim() ? colors.grayBg : colors.accent,
+                      color: loading || aiTyping || !input.trim() ? colors.textMuted : '#fff',
+                      fontSize: '16px', cursor: loading || aiTyping || !input.trim() ? 'default' : 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                    }}>
+                      ➤
+                    </button>
+                  </Tooltip>
                 </div>
               )}
             </>

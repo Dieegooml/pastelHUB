@@ -4,6 +4,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
+import Tooltip from './Tooltip';
 import { colors, font } from '../styles/theme';
 import { notificationsService } from '../services/notificationsService';
 
@@ -230,13 +231,14 @@ export default function Navbar() {
         </div>
 
         <div ref={bellRef} style={{ position: 'relative' }}>
-          <button onClick={handleBellClick} style={{
-            padding: '8px', borderRadius: '99px', border: `1px solid ${colors.border}`,
-            fontSize: '18px', lineHeight: '1', cursor: 'pointer',
-            background: colors.white, color: colors.text, transition: 'all 0.2s ease',
-            position: 'relative',
-          }}>
-            {'\u{1F514}'}
+          <Tooltip text="Notificaciones">
+            <button onClick={handleBellClick} style={{
+              padding: '8px', borderRadius: '99px', border: `1px solid ${colors.border}`,
+              fontSize: '18px', lineHeight: '1', cursor: 'pointer',
+              background: colors.white, color: colors.text, transition: 'all 0.2s ease',
+              position: 'relative',
+            }}>
+              {'\u{1F514}'}
             {unreadCount > 0 && (
               <span style={{
                 position: 'absolute', top: '-4px', right: '-6px',
@@ -251,6 +253,7 @@ export default function Navbar() {
               </span>
             )}
           </button>
+          </Tooltip>
 
           {showDropdown && (
             <div ref={dropdownRef} style={{

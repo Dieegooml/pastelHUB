@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { productsService } from '../../services/productsService';
 import { shopsService } from '../../services/shopsService';
 import Navbar from '../../components/Navbar';
+import Tooltip from '../../components/Tooltip';
 import { colors, font, btnPrimary, animStagger, animFadeIn } from '../../styles/theme';
 
 export default function ProductDetail() {
@@ -226,27 +227,31 @@ export default function ProductDetail() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
               <span style={{ fontFamily: font.body, fontSize: '14px', color: colors.text }}>Cantidad:</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0', border: `1px solid ${colors.border}`, borderRadius: '8px', overflow: 'hidden' }}>
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1}
-                  style={{
-                    width: '36px', height: '36px', border: 'none',
-                    background: colors.grayLight, cursor: quantity <= 1 ? 'not-allowed' : 'pointer',
-                    fontSize: '16px', color: colors.text, opacity: quantity <= 1 ? 0.4 : 1,
-                  }}
-                >−</button>
+                <Tooltip text="Disminuir cantidad">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
+                    style={{
+                      width: '36px', height: '36px', border: 'none',
+                      background: colors.grayLight, cursor: quantity <= 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '16px', color: colors.text, opacity: quantity <= 1 ? 0.4 : 1,
+                    }}
+                  >−</button>
+                </Tooltip>
                 <span style={{
                   width: '44px', textAlign: 'center',
                   fontFamily: font.body, fontSize: '15px', color: colors.text,
                 }}>{quantity}</span>
-                <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  style={{
-                    width: '36px', height: '36px', border: 'none',
-                    background: colors.grayLight, cursor: 'pointer',
-                    fontSize: '16px', color: colors.text,
-                  }}
-                >+</button>
+                <Tooltip text="Aumentar cantidad">
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    style={{
+                      width: '36px', height: '36px', border: 'none',
+                      background: colors.grayLight, cursor: 'pointer',
+                      fontSize: '16px', color: colors.text,
+                    }}
+                  >+</button>
+                </Tooltip>
               </div>
             </div>
 
