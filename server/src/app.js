@@ -7,6 +7,7 @@ const { rateLimit, defaultKeyGenerator } = require('express-rate-limit');
 const logger = require('./utils/logger');
 const { createTraceMiddleware } = require('./utils/logger');
 const { createRoleLimiter } = require('./middlewares/rateLimiter');
+const { verifyToken, requireAdmin } = require('./middlewares/auth');
 const { db } = require('./config/firebase');
 const cache = require('./utils/cache');
 
@@ -203,7 +204,7 @@ app.get('/api/metrics', (req, res) => {
   });
 });
 
-app.get('/api/admin/cache/stats', (req, res) => {
+app.get('/api/admin/cache/stats', verifyToken, requireAdmin, (req, res) => {
   res.json(cache.allStats());
 });
 
