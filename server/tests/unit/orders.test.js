@@ -183,6 +183,17 @@ describe('PATCH /api/orders/:id/status', () => {
       .send({ status: 'confirmed' });
     expect(res.status).toBe(404);
   });
+
+  it('responde 400 si la orden esta cancelada (transicion invalida)', async () => {
+    global.mockToken('admin-uid', ['admin']);
+    global.mockDocExists({ status: 'cancelled', status_history: ['pending', 'cancelled'] });
+    const res = await request(app)
+      .patch('/api/orders/o-1/status')
+      .set('Authorization', 'Bearer token-valido')
+      .send({ status: 'confirmed' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('Transición inválida');
+  });
 });
 
 describe('PATCH /api/orders/:id/payment-status', () => {

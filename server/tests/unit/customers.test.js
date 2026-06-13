@@ -230,6 +230,17 @@ describe('GET /api/customers/:id/addresses', () => {
     expect(res.body).toHaveLength(1);
   });
 
+  it('responde 200 con lista vacia si no hay direcciones', async () => {
+    global.mockToken('admin-uid', ['admin']);
+    global.mockFirestore.get.mockResolvedValueOnce({ exists: true, data: () => ({ defaultAddressId: '' }), id: 'c-1' });
+    global.mockFirestore.get.mockResolvedValueOnce({ docs: [], empty: true });
+    const res = await request(app)
+      .get('/api/customers/c-1/addresses')
+      .set('Authorization', 'Bearer token-valido');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
   it('responde 404 si el customer no existe', async () => {
     global.mockToken('admin-uid', ['admin']);
     global.mockDocNotExists();

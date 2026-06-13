@@ -111,3 +111,25 @@ describe('removeFcmToken', () => {
     expect(batchMock.commit).toHaveBeenCalled();
   });
 });
+
+describe('Null safety', () => {
+  it('no falla cuando messaging no esta disponible', async () => {
+    jest.isolateModules(async () => {
+      jest.resetModules();
+      jest.mock('../../src/config/firebase', () => ({
+        admin: {
+          messaging: () => { throw new Error('FCM not available'); },
+          auth: () => ({ verifyIdToken: jest.fn() }),
+          firestore: () => ({ collection: jest.fn() }),
+        },
+        db: { collection: jest.fn(() => ({ doc: jest.fn(() => ({ get: jest.fn() })) })) },
+      }));
+      const { sendPush: sendNull } = require('../../src/utils/fcmService');
+      await expect(sendNull('user-1', 'Test', 'Body')).resolves.not.toThrow();
+    });
+  });
+
+  it('no falla cuando userId es undefined', async () => {
+    await expect(sendPush(undefined, 'Test', 'Body')).resolves.not.toThrow();
+  });
+});
