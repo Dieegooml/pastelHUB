@@ -13,7 +13,7 @@ const createUserSchema = z.object({
     street: z.string().min(1, 'street es requerido'),
     city: z.string().min(1, 'city es requerido'),
     district: z.string().optional().default(''),
-    isDefault: z.boolean().optional().default(false),
+    is_default: z.boolean().optional().default(false),
   })).optional().default([]),
 });
 
