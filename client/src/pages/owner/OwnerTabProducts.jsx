@@ -3,6 +3,7 @@ import { colors, font, inputStyle, btnSmallPrimary, btnGhost, btnDanger, tableHe
 import { productsService } from '../../services/productsService';
 import { smallInput, sectionTitle } from './ownerConstants';
 import ImageUploader from '../../components/ImageUploader';
+import PropTypes from 'prop-types';
 
 export default function OwnerTabProducts({ selectedShop, setError, setSuccess }) {
   const [products, setProducts] = useState([]);
@@ -132,3 +133,9 @@ export default function OwnerTabProducts({ selectedShop, setError, setSuccess })
     </div>
   );
 }
+
+OwnerTabProducts.propTypes = {
+  selectedShop: PropTypes.object,
+  setError: PropTypes.func,
+  setSuccess: PropTypes.func,
+};

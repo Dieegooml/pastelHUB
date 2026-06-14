@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { colors, font, selectStyle, badge, btnSmallPrimary, tableHeaderStyle, animStagger } from '../../styles/theme';
 import { ordersService } from '../../services/ordersService';
 import { STATUS_TRANSLATIONS, STATUS_COLORS, ALL_STATUSES } from './ownerConstants';
+import PropTypes from 'prop-types';
 
 export default function OwnerTabOrders({ selectedShop, setError, setSuccess }) {
   const [orders, setOrders] = useState([]);
@@ -67,3 +68,9 @@ export default function OwnerTabOrders({ selectedShop, setError, setSuccess }) {
     </div>
   );
 }
+
+OwnerTabOrders.propTypes = {
+  selectedShop: PropTypes.object,
+  setError: PropTypes.func,
+  setSuccess: PropTypes.func,
+};

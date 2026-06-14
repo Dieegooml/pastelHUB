@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { colors, font, badge as badgeStyle, animStagger, animFadeIn } from '../../styles/theme';
 import { invoicesService } from '../../services/invoicesService';
+import PropTypes from 'prop-types';
 
 const STATUS_COLORS = { issued: { bg: '#e8f5e9', color: '#2e7d32' }, cancelled: { bg: '#fee2e2', color: '#ef4444' } };
 const STATUS_TRANS = { issued: 'Emitida', cancelled: 'Anulada' };
@@ -115,3 +116,9 @@ export default function OwnerTabBoletas({ selectedShop, setError, setSuccess }) 
     </div>
   );
 }
+
+OwnerTabBoletas.propTypes = {
+  selectedShop: PropTypes.object,
+  setError: PropTypes.func,
+  setSuccess: PropTypes.func,
+};

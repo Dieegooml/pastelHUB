@@ -3,6 +3,7 @@ import { colors, font, inputStyle, btnPrimary } from '../../styles/theme';
 import { shopsService } from '../../services/shopsService';
 import { smallInput, sectionTitle } from './ownerConstants';
 import ImageUploader from '../../components/ImageUploader';
+import PropTypes from 'prop-types';
 
 export default function OwnerTabInfo({ selectedShop, setError, setSuccess, onShopUpdate }) {
   const [shopForm, setShopForm] = useState({
@@ -84,3 +85,10 @@ export default function OwnerTabInfo({ selectedShop, setError, setSuccess, onSho
     </div>
   );
 }
+
+OwnerTabInfo.propTypes = {
+  selectedShop: PropTypes.object,
+  setError: PropTypes.func,
+  setSuccess: PropTypes.func,
+  onShopUpdate: PropTypes.func,
+};

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { colors, font, inputStyle, selectStyle, badge, btnSmallPrimary, btnGhost, btnDanger, animStagger } from '../../styles/theme';
 import { promotionsService } from '../../services/promotionsService';
 import { smallInput, sectionTitle, formatDate, PROMO_TYPE_LABELS } from './ownerConstants';
+import PropTypes from 'prop-types';
 
 const INITIAL_PROMO_FORM = {
   promoName: '', promoType: 'discount', promoDescription: '',
@@ -195,3 +196,9 @@ export default function OwnerTabPromotions({ selectedShop, setError, setSuccess 
     </div>
   );
 }
+
+OwnerTabPromotions.propTypes = {
+  selectedShop: PropTypes.object,
+  setError: PropTypes.func,
+  setSuccess: PropTypes.func,
+};

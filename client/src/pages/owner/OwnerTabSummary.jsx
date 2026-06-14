@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { colors, font } from '../../styles/theme';
 import { ordersService } from '../../services/ordersService';
 import { STATUS_TRANSLATIONS, STATUS_COLORS } from './ownerConstants';
+import PropTypes from 'prop-types';
 
 export default function OwnerTabSummary({ selectedShop, setError, setSuccess }) {
   const [summary, setSummary] = useState(null);
@@ -186,3 +187,9 @@ export default function OwnerTabSummary({ selectedShop, setError, setSuccess }) 
     </div>
   );
 }
+
+OwnerTabSummary.propTypes = {
+  selectedShop: PropTypes.object,
+  setError: PropTypes.func,
+  setSuccess: PropTypes.func,
+};
