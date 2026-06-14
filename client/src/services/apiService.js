@@ -1,6 +1,5 @@
 import { auth } from '../config/firebase';
 import { signOut } from 'firebase/auth';
-import { triggerRateLimit } from './rateLimitHandler';
 
 const BASE = import.meta.env.VITE_API_URL || '';
 
@@ -43,7 +42,6 @@ async function getHeaders() {
 }
 
 async function handleResponse(res) {
-  if (res.status === 429) triggerRateLimit();
   const text = await res.text();
   let data;
   try {
@@ -65,7 +63,7 @@ const MAX_RETRIES = 3;
 async function retryableFetch(url, options, attempt = 0) {
   try {
     const res = await fetch(url, options);
-    if (res.status < 500 && res.status !== 429) return res;
+    if (res.status < 500) return res;
     if (attempt >= MAX_RETRIES) return res;
     await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
     return retryableFetch(url, options, attempt + 1);

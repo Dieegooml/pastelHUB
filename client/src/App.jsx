@@ -6,7 +6,6 @@ import { auth } from "./config/firebase";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Chatbot from "./components/Chatbot";
-import RateLimitToast from "./components/RateLimitToast";
 import websocketService from "./services/websocketService";
 import Login from "./pages/public/Login";
 import Register from "./pages/public/Register";
@@ -103,7 +102,6 @@ function AppContent() {
         </Routes>
         <Footer />
         {!hideChat && <Chatbot />}
-        <RateLimitToast />
       </>
     );
   }
