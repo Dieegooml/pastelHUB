@@ -18,17 +18,6 @@ function invalidateCountCache(userId) {
   cache.del(countCacheStore, `unread_${userId}`);
 }
 
-const VALID_TYPES = [
-  'order_update',
-  'new_review',
-  'shop_approved',
-  'shop_rejected',
-  'shop_suspended',
-  'report_resolved',
-  'new_order',
-  'payment_confirmed',
-];
-
 // GET todas las notificaciones
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
   await tryPaginate(res, col, req.query, { orderBy: 'created_at' }, 'Error al obtener notificaciones');
