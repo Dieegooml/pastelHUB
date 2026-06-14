@@ -1,4 +1,5 @@
 const logger = require('./logger');
+const { db } = require('../config/firebase');
 
 let messaging = null;
 try {
@@ -14,14 +15,13 @@ async function sendPush(userId, title, body, data = {}) {
     return;
   }
   try {
-    const { db } = require('../config/firebase');
     const tokensSnap = await db.collection('users').doc(userId).collection('fcmTokens').get();
     const tokens = [];
     tokensSnap.forEach(doc => { if (doc.data().token) tokens.push(doc.data().token); });
     if (tokens.length === 0) return;
     const message = {
       notification: { title, body },
-      data: { ...data, click_action: 'FLUTTER_NOTIFICATION_CLICK' },
+      data: { ...data, click_action: 'PASTELHUB_NOTIFICATION_CLICK' },
       tokens,
     };
     const response = await messaging.sendEachForMulticast(message);
@@ -48,7 +48,6 @@ async function sendPush(userId, title, body, data = {}) {
 
 async function saveFcmToken(userId, token) {
   try {
-    const { db } = require('../config/firebase');
     const ref = db.collection('users').doc(userId).collection('fcmTokens').doc();
     await ref.set({ token, createdAt: new Date().toISOString() });
     return true;
@@ -60,7 +59,6 @@ async function saveFcmToken(userId, token) {
 
 async function removeFcmToken(userId, token) {
   try {
-    const { db } = require('../config/firebase');
     const snap = await db.collection('users').doc(userId).collection('fcmTokens')
       .where('token', '==', token).get();
     const batch = db.batch();
