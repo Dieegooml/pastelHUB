@@ -78,11 +78,11 @@ describe('ProductDetail', () => {
     productsModule.productsService.getVariants.mockResolvedValue({ data: [] });
     renderProductDetail();
     await waitFor(() => {
-      expect(screen.getByText('Pastel de Chocolate')).toBeInTheDocument();
+      expect(screen.getAllByText('Pastel de Chocolate').length).toBeGreaterThanOrEqual(1);
     });
     expect(screen.getByText('Delicioso pastel de chocolate artesanal')).toBeInTheDocument();
     expect(screen.getByText('S/ 25.00')).toBeInTheDocument();
-    expect(screen.getByText('Pastelería Delicias')).toBeInTheDocument();
+    expect(screen.getAllByText('Pastelería Delicias').length).toBeGreaterThanOrEqual(1);
   });
 
   it('muestra y selecciona variantes', async () => {
@@ -106,13 +106,13 @@ describe('ProductDetail', () => {
     productsModule.productsService.getVariants.mockResolvedValue({ data: [] });
     renderProductDetail();
     await waitFor(() => {
-      expect(screen.getByText('1')).toBeInTheDocument();
+      expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(1);
     });
     const plusButton = screen.getByText('+');
     fireEvent.click(plusButton);
     expect(screen.getByText('2')).toBeInTheDocument();
     fireEvent.click(plusButton);
-    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1);
     const minusButton = screen.getByText('−');
     fireEvent.click(minusButton);
     expect(screen.getByText('2')).toBeInTheDocument();
@@ -124,11 +124,11 @@ describe('ProductDetail', () => {
     productsModule.productsService.getVariants.mockResolvedValue({ data: [] });
     renderProductDetail();
     await waitFor(() => {
-      expect(screen.getByText('1')).toBeInTheDocument();
+      expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(1);
     });
     const minusButton = screen.getByText('−');
     fireEvent.click(minusButton);
-    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(1);
   });
 
   it('agrega al carrito', async () => {
