@@ -19,6 +19,7 @@ const ALL_COLLECTIONS = [
   'users', 'customers', 'pastryShops', 'products',
   'orders', 'payments', 'reviews', 'notifications',
   'reports', 'promotions', 'chatSessions', 'supportTickets',
+  'invoices',
 ];
 
 const BACKUP_HISTORY_COLLECTION = 'backupHistory';
