@@ -25,7 +25,8 @@ async function backup() {
   console.log(`   Documentos: ${result.meta.total}`);
   console.log(`   Ubicación: ${filePath}\n`);
 
-  const metaPath = filePath.replace(/\.json\.gz$/, '.meta.json');
+  const parsedPath = path.parse(filePath);
+  const metaPath = path.join(parsedPath.dir, parsedPath.name.replace(/\.json$/, '') + '.meta.json');
   fs.writeFileSync(metaPath, JSON.stringify(result.meta, null, 2));
   console.log(`   Meta: ${metaPath}\n`);
 }
