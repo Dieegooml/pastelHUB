@@ -97,6 +97,7 @@ router.post('/', verifyToken, requireAdmin, validate(generateInvoiceSchema), asy
       status: 'issued',
       issueDate: new Date().toISOString(),
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     const ref = await col.add(data);
@@ -380,6 +381,7 @@ async function generateInvoiceFromPayment(orderId) {
       status: 'issued',
       issueDate: new Date().toISOString(),
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     const ref = await col.add(data);
