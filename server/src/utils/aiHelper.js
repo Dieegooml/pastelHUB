@@ -110,7 +110,7 @@ async function getAiResponse(userMessage, userData, catalogData) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
-    const roleKey = getRoleKey(userData.roles || []);
+    const roleKey = getRoleKey(userData?.roles || []);
     const rules = ROLE_RULES[roleKey];
     const roleLabels = { admin: 'administrador', moderator: 'moderador', owner: 'dueño de pastelería', customer: 'cliente' };
     const roleLabel = roleLabels[roleKey] || 'cliente';
