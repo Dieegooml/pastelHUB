@@ -3,26 +3,6 @@ const logger = require('./logger');
 
 const catalogCache = { data: null, timestamp: 0 };
 const CACHE_TTL = 60000;
-const userRateLimits = new Map();
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entries] of userRateLimits) {
-    const valid = entries.filter(t => now - t < 60000);
-    if (valid.length === 0) userRateLimits.delete(key);
-    else userRateLimits.set(key, valid);
-  }
-}, 30000);
-
-function checkRateLimit(uid) {
-  const now = Date.now();
-  const entries = userRateLimits.get(uid) || [];
-  const valid = entries.filter(t => now - t < 60000);
-  if (valid.length >= 10) return false;
-  valid.push(now);
-  userRateLimits.set(uid, valid);
-  return true;
-}
 
 async function fetchCatalogData() {
   const now = Date.now();
@@ -291,4 +271,4 @@ function buildCatalogResponse(lower, catalogData) {
   return res;
 }
 
-module.exports = { fetchCatalogData, formatCatalogForContext, getRoleKey, ROLE_RULES, getAiResponse, fallbackResponse, buildCatalogResponse, checkRateLimit };
+module.exports = { fetchCatalogData, formatCatalogForContext, getRoleKey, ROLE_RULES, getAiResponse, fallbackResponse, buildCatalogResponse };

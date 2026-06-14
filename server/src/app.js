@@ -3,10 +3,8 @@ const compression = require('compression');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const { rateLimit, defaultKeyGenerator } = require('express-rate-limit');
 const logger = require('./utils/logger');
 const { createTraceMiddleware } = require('./utils/logger');
-const { createRoleLimiter } = require('./middlewares/rateLimiter');
 const { verifyToken, requireAdmin } = require('./middlewares/auth');
 const { db } = require('./config/firebase');
 const cache = require('./utils/cache');
@@ -43,35 +41,6 @@ const publicCache = (req, res, next) => {
 const blockedIPs = new Set(
   (process.env.BLOCKED_IPS || '').split(',').map(s => s.trim()).filter(Boolean)
 );
-
-const isTest = process.env.NODE_ENV === 'test' || typeof global.it === 'function';
-
-const ipRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: parseInt(process.env.IP_RATE_LIMIT_MAX) || 100,
-  message: { error: 'Demasiadas solicitudes desde esta IP, intenta en 1 minuto' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => defaultKeyGenerator(req),
-  skip: (req) => {
-    if (isTest) return true;
-    const roles = req.user?.roles || [];
-    return roles.includes('admin');
-  },
-});
-
-const authFailRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 5,
-  message: { error: 'Demasiados intentos de autenticación, intenta en 1 minuto' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => defaultKeyGenerator(req),
-  skip: (req) => {
-    if (isTest) return true;
-    return !req.path.includes('/auth');
-  },
-});
 
 function blockIPs(req, res, next) {
   const ip = req.ip;
@@ -119,10 +88,7 @@ app.use(helmet());
 app.use(cors(corsOptions));
 app.use(createTraceMiddleware());
 app.use(blockIPs);
-app.use(ipRateLimiter);
-app.use(authFailRateLimiter);
 app.use(suspiciousRequestLogger);
-app.use(createRoleLimiter());
 app.use(express.json({ limit: '1mb' }));
 
 app.use((req, res, next) => {
@@ -149,9 +115,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const authLimiter = createRoleLimiter({ auth: true });
-
-app.use('/api/auth', authLimiter, require('./routes/auth'));
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/shops', publicCache, require('./routes/shops'));
 app.use('/api/products', publicCache, require('./routes/products'));

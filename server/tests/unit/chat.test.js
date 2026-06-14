@@ -261,25 +261,6 @@ describe('POST /api/chat/sessions/:id/messages', () => {
     expect(res.status).toBe(400);
   });
 
-  it('responde 429 si excede límite de mensajes', async () => {
-    const ref = makeRefWithMessages();
-    ref.collection = jest.fn().mockReturnValue({ add: jest.fn().mockResolvedValue({ id: 'msg' }) });
-    global.mockFirestore.doc = jest.fn().mockReturnValue(ref);
-    global.mockFirestore.update = jest.fn().mockResolvedValue();
-
-    for (let i = 0; i < 10; i++) {
-      await request(app)
-        .post('/api/chat/sessions/session-1/messages')
-        .set('Authorization', 'Bearer token-valido')
-        .send({ message: `test ${i}` });
-    }
-
-    const res = await request(app)
-      .post('/api/chat/sessions/session-1/messages')
-      .set('Authorization', 'Bearer token-valido')
-      .send({ message: 'too many' });
-    expect(res.status).toBe(429);
-  });
 });
 
 describe('DELETE /api/chat/sessions/:id', () => {

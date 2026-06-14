@@ -1,4 +1,4 @@
-const { fetchCatalogData, formatCatalogForContext, getRoleKey, ROLE_RULES, checkRateLimit } = require('../../src/utils/aiHelper');
+const { fetchCatalogData, formatCatalogForContext, getRoleKey, ROLE_RULES } = require('../../src/utils/aiHelper');
 
 describe('getRoleKey', () => {
   it('retorna admin para rol admin', () => {
@@ -48,27 +48,6 @@ describe('ROLE_RULES', () => {
     expect(rules.allowed).toContain('moderar reseñas');
     expect(rules.allowed).toContain('gestionar reportes');
     expect(rules.denied).toContain('panel de administración');
-  });
-});
-
-describe('checkRateLimit', () => {
-  it('permite mensajes dentro del limite', () => {
-    expect(checkRateLimit('user-1')).toBe(true);
-  });
-
-  it('bloquea despues de 10 mensajes', () => {
-    for (let i = 0; i < 10; i++) {
-      checkRateLimit('user-spam');
-    }
-    expect(checkRateLimit('user-spam')).toBe(false);
-  });
-
-  it('usuarios diferentes tienen limites independientes', () => {
-    for (let i = 0; i < 10; i++) {
-      checkRateLimit('user-a');
-    }
-    expect(checkRateLimit('user-b')).toBe(true);
-    expect(checkRateLimit('user-a')).toBe(false);
   });
 });
 

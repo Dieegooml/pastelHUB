@@ -5,7 +5,7 @@ const { verifyToken } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { createSessionSchema, sendMessageSchema } = require('../validators/chatValidator');
 const { tryPaginate } = require('../utils/paginate');
-const { fetchCatalogData, getRoleKey, getAiResponse, checkRateLimit } = require('../utils/aiHelper');
+const { fetchCatalogData, getRoleKey, getAiResponse } = require('../utils/aiHelper');
 
 const col = db.collection('chatSessions');
 
@@ -91,10 +91,6 @@ router.post('/sessions/:id/messages', verifyToken, validate(sendMessageSchema), 
     const data = { id: doc.id, ...doc.data() };
     if (!canAccessSession(req.user?.roles || [], req.user.uid, data)) {
       return res.status(403).json({ error: 'No tienes permiso' });
-    }
-
-    if (!checkRateLimit(req.user.uid)) {
-      return res.status(429).json({ error: 'Demasiados mensajes, espera un momento' });
     }
 
     const { message } = req.body;

@@ -5,7 +5,6 @@ const logger = require('./logger');
 const { getAiResponse, fetchCatalogData, getRoleKey } = require('./aiHelper');
 
 const clients = new Map();
-const wsRateLimits = new Map();
 
 function createWebSocketServer(server) {
   const wss = new WebSocket.Server({ server, maxPayload: 50 * 1024 });
@@ -55,7 +54,6 @@ function createWebSocketServer(server) {
           conns.delete(ws);
           if (conns.size === 0) clients.delete(userId);
         }
-        wsRateLimits.delete(ws);
         logger.info('WebSocket disconnected', { userId });
       });
 
@@ -79,7 +77,6 @@ function createWebSocketServer(server) {
           conns.delete(ws);
           if (conns.size === 0) clients.delete(uid);
         }
-        wsRateLimits.delete(ws);
         return ws.terminate();
       }
       ws.isAlive = false;
@@ -87,33 +84,12 @@ function createWebSocketServer(server) {
     });
   }, 30000);
 
-  const rateLimitCleanup = setInterval(() => {
-    const now = Date.now();
-    for (const [ws, timestamps] of wsRateLimits) {
-      const valid = timestamps.filter(t => now - t < 60000);
-      if (valid.length === 0) wsRateLimits.delete(ws);
-      else wsRateLimits.set(ws, valid);
-    }
-  }, 30000);
-
   wss.on('close', () => {
     clearInterval(heartbeat);
-    clearInterval(rateLimitCleanup);
     clients.clear();
-    wsRateLimits.clear();
   });
 
   return wss;
-}
-
-function checkWsRateLimit(ws) {
-  const now = Date.now();
-  const timestamps = wsRateLimits.get(ws) || [];
-  const valid = timestamps.filter(t => now - t < 60000);
-  if (valid.length >= 10) return false;
-  valid.push(now);
-  wsRateLimits.set(ws, valid);
-  return true;
 }
 
 async function handleMessage(ws, msg) {
@@ -136,10 +112,6 @@ async function handleMessage(ws, msg) {
 }
 
 async function handleChatMessage(ws, msg) {
-  if (!checkWsRateLimit(ws)) {
-    return ws.send(JSON.stringify({ type: 'error', message: 'Demasiados mensajes, espera un momento' }));
-  }
-
   try {
     const { sessionId, text } = msg;
     if (!sessionId || !text) {
