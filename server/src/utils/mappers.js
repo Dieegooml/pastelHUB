@@ -94,6 +94,14 @@ const REVIEW_SNAKE_TO_CAMEL = {
   created_at: 'createdAt',
 };
 
+const INVOICE_CAMEL_TO_SNAKE = {
+  shopId: 'shop_id',
+};
+
+const INVOICE_SNAKE_TO_CAMEL = {
+  shop_id: 'shopId',
+};
+
 const REPORT_CAMEL_TO_SNAKE = {
   targetType: 'target_type',
   targetId: 'target_id',
@@ -177,6 +185,14 @@ function mapReportToResponse(doc) {
   return mapKeys(doc, REPORT_SNAKE_TO_CAMEL);
 }
 
+function mapInvoiceFromRequest(body) {
+  return mapKeys(body, INVOICE_CAMEL_TO_SNAKE);
+}
+
+function mapInvoiceToResponse(doc) {
+  return mapKeys(doc, INVOICE_SNAKE_TO_CAMEL);
+}
+
 module.exports = {
   mapShopFromRequest,
   mapShopToResponse,
@@ -192,6 +208,8 @@ module.exports = {
   mapReviewToResponse,
   mapReportFromRequest,
   mapReportToResponse,
+  mapInvoiceFromRequest,
+  mapInvoiceToResponse,
   mapKeys,
   SHOP_CAMEL_TO_SNAKE,
   SHOP_SNAKE_TO_CAMEL,
@@ -207,4 +225,6 @@ module.exports = {
   REVIEW_SNAKE_TO_CAMEL,
   REPORT_CAMEL_TO_SNAKE,
   REPORT_SNAKE_TO_CAMEL,
+  INVOICE_CAMEL_TO_SNAKE,
+  INVOICE_SNAKE_TO_CAMEL,
 };
