@@ -120,6 +120,6 @@ export const api = {
   },
   post:   (path, body) => { invalidateCache(path.split('/').slice(0, 2).join('/')); return apiFetch(path, { method: 'POST', body: JSON.stringify(body) }); },
   put:    (path, body) => { invalidateCache(path.split('/').slice(0, 2).join('/')); return apiFetch(path, { method: 'PUT', body: JSON.stringify(body) }); },
-  delete: (path) => { invalidateCache(path.split('/').slice(0, 2).join('/')); return apiFetch(path, { method: 'DELETE' }); },
+  delete: (path, body) => { invalidateCache(path.split('/').slice(0, 2).join('/')); return apiFetch(path, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined }); },
   patch:  (path, body) => { invalidateCache(path.split('/').slice(0, 2).join('/')); return apiFetch(path, { method: 'PATCH', body: JSON.stringify(body) }); },
 };
