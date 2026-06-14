@@ -38,6 +38,7 @@ import Notifications from "./pages/admin/Notifications";
 import Payments from "./pages/admin/Payments";
 import Promotions from "./pages/admin/Promotions";
 import ModeratorDashboard from "./pages/moderator/ModeratorDashboard";
+import ModeratorUsers from "./pages/moderator/ModeratorUsers";
 import AdminChat from "./pages/admin/Chat";
 
 function WebSocketInit() {
@@ -98,6 +99,7 @@ function AppContent() {
           <Route path="/admin/promotions" element={<ProtectedRoute role="admin"><Promotions /></ProtectedRoute>} />
           <Route path="/admin/chat" element={<ProtectedRoute role="admin"><AdminChat /></ProtectedRoute>} />
           <Route path="/moderator" element={<ProtectedRoute role={['moderator', 'admin']}><ModeratorDashboard /></ProtectedRoute>} />
+          <Route path="/moderator/usuarios" element={<ProtectedRoute role={['moderator', 'admin']}><ModeratorUsers /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Footer />
