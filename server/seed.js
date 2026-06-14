@@ -1,4 +1,4 @@
-const { admin, db } = require('./src/config/firebase');
+const { db } = require('./src/config/firebase');
 
 async function seed() {
   console.log('=== PastelHub — Seed de datos de ejemplo ===\n');

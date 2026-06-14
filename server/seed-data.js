@@ -19,7 +19,6 @@ const CONFIG = {
 };
 
 process.argv.forEach((arg, i) => {
-  const next = () => process.argv[i + 1];
   if (arg.startsWith('--customers=')) CONFIG.customers = parseInt(arg.split('=')[1]);
   if (arg.startsWith('--min-products=')) CONFIG.minProducts = parseInt(arg.split('=')[1]);
   if (arg.startsWith('--max-products=')) CONFIG.maxProducts = parseInt(arg.split('=')[1]);
@@ -117,21 +116,19 @@ function track(col) {
 async function cleanDatabase() {
   const collections = ['users', 'customers', 'pastryShops', 'products', 'orders', 'payments', 'reviews', 'notifications', 'reports', 'promotions', 'chatSessions'];
   for (const col of collections) {
-    const snap = await db.collection(col).limit(500).get();
-    if (snap.empty) continue;
-    const batch = db.batch();
-    let count = 0;
-    snap.docs.forEach(doc => { batch.delete(doc.ref); count++; });
-    await batch.commit();
-    if (count >= 500) {
-      const remaining = await db.collection(col).limit(500).get();
-      if (!remaining.empty) {
-        const b2 = db.batch();
-        remaining.docs.forEach(doc => b2.delete(doc.ref));
-        await b2.commit();
-      }
+    let total = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const snap = await db.collection(col).limit(500).get();
+      if (snap.empty) break;
+      const batch = db.batch();
+      let count = 0;
+      snap.docs.forEach(doc => { batch.delete(doc.ref); count++; });
+      await batch.commit();
+      total += count;
+      hasMore = count >= 500;
     }
-    console.log(`  ${col}: ${count} documentos eliminados`);
+    console.log(`  ${col}: ${total} documentos eliminados`);
   }
 }
 
@@ -598,7 +595,7 @@ async function createPromotions(shopIds, allProductIds) {
   console.log(`  ${count} promociones creadas`);
 }
 
-async function createNotifications(uids, orderIds, shopIds, shopOwners) {
+async function createNotifications(uids, orderIds, shopOwners) {
   console.log('\n── 9. NOTIFICACIONES ──');
   const customerUids = [];
   for (const [email, uid] of Object.entries(uids)) {
@@ -718,7 +715,7 @@ async function seed() {
   await createPayments(orderIds);
   await createReviews(uids, shopIds, orderIds);
   await createPromotions(shopIds, allProductIds);
-  await createNotifications(uids, orderIds, shopIds, shopOwners);
+  await createNotifications(uids, orderIds, shopOwners);
   await createReports(uids);
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
