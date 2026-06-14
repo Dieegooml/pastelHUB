@@ -4,7 +4,7 @@ const { db } = require('../config/firebase');
 const { verifyToken, requireAdmin, requireModerator, requireCustomer } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const {
-  createTicketSchema, updateTicketStatusSchema, assignTicketSchema, sendMessageSchema,
+  createTicketSchema, updateTicketStatusSchema, sendMessageSchema,
 } = require('../validators/supportValidator');
 const { tryPaginate } = require('../utils/paginate');
 
