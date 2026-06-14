@@ -21,21 +21,16 @@
 | **Reports** | CRUD + asignar moderador + cambiar estado | 29 |
 | **Customers** | CRUD + subcolección addresses | 31 |
 | **Promotions** | CRUD + toggle activo + filtro público activas | 15 |
-| **Invoices** | CRUD + PDF generation + auto-generación al pagar | — |
-| **Chat** | Sessions + messages + AI (Gemini + fallback) | 31 |
-| **Support** | Tickets + messages + asignación + estados | 25 |
- | **Health** | `GET /api/health` + 404 handler | 3 |
+| **Invoices** | CRUD + PDF generation + auto-generación al pagar | 12 |
+| **Health** | `GET /api/health` + 404 handler | 3 |
 | **Middleware** | verifyToken + requireAdmin/Owner/Moderator/Customer/OwnerOrAdmin/SelfOrAdmin | 19 |
 | **Backup/Restore** | Export/import colecciones, validación, dry-run | 12 |
-| **Invoices** | CRUD + PDF generation + auto-generación al pagar | 12 |
-| **Chat** | Sessions + messages + AI (Gemini + fallback) | 31 |
-| **Support** | Tickets + messages + asignación + estados | 25 |
 | **Uploads** | Upload de imágenes shop/product/profile | 8 |
 | **Cache** | In-memory LRU cache con TTL y stats | 11 |
 | **FCM Service** | Push notifications, save/remove tokens | 5 |
 | **Payment Gateway** | Simulado + MercadoPago, preferencias, webhooks | 6 |
 | **WebSocket** | Conexiones, pushNotification, broadcastToUser | 4 |
-| **AI Helper** | Role rules, rate limit, catalog formatting | 14 |
+| **AI Helper** | Role rules, catalog formatting | 14 |
 
 **Total: 433 tests unitarios** — 23 suites, todos pasando.
 
@@ -46,7 +41,7 @@
 | **Público** | Login, Register, ShopsList, ShopDetail, ProductDetail, NotFound |
 | **Cliente** | Cart, Checkout, MyOrders, OrderDetail, Profile, Notifications, Invoices, Support, SupportNew, SupportDetail |
 | **Dueño** | OwnerDashboard (6 tabs: info, productos, órdenes, promociones, boletas, resumen) |
-| **Moderador** | ModeratorDashboard, ModeratorNav |
+| **Moderador** | ModeratorDashboard, ModeratorNav, ModeratorUsers |
 | **Admin** | Dashboard, Users, Shops, Products, Orders, Reviews, Customers, Reports, Notifications, Payments, Promotions, Invoices, Chat, AdminNav |
 
 ### E2E — Playwright — 7 specs, 42 tests
@@ -63,10 +58,9 @@
 
 ### Infraestructura
 
-- ✅ Rate limiting (100 req/15min general, 10 req/15min auth, ajustable en dev/test)
 - ✅ Seguridad: helmet, CORS configurado
-- ✅ Validación Zod en todos los endpoints de mutación
-- ✅ Middleware de roles completo (7 middlewares)
+- ✅ Validación Zod en todos los endpoints de mutación (14 esquemas)
+- ✅ Middleware de roles completo (9 middlewares)
 - ✅ `app.listen()` separado de `app.js` (testeable con supertest)
 - ✅ Modo LOAD_TEST con bypass de autenticación
 - ✅ Dockerfiles para server y client
@@ -91,9 +85,6 @@
 
 - **Pruebas de integración real contra Firestore** — Todas mockeadas (Firebase Admin mockeado en Jest setup)
 - **Snapshot tests** — No existen
-- **Tests de utilerías server faltantes** — `auditLog`, `autoNotify`, `logger`, `mappers`, `paginate` no tienen tests dedicados
-- **Tests de middlewares server** — `validate` y `rateLimiter` no tienen tests unitarios dedicados
-- **Tests de config server** — `mercadopago.js` no tiene tests
 - **Tests de páginas client** — 14 admin + 7 owner/moderator + 5 públicas + 7 customer pages sin tests (~56/75 archivos)
 - **Tests de servicios client** — 9 servicios sin tests (chat, customers, invoices, promotions, reports, storage, support, users, websocket)
 
