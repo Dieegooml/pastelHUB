@@ -1,3 +1,27 @@
+@keyframes pastel-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.pastel-skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.pastel-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 25%,
+    rgba(255,255,255,0.4) 50%,
+    transparent 75%
+  );
+  background-size: 200% 100%;
+  animation: pastel-shimmer 1.5s ease-in-out infinite;
+}
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;
