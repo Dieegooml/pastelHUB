@@ -19,7 +19,7 @@ vi.mock('firebase/auth', () => ({
   signInWithPopup: (...args) => mockSignInPopup(...args),
 }));
 
-vi.mock('../config/firebase', () => ({ auth: {}, googleProvider: {} }));
+vi.mock('../config/firebase', () => ({ auth: {}, googleProvider: {}, facebookProvider: {} }));
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({ refreshUser: mockRefreshUser }),

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '../../config/firebase';
+import { auth, googleProvider, facebookProvider } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/apiService';
 import { authService } from '../../services/authService';
@@ -101,13 +101,36 @@ export default function Login() {
     }
   };
 
+  const handleFacebook = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await signInWithPopup(auth, facebookProvider);
+      await api.post('/auth/sync', {});
+      await refreshUser();
+      navigate('/');
+    } catch (err) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError('Error al iniciar sesión con Facebook');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthLayout>
       <PastelPageTransition>
-      <Heading as="h1" fontFamily="heading" fontSize={{ base: '28px', md: '32px' }} fontWeight={700} color="brand.900" m={0}>
+      <Box
+        bg="white"
+        borderRadius="2xl"
+        boxShadow={{ base: 'none', md: '0 4px 24px rgba(0,0,0,0.06)' }}
+        p={{ base: 0, md: 8 }}
+      >
+      <Heading as="h1" fontFamily="heading" fontSize={{ base: '24px', md: '32px' }} fontWeight={700} color="brand.900" m={0}>
         Bienvenido de nuevo
       </Heading>
-      <Text fontFamily="body" fontSize="14px" color="warmGray.500" mt={2} mb={8}>
+      <Text fontFamily="body" fontSize="14px" color="warmGray.500" mt={1} mb={6}>
         Inicia sesión en tu cuenta
       </Text>
 
@@ -297,12 +320,28 @@ export default function Login() {
         Continuar con Google
       </Button>
 
+      <Button
+        variant="outline"
+        w="100%"
+        h="50px"
+        onClick={handleFacebook}
+        isDisabled={loading}
+        leftIcon={
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          </svg>
+        }
+      >
+        Continuar con Facebook
+      </Button>
+
       <Text textAlign="center" fontFamily="body" fontSize="14px" color="warmGray.500" mt={6}>
         ¿No tienes cuenta?{' '}
         <Box as={Link} to="/register" color="accent.500" fontWeight={600}>
           Regístrate aquí
         </Box>
       </Text>
+    </Box>
     </PastelPageTransition>
     </AuthLayout>
   );
