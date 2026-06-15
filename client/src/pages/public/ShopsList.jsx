@@ -1,45 +1,26 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { shopsService } from '../../services/shopsService';
-import Navbar from '../../components/Navbar';
-import Tooltip from '../../components/Tooltip';
-import { colors, font, animFadeIn, animStagger } from '../../styles/theme';
 import { useDebounce } from '../../utils/useDebounce';
+import {
+  PastelCard, PastelStatusBadge, PastelEmptyState, PastelErrorState,
+  PastelSkeletonCard, PastelSkeletonHero, PastelSkeletonShopCard, PastelHero, PastelRating, PastelTag, PastelInfoRow, PastelPageTransition,
+} from '../../components/UI';
+import {
+  Box, Flex, Text, Heading, Input, SimpleGrid, IconButton,
+} from '@chakra-ui/react';
 
-const STATUS_CONFIG = {
-  approved:  { bg: '#e1f5ee', color: '#1D9E75', label: 'Aprobado' },
-  pending:   { bg: '#fff8e1', color: '#f59e0b', label: 'Pendiente' },
-  rejected:  { bg: '#fee2e2', color: '#ef4444', label: 'Rechazado' },
-  suspended: { bg: '#f3f4f6', color: '#6b7280', label: 'Suspendido' },
-};
+const searchIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </svg>
+);
 
-const BANNER_PLACEHOLDERS = [
-  'linear-gradient(135deg, #2D1F1F 0%, #1D9E75 100%)',
-  'linear-gradient(135deg, #1D9E75 0%, #F9F4EE 100%)',
-  'linear-gradient(135deg, #E8DDD5 0%, #2D1F1F 100%)',
-  'linear-gradient(135deg, #F9F4EE 0%, #1D9E75 100%)',
-  'linear-gradient(135deg, #2D1F1F 0%, #E8DDD5 100%)',
-  'linear-gradient(135deg, #1D9E75 0%, #2D1F1F 100%)',
-];
-
-function SkeletonCard() {
-  return (
-    <div style={{
-      background: colors.white, borderRadius: '16px', overflow: 'hidden',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-    }}>
-      <div style={{ height: '160px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
-      <div style={{ padding: '1.2rem 1.5rem 1.5rem' }}>
-        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#e0e0e0', marginTop: '-48px', marginBottom: '12px', border: '3px solid white', animation: 'shimmer 1.5s infinite' }} />
-        <div style={{ height: '20px', width: '60%', background: '#e0e0e0', borderRadius: '4px', marginBottom: '8px', animation: 'shimmer 1.5s infinite' }} />
-        <div style={{ height: '14px', width: '40%', background: '#e0e0e0', borderRadius: '4px', marginBottom: '12px', animation: 'shimmer 1.5s infinite' }} />
-        <div style={{ height: '12px', width: '100%', background: '#e0e0e0', borderRadius: '4px', marginBottom: '4px', animation: 'shimmer 1.5s infinite' }} />
-        <div style={{ height: '12px', width: '80%', background: '#e0e0e0', borderRadius: '4px', marginBottom: '16px', animation: 'shimmer 1.5s infinite' }} />
-        <div style={{ height: '28px', width: '90px', background: '#e0e0e0', borderRadius: '99px', animation: 'shimmer 1.5s infinite' }} />
-      </div>
-    </div>
-  );
-}
+const clearIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+);
 
 export default function ShopsList() {
   const navigate = useNavigate();
@@ -75,306 +56,263 @@ export default function ShopsList() {
     );
   }, [shops, debouncedSearch]);
 
+  const approvedCount = useMemo(() => shops.filter(s => s.approvalStatus === 'approved').length, [shops]);
+
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <style>{`
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-      `}</style>
-      <Navbar />
-
-      {/* Hero Section */}
-      <section style={{
-        position: 'relative',
-        background: `linear-gradient(135deg, ${colors.primary} 0%, #1a6b4f 50%, ${colors.accent} 100%)`,
-        padding: '4rem 2rem 5rem',
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.06) 0%, transparent 60%)',
-        }} />
-        <div style={{
-          position: 'absolute', top: '-120px', right: '-80px',
-          width: '400px', height: '400px', borderRadius: '50%',
-          background: 'rgba(255,255,255,0.04)',
-        }} />
-        <div style={{
-          position: 'absolute', bottom: '-60px', left: '10%',
-          width: '200px', height: '200px', borderRadius: '50%',
-          background: 'rgba(255,255,255,0.03)',
-        }} />
-
-        <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          <div style={{ ...animFadeIn }}>
-            <h1 style={{
-              fontFamily: font.heading, fontSize: 'clamp(32px, 5vw, 52px)',
-              fontWeight: 700, color: '#fff', margin: '0 0 12px',
-              lineHeight: 1.15,
-            }}>
-              Descubre las mejores <br />
-              <span style={{ color: '#F9F4EE', textDecoration: 'underline', textDecorationColor: 'rgba(255,255,255,0.3)', textUnderlineOffset: '8px' }}>
+    <PastelPageTransition>
+      <Box minH="100vh" bg="warmGray.50">
+        <PastelHero
+          title={
+            <>
+              Descubre las mejores<br />
+              <Box as="span" color="#FDE68A" position="relative">
                 pastelerías artesanales
-              </span>
-            </h1>
-            <p style={{
-              fontFamily: font.body, fontSize: '16px', color: 'rgba(255,255,255,0.75)',
-              maxWidth: '520px', lineHeight: 1.6, margin: '0 0 2rem',
-            }}>
-              Explora una selección de las mejores pastelerías locales. Encuentra tu postre favorito y ordénalo con un clic.
-            </p>
-          </div>
-
-          {/* Search */}
-          <div style={{ ...animFadeIn }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '12px',
-              background: 'rgba(255,255,255,0.12)',
-              backdropFilter: 'blur(8px)',
-              borderRadius: '14px', padding: '6px 6px 6px 16px',
-              maxWidth: '500px',
-              border: '1px solid rgba(255,255,255,0.15)',
-            }}>
-              <input
-                placeholder="Buscar por nombre, ciudad..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{
-                  flex: 1, border: 'none', background: 'transparent',
-                  padding: '14px 0', fontSize: '14px', fontFamily: font.body,
-                  color: '#fff', outline: 'none',
-                }}
+                <Box position="absolute" bottom="-4px" left={0} right={0} h="3px" bg="rgba(253,230,138,0.3)" borderRadius="full" />
+              </Box>
+            </>
+          }
+          subtitle="Explora una selección de las mejores pastelerías locales. Encuentra tu postre favorito y ordénalo con un clic."
+          gradient="dark"
+          size="lg"
+        >
+          <Flex
+            align="center"
+            gap={3}
+            bg="rgba(255,255,255,0.1)"
+            borderRadius="14px"
+            p="6px 6px 6px 16px"
+            maxW="500px"
+            border="1px solid"
+            borderColor="rgba(255,255,255,0.15)"
+            backdropFilter="blur(8px)"
+            transition="border-color 0.2s"
+            _focusWithin={{ borderColor: 'rgba(253,230,138,0.5)' }}
+          >
+            <Box color="whiteAlpha.600" flexShrink={0}>
+              {searchIcon}
+            </Box>
+            <Input
+              placeholder="Buscar por nombre, ciudad..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              variant="unstyled"
+              flex={1}
+              py={3.5}
+              fontSize="14px"
+              fontFamily="body"
+              color="white"
+              _placeholder={{ color: 'whiteAlpha.500' }}
+            />
+            {search && (
+              <IconButton
+                icon={clearIcon}
+                size="sm"
+                variant="ghost"
+                onClick={() => setSearch('')}
+                color="whiteAlpha.600"
+                _hover={{ bg: 'whiteAlpha.200' }}
+                aria-label="Limpiar búsqueda"
               />
-              {search && (
-                <Tooltip text="Limpiar búsqueda">
-                  <button
-                    onClick={() => setSearch('')}
-                    style={{
-                      background: 'rgba(255,255,255,0.15)', border: 'none',
-                      borderRadius: '8px', padding: '6px 10px',
-                      cursor: 'pointer', fontSize: '14px', lineHeight: 1, color: '#fff',
-                    }}
-                  >✕</button>
-                </Tooltip>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
+            )}
+          </Flex>
+        </PastelHero>
 
-      {/* Stats bar */}
-      <div style={{
-        maxWidth: '1100px', margin: '-1.5rem auto 2rem', padding: '0 1.5rem',
-        position: 'relative', zIndex: 2,
-      }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '24px',
-          background: colors.white, borderRadius: '16px',
-          padding: '1rem 1.5rem',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-        }}>
-          <div>
-            <div style={{ fontSize: '20px', fontWeight: 700, color: colors.primary, fontFamily: font.body, lineHeight: 1.2 }}>
-              {shops.filter(s => s.approvalStatus === 'approved').length}
-            </div>
-            <div style={{ fontSize: '12px', color: colors.textSecondary, fontFamily: font.body }}>
-              pastelerías activas
-            </div>
-          </div>
-          {filtered.length !== shops.filter(s => s.approvalStatus === 'approved').length && (
-            <div style={{ fontSize: '13px', color: colors.textMuted, fontFamily: font.body }}>
-              {filtered.length} resultados para "{search}"
-            </div>
-          )}
-        </div>
-      </div>
+        {/* Stats bar */}
+        <Box maxW="1100px" mx="auto" px={{ base: 4, md: 6 }} mt="-1.5rem" position="relative" zIndex={2}>
+          <Flex
+            align="center"
+            gap={6}
+            bg="white"
+            borderRadius="16px"
+            px={6}
+            py={4}
+            boxShadow="0 4px 20px rgba(0,0,0,0.06)"
+          >
+            <Box>
+              <Text fontSize="20px" fontWeight={700} color="brand.900" fontFamily="body" lineHeight={1.2}>
+                {approvedCount}
+              </Text>
+              <Text fontSize="12px" color="warmGray.500" fontFamily="body">
+                pastelerías activas
+              </Text>
+            </Box>
+            {debouncedSearch && (
+              <Text fontSize="13px" color="warmGray.400" fontFamily="body">
+                {filtered.length} resultados para &ldquo;{debouncedSearch}&rdquo;
+              </Text>
+            )}
+          </Flex>
+        </Box>
 
-      {/* Error */}
-      {error && (
-        <div style={{ maxWidth: '1100px', margin: '0 auto 1rem', padding: '0 1.5rem' }}>
-          <p style={{
-            color: colors.error, fontFamily: font.body, fontSize: '14px',
-            background: colors.errorBg, padding: '12px 16px', borderRadius: '8px',
-            borderLeft: `3px solid ${colors.error}`,
-          }}>{error}</p>
-        </div>
-      )}
+        {error && (
+          <Box maxW="1100px" mx="auto" px={{ base: 4, md: 6 }} mb={4}>
+            <PastelErrorState
+              title="Error al cargar"
+              message={error}
+              onRetry={() => window.location.reload()}
+              onBack={() => navigate('/')}
+            />
+          </Box>
+        )}
 
-      {/* Loading skeleton */}
-      {loading ? (
-        <div style={{
-          maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem 3rem',
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem',
-        }}>
-          {[1, 2, 3, 4, 5, 6].map(i => <SkeletonCard key={i} />)}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div style={{
-          textAlign: 'center', padding: '4rem 1rem', color: colors.textMuted, fontFamily: font.body,
-          maxWidth: '1100px', margin: '0 auto',
-        }}>
-          <p style={{ fontSize: '18px', fontWeight: 600, color: colors.primary, margin: '0 0 6px' }}>
-            {search ? 'Sin resultados' : 'No hay pastelerías disponibles'}
-          </p>
-          <p style={{ fontSize: '14px', margin: 0 }}>
-            {search ? `No encontramos nada para "${search}"` : 'Vuelve pronto para descubrir nuevas opciones'}
-          </p>
-        </div>
-      ) : (
-        /* Cards Grid */
-        <div style={{
-          maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem 3rem',
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem',
-        }}>
-          {filtered.map((shop, index) => {
-            const sc = STATUS_CONFIG[shop.approvalStatus] || STATUS_CONFIG.pending;
-            const bannerBg = BANNER_PLACEHOLDERS[index % BANNER_PLACEHOLDERS.length];
-            return (
-              <div
-                key={shop.id}
-                onClick={() => navigate(`/shops/${shop.id}`)}
-                style={{
-                  ...animStagger(index * 0.08),
-                  background: colors.white, borderRadius: '16px', overflow: 'hidden',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                  cursor: 'pointer',
-                  transition: 'box-shadow 0.25s ease, transform 0.25s ease',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.12)'; e.currentTarget.style.transform = 'translateY(-6px)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-              >
-                {/* Banner */}
-                <div style={{
-                  position: 'relative', height: '160px', overflow: 'hidden',
-                  background: bannerBg,
-                }}>
-                  {shop.bannerUrl ? (
-                    <img src={shop.bannerUrl} alt=""
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                  ) : null}
-                  {/* Status badge on banner */}
-                  <div style={{
-                    position: 'absolute', top: '12px', right: '12px',
-                  }}>
-                    <span style={{
-                      padding: '4px 12px', borderRadius: '99px',
-                      fontSize: '11px', fontWeight: 600,
-                      fontFamily: font.body,
-                      background: sc.bg, color: sc.color,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                    }}>
-                      {sc.label}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div style={{ padding: '0 1.5rem 1.5rem', position: 'relative' }}>
-                  {/* Logo avatar */}
-                  <div style={{
-                    width: '72px', height: '72px', borderRadius: '50%',
-                    overflow: 'hidden', marginTop: '-36px', marginBottom: '12px',
-                    border: '3px solid white',
-                    background: colors.bgBeige,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '32px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                  }}>
-                    {shop.logoUrl ? (
-                      <img src={shop.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        {loading ? (
+          <Box>
+            <PastelSkeletonHero />
+            <Box maxW="1100px" mx="auto" px={{ base: 4, md: 6 }} pt={6} pb={12}>
+              <PastelSkeletonProductGrid count={6} />
+            </Box>
+          </Box>
+        ) : filtered.length === 0 ? (
+          <Box pt={6}>
+            <PastelEmptyState
+              title={search ? 'Sin resultados' : 'No hay pastelerías disponibles'}
+              description={search ? `No encontramos nada para "${search}"` : 'Vuelve pronto para descubrir nuevas opciones'}
+            />
+          </Box>
+        ) : (
+          <Box maxW="1100px" mx="auto" px={{ base: 4, md: 6 }} pb={12}>
+            <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} spacing={6}>
+              {filtered.map((shop) => (
+                <PastelCard
+                  key={shop.id}
+                  variant="elevated"
+                  p={0}
+                  cursor="pointer"
+                  onClick={() => navigate(`/shops/${shop.id}`)}
+                  _hover={{ transform: 'translateY(-4px)', boxShadow: '0 12px 28px rgba(0,0,0,0.12)' }}
+                  transition="transform 0.25s ease, box-shadow 0.25s ease"
+                  mb={0}
+                >
+                  {/* Banner */}
+                  <Box
+                    position="relative"
+                    h="160px"
+                    overflow="hidden"
+                    bg={shop.bannerUrl ? undefined : 'linear-gradient(135deg, #2D1810, #6B4226)'}
+                  >
+                    {shop.bannerUrl && (
+                      <Box
+                        as="img"
+                        src={shop.bannerUrl}
+                        alt=""
+                        w="100%" h="100%"
+                        objectFit="cover"
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
-                    ) : null}
-                    {!shop.logoUrl && '🏪'}
-                  </div>
-
-                  {/* Name */}
-                  <h3 style={{
-                    fontFamily: font.heading, fontSize: '20px', fontWeight: 700,
-                    color: colors.primary, margin: '0 0 4px',
-                  }}>
-                    {shop.shopName}
-                  </h3>
-
-                  {/* City & Rating */}
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '4px',
-                    fontSize: '13px', color: colors.textSecondary, fontFamily: font.body,
-                    marginBottom: '10px', flexWrap: 'wrap',
-                  }}>
-                    <span>📍</span>
-                    <span>{shop.city}</span>
-                    {shop.rating !== undefined && shop.rating > 0 && (
-                      <>
-                        <span style={{ margin: '0 4px', color: colors.border }}>·</span>
-                        <span style={{ color: '#f59e0b' }}>
-                          {'★'.repeat(Math.round(shop.rating))} {'☆'.repeat(5 - Math.round(shop.rating))}
-                          <span style={{ color: colors.textSecondary, marginLeft: '4px', fontSize: '12px' }}>{shop.rating.toFixed(1)}</span>
-                        </span>
-                      </>
                     )}
-                    {shop.phone && (
-                      <>
-                        <span style={{ margin: '0 4px', color: colors.border }}>·</span>
-                        <span>📞 {shop.phone}</span>
-                      </>
-                    )}
-                  </div>
+                    <Box position="absolute" top={3} right={3}>
+                      <PastelStatusBadge status={shop.approvalStatus || 'pending'} />
+                    </Box>
+                  </Box>
 
-                  {/* Description */}
-                  {(shop.shopDescription || shop.description) && (
-                    <p style={{
-                      fontSize: '13px', color: '#555', fontFamily: font.body,
-                      lineHeight: 1.6, margin: '0 0 16px',
-                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}>
-                      {shop.shopDescription || shop.description}
-                    </p>
-                  )}
-
-                  {/* Categories chips */}
-                  {shop.categories && shop.categories.length > 0 && (
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                      {shop.categories.slice(0, 3).map((cat, i) => (
-                        <span key={i} style={{
-                          padding: '3px 10px', borderRadius: '99px',
-                          background: colors.bgBeige, color: colors.primary,
-                          fontSize: '11px', fontWeight: 500, fontFamily: font.body,
-                        }}>
-                          {typeof cat === 'string' ? cat : cat.name || ''}
-                        </span>
-                      ))}
-                      {shop.categories.length > 3 && (
-                        <span style={{
-                          padding: '3px 10px', borderRadius: '99px',
-                          background: colors.bgBeige, color: colors.textMuted,
-                          fontSize: '11px', fontFamily: font.body,
-                        }}>
-                          +{shop.categories.length - 3}
-                        </span>
+                  <Box px={6} pb={6} position="relative">
+                    {/* Logo avatar */}
+                    <Flex
+                      w="72px" h="72px"
+                      borderRadius="50%"
+                      overflow="hidden"
+                      mt="-36px"
+                      mb={3}
+                      border="3px solid white"
+                      bg="warmGray.50"
+                      align="center"
+                      justify="center"
+                      boxShadow="0 4px 12px rgba(0,0,0,0.08)"
+                    >
+                      {shop.logoUrl ? (
+                        <Box
+                          as="img"
+                          src={shop.logoUrl}
+                          alt=""
+                          w="100%" h="100%"
+                          objectFit="cover"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#C48B5A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+                        </svg>
                       )}
-                    </div>
-                  )}
+                    </Flex>
 
-                  {/* Bottom row */}
-                  {shop.address && (
-                    <div style={{
-                      fontSize: '12px', color: colors.textMuted, fontFamily: font.body,
-                      paddingTop: '12px', borderTop: `1px solid ${colors.border}`,
-                      display: 'flex', alignItems: 'center', gap: '4px',
-                    }}>
-                      <span style={{ fontSize: '12px' }}>📍</span>
-                      <span>{shop.address}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+                    {/* Name */}
+                    <Heading as="h3" fontFamily="heading" fontSize="20px" fontWeight={700} color="brand.900" mb={1}>
+                      {shop.shopName}
+                    </Heading>
+
+                    {/* City & Rating */}
+                    <Flex
+                      align="center"
+                      gap={1.5}
+                      fontSize="13px"
+                      color="warmGray.500"
+                      fontFamily="body"
+                      mb={2.5}
+                      flexWrap="wrap"
+                    >
+                      <PastelInfoRow icon="location" label={shop.city} />
+                      {shop.rating !== undefined && shop.rating > 0 && (
+                        <Flex align="center" gap={1}>
+                          <PastelRating value={shop.rating} size="sm" showValue={false} />
+                        </Flex>
+                      )}
+                    </Flex>
+
+                    {/* Description */}
+                    {(shop.shopDescription || shop.description) && (
+                      <Text
+                        fontSize="13px"
+                        color="warmGray.600"
+                        fontFamily="body"
+                        lineHeight={1.6}
+                        mb={4}
+                        noOfLines={2}
+                      >
+                        {shop.shopDescription || shop.description}
+                      </Text>
+                    )}
+
+                    {/* Categories chips */}
+                    {shop.categories && shop.categories.length > 0 && (
+                      <Flex gap={1.5} flexWrap="wrap" mb={3.5}>
+                        {shop.categories.slice(0, 3).map((cat, i) => (
+                          <PastelTag key={i} size="sm">
+                            {typeof cat === 'string' ? cat : cat.name || ''}
+                          </PastelTag>
+                        ))}
+                        {shop.categories.length > 3 && (
+                          <PastelTag color="gray" size="sm">+{shop.categories.length - 3}</PastelTag>
+                        )}
+                      </Flex>
+                    )}
+
+                    {/* Bottom row */}
+                    {shop.address && (
+                      <Flex
+                        fontSize="12px"
+                        color="warmGray.400"
+                        fontFamily="body"
+                        pt={3}
+                        borderTop="1px solid"
+                        borderTopColor="warmGray.200"
+                        align="center"
+                        gap={1.5}
+                      >
+                        <Box as="span" w="14px" h="14px" color="warmGray.300" flexShrink={0}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                          </svg>
+                        </Box>
+                        <Text as="span">{shop.address}</Text>
+                      </Flex>
+                    )}
+                  </Box>
+                </PastelCard>
+              ))}
+            </SimpleGrid>
+          </Box>
+        )}
+      </Box>
+    </PastelPageTransition>
   );
 }

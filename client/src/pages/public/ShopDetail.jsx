@@ -1,24 +1,18 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Navbar from '../../components/Navbar';
-import { colors, font, badge as badgeStyle, animFadeIn, animStagger } from '../../styles/theme';
 import { shopsService } from '../../services/shopsService';
 import { productsService } from '../../services/productsService';
 import { slugify } from '../../utils/slug';
 import { reviewsService } from '../../services/reviewsService';
-
-const smallBtn = {
-  padding: '6px 14px', borderRadius: '99px', border: 'none', cursor: 'pointer',
-  fontSize: '12px', fontWeight: 600, fontFamily: font.body,
-  background: colors.accent, color: '#fff', transition: 'all 0.2s ease',
-};
-
-const sidebarBox = {
-  background: colors.white, borderRadius: '12px', padding: '20px',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef',
-};
-
-const sectionTitle = { fontSize: '11px', color: colors.textSecondary, fontFamily: font.body, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: '8px' };
+import {
+  PastelPageHeader, PastelCard, PastelStatusBadge,
+  PastelEmptyState, PastelErrorState, PastelSection,
+  PastelFilterBar, PastelSkeletonPage, PastelRating,
+  PastelInfoRow, PastelTag, PastelPrice, PastelPageTransition,
+} from '../../components/UI';
+import {
+  Box, Flex, Grid, Heading, Text, Button, Image, SimpleGrid, VStack,
+} from '@chakra-ui/react';
 
 export default function ShopDetail() {
   const { id } = useParams();
@@ -50,9 +44,14 @@ export default function ShopDetail() {
   }, [id]);
 
   const categories = useMemo(() => {
-    const cats = [...new Set(products.map((p) => p.category_id).filter(Boolean))];
-    return cats;
+    return [...new Set(products.map((p) => p.category_id).filter(Boolean))];
   }, [products]);
+
+  const filterOptions = useMemo(() => {
+    const opts = [{ value: 'all', label: 'Todas' }];
+    categories.forEach(cat => opts.push({ value: cat, label: cat }));
+    return opts;
+  }, [categories]);
 
   const filtered = useMemo(() => {
     if (categoryFilter === 'all') return products.filter((p) => p.is_available !== false);
@@ -81,327 +80,299 @@ export default function ShopDetail() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-        <Navbar />
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem' }}>
-          <div style={{ height: '200px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '12px', animation: 'shimmer 1.5s infinite', marginBottom: '16px' }} />
-          <div style={{ height: '24px', width: '60%', background: '#f0f0f0', borderRadius: '6px', marginBottom: '12px' }} />
-          <div style={{ height: '16px', width: '40%', background: '#f0f0f0', borderRadius: '6px' }} />
-        </div>
-      </div>
+      <Box minH="100vh" bg="warmGray.50">
+        <Box maxW="1100px" mx="auto" px={{ base: 4, md: 8 }} py={10}>
+          <PastelSkeletonPage cards={2} />
+        </Box>
+      </Box>
     );
   }
 
   if (loadError) {
     return (
-      <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-        <Navbar />
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 2rem', textAlign: 'center' }}>
-          <p style={{ color: colors.error, fontFamily: font.body, fontSize: '15px' }}>{loadError}</p>
-          <button onClick={() => navigate('/')} style={{ ...smallBtn, marginTop: '12px' }}>Volver al inicio</button>
-        </div>
-      </div>
+      <Box minH="100vh" bg="warmGray.50">
+        <Box maxW="900px" mx="auto" px={{ base: 4, md: 8 }} py={10}>
+          <PastelErrorState
+            title="Error al cargar"
+            message={loadError}
+            onBack={() => navigate('/')}
+          />
+        </Box>
+      </Box>
     );
   }
 
   if (!shop) {
     return (
-      <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-        <Navbar />
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 2rem', textAlign: 'center' }}>
-          <p style={{ color: colors.textMuted, fontFamily: font.body, fontSize: '15px' }}>Pastelería no encontrada</p>
-          <button onClick={() => navigate('/')} style={{ ...smallBtn, marginTop: '12px' }}>Volver al inicio</button>
-        </div>
-      </div>
+      <Box minH="100vh" bg="warmGray.50">
+        <Box maxW="900px" mx="auto" px={{ base: 4, md: 8 }} py={10}>
+          <PastelEmptyState
+            title="Pastelería no encontrada"
+            description="La pastelería que buscas no existe o ha sido eliminada"
+            actionLabel="Volver al inicio"
+            onAction={() => navigate('/')}
+          />
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem 2rem', ...animFadeIn }}>
-        <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: colors.accent, fontFamily: font.body, padding: 0, marginBottom: '16px', display: 'inline-block' }}>
-          ← Volver a pastelerías
-        </button>
+    <PastelPageTransition>
+      <Box minH="100vh" bg="warmGray.50">
+        <Box maxW="1100px" mx="auto" px={{ base: 4, md: 8 }} py={10} pb={8}>
+          <PastelPageHeader
+            breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: shop.shopName || shop.name }]}
+          />
 
-        <div style={{
-          background: (shop.bannerUrl || shop.banner_url) ? `url(${shop.bannerUrl || shop.banner_url}) center/cover no-repeat` : `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
-          height: '220px', borderRadius: '12px', position: 'relative',
-          marginBottom: '56px',
-        }}>
-          {(shop.logoUrl || shop.logo_url) && (
-            <img
-              src={shop.logoUrl || shop.logo_url}
-              alt={shop.shopName || shop.name}
-              style={{
-                width: '110px', height: '110px', borderRadius: '50%',
-                border: '4px solid white', position: 'absolute', bottom: '-55px',
-                left: '32px', objectFit: 'cover', background: colors.white,
-              }}
-            />
-          )}
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
-          <div>
-            <h1 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0 }}>{shop.shopName || shop.name}</h1>
-            <p style={{ fontFamily: font.body, fontSize: '14px', color: colors.textSecondary, margin: '4px 0 0' }}>
-              📍 {shop.city}{shop.address ? ` — ${shop.address}` : ''}
-            </p>
-          </div>
-          <span style={badgeStyle('#e8f5e9', '#2e7d32')}>{shop.approvalStatus || shop.status || 'Activo'}</span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '28px', alignItems: 'start' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-              <h2 style={{ fontFamily: font.heading, fontSize: '22px', fontWeight: 700, color: colors.primary, margin: 0 }}>Productos</h2>
-              <span style={{ fontSize: '13px', color: colors.textMuted, fontFamily: font.body }}>
-                {filtered.length} {filtered.length === 1 ? 'producto' : 'productos'}
-              </span>
-            </div>
-
-            {categories.length > 1 && (
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px' }}>
-                <button
-                  onClick={() => setCategoryFilter('all')}
-                  style={{
-                    padding: '5px 14px', borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 500,
-                    fontFamily: font.body, border: categoryFilter === 'all' ? 'none' : `1px solid ${colors.border}`,
-                    background: categoryFilter === 'all' ? colors.primary : colors.white,
-                    color: categoryFilter === 'all' ? '#fff' : colors.textSecondary,
-                    transition: 'all 0.2s ease',
-                  }}
-                >Todas</button>
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setCategoryFilter(cat)}
-                    style={{
-                      padding: '5px 14px', borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 500,
-                      fontFamily: font.body, border: categoryFilter === cat ? 'none' : `1px solid ${colors.border}`,
-                      background: categoryFilter === cat ? colors.accent : colors.white,
-                      color: categoryFilter === cat ? '#fff' : colors.textSecondary,
-                      transition: 'all 0.2s ease',
-                    }}
-                  >{cat}</button>
-                ))}
-              </div>
+          {/* Banner */}
+          <Box
+            bg={shop.bannerUrl || shop.banner_url
+              ? `url(${shop.bannerUrl || shop.banner_url}) center/cover no-repeat`
+              : 'linear-gradient(135deg, #2D1810, #6B4226)'}
+            h="220px"
+            borderRadius="12px"
+            position="relative"
+            mb={14}
+          >
+            {(shop.logoUrl || shop.logo_url) && (
+              <Image
+                src={shop.logoUrl || shop.logo_url}
+                alt={shop.shopName || shop.name}
+                position="absolute"
+                bottom="-55px"
+                left="32px"
+                w="110px"
+                h="110px"
+                borderRadius="50%"
+                border="4px solid white"
+                objectFit="cover"
+                bg="white"
+              />
             )}
+          </Box>
 
-            {filtered.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', gap: '12px' }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
-                </svg>
-                <p style={{ color: '#999', fontSize: '15px', margin: 0, fontFamily: font.body }}>
-                  {categoryFilter !== 'all' ? 'No hay productos en esta categoría' : 'Esta pastelería aún no tiene productos disponibles'}
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
-                {filtered.map((p, i) => (
-                  <div
-                    key={p.id}
-                    style={{
-                      ...animStagger(i * 0.04),
-                      background: colors.white, borderRadius: '12px',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef',
-                      overflow: 'hidden', display: 'flex', flexDirection: 'column',
-                    }}
-                  >
-                    {p.image_url ? (
-                      <img src={p.image_url} alt={p.name}
-                        style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }}
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <div style={{
-                        width: '100%', height: '140px', background: colors.grayLight,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '28px', color: colors.border,
-                      }}>
-                        🧁
-                      </div>
-                    )}
-                    <div style={{ padding: '12px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <button onClick={() => navigate(`/producto/${slugify(shop?.name)}/${p.id}`)} style={{ fontFamily: font.heading, fontSize: '15px', fontWeight: 600, color: colors.primary, margin: 0, padding: 0, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>{p.name}</button>
-                      {p.description && (
-                        <p style={{ fontFamily: font.body, fontSize: '11px', color: colors.textSecondary, margin: '3px 0 6px', lineHeight: 1.4, flex: 1 }}>{p.description}</p>
+          {/* Shop name + status */}
+          <Flex justify="space-between" align="flex-start" flexWrap="wrap" gap={3} mb={6}>
+            <Box>
+              <Heading as="h1" fontFamily="heading" fontSize="28px" fontWeight={700} color="brand.900" m={0}>
+                {shop.shopName || shop.name}
+              </Heading>
+              <PastelInfoRow icon="location" color="warm">
+                {shop.city}{shop.address ? ` — ${shop.address}` : ''}
+              </PastelInfoRow>
+            </Box>
+            <PastelStatusBadge status={shop.approvalStatus || shop.status || 'active'} />
+          </Flex>
+
+          <Grid templateColumns={{ base: '1fr', md: '1fr 320px' }} gap={7} alignItems="start">
+            <Box>
+              <Flex align="center" justify="space-between" flexWrap="wrap" gap={3} mb={4}>
+                <Heading as="h2" fontFamily="heading" fontSize="22px" fontWeight={700} color="brand.900" m={0}>
+                  Productos
+                </Heading>
+                <Text fontSize="13px" color="warmGray.400" fontFamily="body">
+                  {filtered.length} {filtered.length === 1 ? 'producto' : 'productos'}
+                </Text>
+              </Flex>
+
+              {categories.length > 1 && (
+                <Box mb={5}>
+                  <PastelFilterBar
+                    options={filterOptions}
+                    active={categoryFilter}
+                    onChange={setCategoryFilter}
+                  />
+                </Box>
+              )}
+
+              {filtered.length === 0 ? (
+                <PastelEmptyState
+                  title={categoryFilter !== 'all' ? 'No hay productos en esta categoría' : 'Esta pastelería aún no tiene productos disponibles'}
+                />
+              ) : (
+                <SimpleGrid columns={{ base: 2, sm: 3, md: 2, lg: 3 }} gap={4}>
+                  {filtered.map((p) => (
+                    <PastelCard
+                      key={p.id}
+                      variant="elevated"
+                      p={0}
+                      display="flex"
+                      flexDir="column"
+                      mb={0}
+                      transition="transform 0.2s ease, box-shadow 0.2s ease"
+                      _hover={{ transform: 'translateY(-3px)', boxShadow: '0 8px 20px rgba(0,0,0,0.1)' }}
+                    >
+                      {p.image_url ? (
+                        <Image src={p.image_url} alt={p.name} w="100%" h="140px" objectFit="cover" onError={(e) => { e.target.style.display = 'none'; }} />
+                      ) : (
+                        <Flex w="100%" h="140px" bg="warmGray.100" align="center" justify="center" color="warmGray.300">
+                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                          </svg>
+                        </Flex>
                       )}
-                      {p.stock !== undefined && p.stock !== null && p.stock <= 5 && p.stock > 0 && (
-                        <div style={{ fontSize: '10px', color: '#f59e0b', fontFamily: font.body, marginBottom: '4px' }}>Solo quedan {p.stock}</div>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '6px', borderTop: `1px solid ${colors.tableBorder}` }}>
-                        <span style={{ fontSize: '16px', fontWeight: 700, color: colors.accent, fontFamily: font.body }}>
-                          S/ {(p.price || 0).toFixed(2)}
-                        </span>
-                        <button
-                          onClick={() => addToCart(p)}
-                          style={{
-                            ...smallBtn, padding: '5px 12px', fontSize: '11px',
-                            background: addedIds[p.id] ? '#4caf50' : colors.accent,
-                            transform: addedIds[p.id] ? 'scale(0.95)' : 'scale(1)',
-                          }}
-                          onMouseEnter={(e) => { if (!addedIds[p.id]) e.target.style.background = '#168959'; }}
-                          onMouseLeave={(e) => { if (!addedIds[p.id]) e.target.style.background = colors.accent; }}
+                      <Box p={3} flex={1} display="flex" flexDir="column">
+                        <Button
+                          variant="link"
+                          fontFamily="heading"
+                          fontSize="15px"
+                          fontWeight={600}
+                          color="brand.900"
+                          textAlign="left"
+                          p={0}
+                          minH="auto"
+                          h="auto"
+                          onClick={() => navigate(`/producto/${slugify(shop?.name)}/${p.id}`)}
                         >
-                          {addedIds[p.id] ? '✓' : 'Agregar'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {(shop.shopDescription || shop.description) && (
-              <div style={sidebarBox}>
-                <div style={sectionTitle}>Descripción</div>
-                <p style={{ fontFamily: font.body, fontSize: '13px', color: colors.textSecondary, margin: 0, lineHeight: 1.7 }}>{shop.shopDescription || shop.description}</p>
-              </div>
-            )}
-
-            <div style={sidebarBox}>
-              <div style={sectionTitle}>Información</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {shop.rating !== undefined && shop.rating > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>⭐</span>
-                    <div>
-                      <div style={{ fontSize: '11px', color: colors.textMuted, fontFamily: font.body }}>Puntuación</div>
-                      <div style={{ fontSize: '14px', fontFamily: font.body, color: '#f59e0b' }}>
-                        {'★'.repeat(Math.round(shop.rating))}{'☆'.repeat(5 - Math.round(shop.rating))}
-                        <span style={{ color: colors.textSecondary, marginLeft: '6px', fontSize: '13px' }}>{shop.rating.toFixed(1)} / 5</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>📍</span>
-                  <div>
-                    <div style={{ fontSize: '11px', color: colors.textMuted, fontFamily: font.body }}>Dirección</div>
-                    <div style={{ fontSize: '13px', fontFamily: font.body, color: colors.text }}>{shop.address || shop.city || '—'}</div>
-                  </div>
-                </div>
-                {shop.phone && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>📞</span>
-                    <div>
-                      <div style={{ fontSize: '11px', color: colors.textMuted, fontFamily: font.body }}>Teléfono</div>
-                      <div style={{ fontSize: '13px', fontFamily: font.body, color: colors.text }}>{shop.phone}</div>
-                    </div>
-                  </div>
-                )}
-                {shop.email && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>✉️</span>
-                    <div>
-                      <div style={{ fontSize: '11px', color: colors.textMuted, fontFamily: font.body }}>Email</div>
-                      <div style={{ fontSize: '13px', fontFamily: font.body, color: colors.text }}>{shop.email}</div>
-                    </div>
-                  </div>
-                )}
-                {shop.delivery_range && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>🚚</span>
-                    <div>
-                      <div style={{ fontSize: '11px', color: colors.textMuted, fontFamily: font.body }}>Cobertura</div>
-                      <div style={{ fontSize: '13px', fontFamily: font.body, color: colors.text }}>{shop.delivery_range} km</div>
-                    </div>
-                  </div>
-                )}
-                {shop.owner_name && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>👤</span>
-                    <div>
-                      <div style={{ fontSize: '11px', color: colors.textMuted, fontFamily: font.body }}>Dueño</div>
-                      <div style={{ fontSize: '13px', fontFamily: font.body, color: colors.text }}>{shop.owner_name}</div>
-                    </div>
-                  </div>
-                )}
-                {shop.owner_id && !shop.owner_name && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>👤</span>
-                    <div>
-                      <div style={{ fontSize: '11px', color: colors.textMuted, fontFamily: font.body }}>Dueño ID</div>
-                      <div style={{ fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{shop.owner_id.slice(0, 12)}…</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {shop.schedules && shop.schedules.length > 0 && (
-              <div style={sidebarBox}>
-                <div style={sectionTitle}>Horarios</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {shop.schedules.map((s, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontFamily: font.body }}>
-                      <span style={{ color: colors.textSecondary }}>{s.day || s.dayOfWeek}</span>
-                      <span style={{ color: colors.text }}>{s.open} — {s.close}</span>
-                    </div>
+                          {p.name}
+                        </Button>
+                        {p.description && (
+                          <Text fontFamily="body" fontSize="11px" color="warmGray.500" mt={0.5} mb={1.5} lineHeight={1.4} flex={1}>
+                            {p.description}
+                          </Text>
+                        )}
+                        {p.stock !== undefined && p.stock !== null && p.stock <= 5 && p.stock > 0 && (
+                          <Text fontSize="10px" color="#f59e0b" fontFamily="body" mb={1}>
+                            Solo quedan {p.stock}
+                          </Text>
+                        )}
+                        <Flex justify="space-between" align="center" mt="auto" pt={1.5} borderTop="1px solid" borderTopColor="warmGray.100">
+                          <PastelPrice value={p.price || 0} size="sm" />
+                          <Button
+                            size="xs"
+                            borderRadius="99px"
+                            fontSize="11px"
+                            fontWeight={600}
+                            fontFamily="body"
+                            bg={addedIds[p.id] ? 'green.500' : 'accent.500'}
+                            color="white"
+                            _hover={!addedIds[p.id] ? { bg: '#168959' } : undefined}
+                            transform={addedIds[p.id] ? 'scale(0.95)' : 'scale(1)'}
+                            onClick={() => addToCart(p)}
+                          >
+                            {addedIds[p.id] ? '✓' : 'Agregar'}
+                          </Button>
+                        </Flex>
+                      </Box>
+                    </PastelCard>
                   ))}
-                </div>
-              </div>
-            )}
+                </SimpleGrid>
+              )}
+            </Box>
 
-            {shop.categories && shop.categories.length > 0 && (
-              <div style={sidebarBox}>
-                <div style={sectionTitle}>Categorías</div>
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  {shop.categories.map((cat, i) => (
-                    <span key={i} style={{
-                      padding: '3px 10px', borderRadius: '99px', fontSize: '11px',
-                      background: colors.grayBg, color: colors.textSecondary, fontFamily: font.body,
-                    }}>
-                      {cat.name || cat}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Sidebar */}
+            <VStack spacing={4} align="stretch">
+              {(shop.shopDescription || shop.description) && (
+                <PastelCard title="Descripción" variant="elevated">
+                  <Text fontFamily="body" fontSize="13px" color="warmGray.500" m={0} lineHeight={1.7}>
+                    {shop.shopDescription || shop.description}
+                  </Text>
+                </PastelCard>
+              )}
 
-            {/* Reviews */}
-            {reviews.length > 0 && (
-              <div style={sidebarBox}>
-                <div style={sectionTitle}>Reseñas ({reviews.length})</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  {reviews.slice(0, 5).map((r) => (
-                    <div key={r.id} style={{ borderBottom: `1px solid ${colors.border}`, paddingBottom: '10px' }}>
-                      <div style={{ fontSize: '16px', marginBottom: '4px' }}>
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <span key={star} style={{ color: star <= r.rating ? '#f59e0b' : '#ddd', marginRight: '1px' }}>★</span>
-                        ))}
-                      </div>
-                      {r.comment && <p style={{ fontFamily: font.body, fontSize: '12px', color: colors.text, margin: 0, lineHeight: 1.5 }}>{r.comment}</p>}
-                      {r.ownerReply && (
-                        <div style={{ marginTop: '6px', padding: '8px', background: colors.grayLight, borderRadius: '6px', fontSize: '11px', color: colors.textSecondary, fontFamily: font.body, borderLeft: `2px solid ${colors.accent}` }}>
-                          <strong style={{ color: colors.accent }}>Dueño:</strong> {r.ownerReply}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+              <PastelCard title="Información" variant="elevated">
+                <VStack spacing={0} align="stretch" divider={<Box h="1px" bg="warmGray.100" />}>
+                  {shop.rating !== undefined && shop.rating > 0 && (
+                    <PastelInfoRow icon="star" color="warm">
+                      <Flex align="center" gap={2}>
+                        <PastelRating value={shop.rating} showValue />
+                        <Text as="span" fontSize="12px" color="warmGray.400">/ 5</Text>
+                      </Flex>
+                    </PastelInfoRow>
+                  )}
+                  <PastelInfoRow icon="location" label="Dirección" color="brand">
+                    {shop.address || shop.city || '—'}
+                  </PastelInfoRow>
+                  {shop.phone && (
+                    <PastelInfoRow icon="phone" label="Teléfono" color="blue" href={`tel:${shop.phone}`}>
+                      {shop.phone}
+                    </PastelInfoRow>
+                  )}
+                  {shop.email && (
+                    <PastelInfoRow icon="mail" label="Email" color="blue" href={`mailto:${shop.email}`}>
+                      {shop.email}
+                    </PastelInfoRow>
+                  )}
+                  {shop.delivery_range && (
+                    <PastelInfoRow icon="truck" label="Cobertura" color="accent">
+                      {shop.delivery_range} km
+                    </PastelInfoRow>
+                  )}
+                  {shop.owner_name && (
+                    <PastelInfoRow icon="user" label="Dueño" color="rose">
+                      {shop.owner_name}
+                    </PastelInfoRow>
+                  )}
+                </VStack>
+              </PastelCard>
 
-      {toast && (
-        <div style={{
-          position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-          background: colors.primary, color: '#fff', padding: '12px 24px',
-          borderRadius: '99px', fontSize: '14px', fontFamily: font.body,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.2)', zIndex: 1000,
-          transition: 'opacity 0.3s ease',
-        }}>
-          {toast}
-        </div>
-      )}
-    </div>
+              {shop.schedules && shop.schedules.length > 0 && (
+                <PastelCard title="Horarios" variant="elevated">
+                  <VStack spacing={1} align="stretch">
+                    {shop.schedules.map((s, i) => (
+                      <Flex key={i} justify="space-between" fontSize="12px" fontFamily="body">
+                        <Text color="warmGray.500">{s.day || s.dayOfWeek}</Text>
+                        <Text color="brand.900">{s.open} — {s.close}</Text>
+                      </Flex>
+                    ))}
+                  </VStack>
+                </PastelCard>
+              )}
+
+              {shop.categories && shop.categories.length > 0 && (
+                <PastelCard title="Categorías" variant="elevated">
+                  <Flex gap={1.5} flexWrap="wrap">
+                    {shop.categories.map((cat, i) => (
+                      <PastelTag key={i} size="sm">{cat.name || cat}</PastelTag>
+                    ))}
+                  </Flex>
+                </PastelCard>
+              )}
+
+              {/* Reviews */}
+              {reviews.length > 0 && (
+                <PastelCard title={`Reseñas (${reviews.length})`} variant="elevated">
+                  <VStack spacing={3.5} align="stretch">
+                    {reviews.slice(0, 5).map((r) => (
+                      <Box key={r.id} borderBottom="1px solid" borderBottomColor="warmGray.200" pb={2.5}>
+                        <PastelRating value={r.rating} size="sm" showValue={false} />
+                        {r.comment && <Text fontFamily="body" fontSize="12px" color="brand.900" m={0} lineHeight={1.5}>{r.comment}</Text>}
+                        {r.ownerReply && (
+                          <Box mt={1.5} p={2} bg="warmGray.100" borderRadius="6px" fontSize="11px" color="warmGray.500" fontFamily="body" borderLeft="2px solid" borderLeftColor="accent.500">
+                            <Text as="strong" color="accent.500">Dueño:</Text> {r.ownerReply}
+                          </Box>
+                        )}
+                      </Box>
+                    ))}
+                  </VStack>
+                </PastelCard>
+              )}
+            </VStack>
+          </Grid>
+        </Box>
+
+        {/* Toast */}
+        {toast && (
+          <Box
+            position="fixed"
+            bottom="24px"
+            left="50%"
+            transform="translateX(-50%)"
+            bg="brand.900"
+            color="white"
+            px={6}
+            py={3}
+            borderRadius="99px"
+            fontSize="14px"
+            fontFamily="body"
+            boxShadow="0 4px 16px rgba(0,0,0,0.2)"
+            zIndex={1000}
+          >
+            {toast}
+          </Box>
+        )}
+      </Box>
+    </PastelPageTransition>
   );
 }

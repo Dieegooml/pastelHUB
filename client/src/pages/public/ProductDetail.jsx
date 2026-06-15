@@ -2,29 +2,14 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { productsService } from '../../services/productsService';
 import { shopsService } from '../../services/shopsService';
-import Navbar from '../../components/Navbar';
-import Tooltip from '../../components/Tooltip';
-import { colors, font, btnPrimary, animStagger, animFadeIn, badge } from '../../styles/theme';
-
-const presetQuantities = [1, 3, 6, 12];
-
-const mediaStyle = `
-@media (max-width: 768px) {
-  .pd-grid { grid-template-columns: 1fr !important; }
-  .pd-image { height: 280px !important; }
-  .pd-presets { flex-wrap: wrap; }
-}
-.lightbox-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.85); z-index: 2000;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; animation: fadeIn 0.2s ease;
-}
-.lightbox-img {
-  max-width: 90vw; max-height: 90vh; object-fit: contain;
-  border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.4);
-}
-`;
+import {
+  PastelPageHeader, PastelCard, PastelEmptyState, PastelErrorState,
+  PastelSkeletonPage, PastelPrice, PastelQuantitySelector,
+  PastelImageWithZoom, PastelPageTransition,
+} from '../../components/UI';
+import {
+  Box, Flex, Grid, Heading, Text, Button, SimpleGrid,
+} from '@chakra-ui/react';
 
 export default function ProductDetail() {
   const { shop: shopSlug, id } = useParams();
@@ -39,7 +24,6 @@ export default function ProductDetail() {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [added, setAdded] = useState(false);
   const [toast, setToast] = useState('');
-  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -107,341 +91,282 @@ export default function ProductDetail() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-        <Navbar />
-        <style>{mediaStyle}</style>
-        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 16px' }}>
-          <div style={{ width: '180px', height: '14px', background: '#e0e0e0', borderRadius: '4px', marginBottom: '20px', animation: 'shimmer 1.5s infinite' }} />
-          <div className="pd-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-            <div style={{ width: '100%', height: '400px', background: '#e0e0e0', borderRadius: '12px', animation: 'shimmer 1.5s infinite' }} />
-            <div>
-              <div style={{ width: '40%', height: '14px', background: '#e0e0e0', borderRadius: '4px', marginBottom: '10px', animation: 'shimmer 1.5s infinite' }} />
-              <div style={{ width: '70%', height: '28px', background: '#e0e0e0', borderRadius: '4px', marginBottom: '10px', animation: 'shimmer 1.5s infinite' }} />
-              <div style={{ width: '30%', height: '24px', background: '#e0e0e0', borderRadius: '4px', marginBottom: '16px', animation: 'shimmer 1.5s infinite' }} />
-              <div style={{ width: '100%', height: '12px', background: '#e0e0e0', borderRadius: '4px', marginBottom: '6px', animation: 'shimmer 1.5s infinite' }} />
-              <div style={{ width: '90%', height: '12px', background: '#e0e0e0', borderRadius: '4px', marginBottom: '6px', animation: 'shimmer 1.5s infinite' }} />
-              <div style={{ width: '60%', height: '12px', background: '#e0e0e0', borderRadius: '4px', marginBottom: '24px', animation: 'shimmer 1.5s infinite' }} />
-              <div style={{ width: '50%', height: '48px', background: '#e0e0e0', borderRadius: '99px', animation: 'shimmer 1.5s infinite' }} />
-            </div>
-          </div>
-        </div>
-      </div>
+      <Box minH="100vh" bg="warmGray.50">
+        <Box maxW="1000px" mx="auto" px={{ base: 4, md: 6 }} py={8}>
+          <PastelSkeletonPage cards={2} />
+        </Box>
+      </Box>
     );
   }
 
   if (error && !product) {
     return (
-      <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-        <Navbar />
-        <style>{mediaStyle}</style>
-        <div style={{ textAlign: 'center', padding: '80px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>😕</div>
-          <h2 style={{ fontFamily: font.heading, color: colors.primary }}>Producto no encontrado</h2>
-          <p style={{ fontFamily: font.body, color: colors.textSecondary, marginBottom: '20px' }}>{error}</p>
-          <button onClick={() => navigate(-1)} style={{ ...btnPrimary, display: 'inline-block' }}>Volver</button>
-        </div>
-      </div>
+      <Box minH="100vh" bg="warmGray.50">
+        <Box maxW="500px" mx="auto" py={20} px={5}>
+          <PastelErrorState
+            title="Producto no encontrado"
+            message={error}
+            onBack={() => navigate(-1)}
+          />
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <style>{mediaStyle}</style>
-
-      {lightboxOpen && (
-        <div className="lightbox-overlay" onClick={() => setLightboxOpen(false)}>
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className="lightbox-img"
+    <PastelPageTransition>
+      <Box minH="100vh" bg="warmGray.50">
+        <Box maxW="1000px" mx="auto" px={{ base: 4, md: 6 }} py={6}>
+          <PastelPageHeader
+            breadcrumbs={[
+              { label: 'Inicio', href: '/' },
+              { label: shop?.name || 'Tienda', href: `/shops/${product.shop_id}` },
+              { label: product.name },
+            ]}
           />
-        </div>
-      )}
 
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '24px 16px' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
-          fontFamily: font.body, fontSize: '12px', color: colors.textSecondary,
-          marginBottom: '16px', flexWrap: 'wrap',
-        }}>
-          <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.accent, fontFamily: font.body, fontSize: '12px', padding: 0 }}>Inicio</button>
-          <span>/</span>
-          <button onClick={() => navigate(`/shops/${product.shop_id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.accent, fontFamily: font.body, fontSize: '12px', padding: 0 }}>{shop?.name || 'Tienda'}</button>
-          <span>/</span>
-          <span style={{ color: colors.textMuted }}>{product.name}</span>
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <button onClick={() => navigate('/shops/' + product.shop_id)} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontFamily: font.body, fontSize: '13px', color: colors.accent,
-            padding: '4px 0', display: 'inline-flex', alignItems: 'center', gap: '4px',
-          }}>
-            ← Volver a {shop?.name || 'la tienda'}
-          </button>
-        </div>
-
-        <div className="pd-grid" style={{
-          ...animStagger(0.02),
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px',
-          alignItems: 'start',
-        }}>
-          <div>
-            {product.image_url ? (
-              <img
+          <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={8} alignItems="start">
+            <Box>
+              <PastelImageWithZoom
                 src={product.image_url}
                 alt={product.name}
-                className="pd-image"
-                style={{ width: '100%', height: '400px', objectFit: 'cover', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'transform 0.2s', display: 'block' }}
-                onClick={() => setLightboxOpen(true)}
-                onMouseEnter={(e) => { e.target.style.transform = 'scale(1.01)'; }}
-                onMouseLeave={(e) => { e.target.style.transform = 'scale(1)'; }}
-                onError={(e) => { e.target.style.display = 'none'; }}
+                h={{ base: '280px', md: '400px' }}
+                borderRadius="16px"
+                fallback="brand"
               />
-            ) : (
-              <div style={{
-                width: '100%', height: '400px', borderRadius: '16px',
-                background: `linear-gradient(135deg, ${colors.grayLight}, ${colors.border})`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '72px', color: colors.textSecondary,
-              }}>🧁</div>
-            )}
-            <p style={{ fontFamily: font.body, fontSize: '11px', color: colors.textMuted, textAlign: 'center', marginTop: '8px' }}>
-              {product.image_url ? 'Click para ampliar' : 'Sin imagen disponible'}
-            </p>
-          </div>
+              <Text fontFamily="body" fontSize="11px" color="warmGray.400" textAlign="center" mt={2}>
+                {product.image_url ? 'Click para ampliar' : 'Sin imagen disponible'}
+              </Text>
+            </Box>
 
-          <div>
-            {shop && (
-              <div style={{
-                ...badge,
-                background: '#e1f5ee', color: colors.accent,
-                display: 'inline-block', marginBottom: '10px',
-              }}>
-                {shop.name}
-              </div>
-            )}
-
-            <h1 style={{
-              fontFamily: font.heading, fontSize: '26px',
-              fontWeight: 700, color: colors.primary,
-              margin: '0 0 8px', lineHeight: 1.2,
-            }}>{product.name}</h1>
-
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '16px' }}>
-              <span style={{ fontSize: '28px', fontWeight: 700, color: colors.accent, fontFamily: font.body }}>
-                S/ {unitPrice.toFixed(2)}
-              </span>
-              {selectedVariant && selectedVariant.extra_price > 0 && (
-                <span style={{ fontSize: '13px', color: colors.textSecondary, fontWeight: 400 }}>
-                  (+S/ {selectedVariant.extra_price.toFixed(2)})
-                </span>
-              )}
-              {quantity > 1 && (
-                <span style={{ fontSize: '13px', color: colors.textMuted, fontWeight: 400 }}>
-                  (S/ {totalPrice.toFixed(2)} total)
-                </span>
-              )}
-            </div>
-
-            {product.stock !== undefined && product.stock !== null && (
-              <div style={{
-                fontFamily: font.body, fontSize: '13px',
-                padding: '6px 12px', borderRadius: '99px',
-                display: 'inline-block', marginBottom: '20px',
-                background: product.stock === 0 ? '#fee2e2' : product.stock <= 5 ? '#fef3c7' : '#e1f5ee',
-                color: product.stock === 0 ? '#dc2626' : product.stock <= 5 ? '#d97706' : '#059669',
-                fontWeight: 500,
-              }}>
-                {product.stock === 0
-                  ? 'Agotado'
-                  : product.stock <= 5
-                    ? `Solo quedan ${product.stock} unidades`
-                    : `${product.stock} en stock`
-                }
-              </div>
-            )}
-
-            {product.description && (
-              <div style={{
-                fontFamily: font.body, fontSize: '14px',
-                color: colors.textSecondary, lineHeight: 1.8,
-                margin: '0 0 24px', padding: '16px 0', borderTop: `1px solid ${colors.tableBorder}`,
-              }}>
-                {product.description}
-              </div>
-            )}
-
-            {variants.length > 0 && (
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{
-                  fontFamily: font.heading, fontSize: '13px',
-                  fontWeight: 600, color: colors.primary,
-                  margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.03em',
-                }}>Variantes</h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {variants.map((v, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setSelectedVariant(selectedVariant?.type === v.type && selectedVariant?.value === v.value ? null : v)}
-                      style={{
-                        padding: '7px 16px',
-                        borderRadius: '99px',
-                        border: `1.5px solid ${selectedVariant?.type === v.type && selectedVariant?.value === v.value ? colors.accent : colors.border}`,
-                        background: selectedVariant?.type === v.type && selectedVariant?.value === v.value ? '#e1f5ee' : colors.white,
-                        cursor: 'pointer',
-                        fontFamily: font.body,
-                        fontSize: '13px',
-                        color: selectedVariant?.type === v.type && selectedVariant?.value === v.value ? colors.accent : colors.text,
-                        transition: 'all 0.2s',
-                        fontWeight: selectedVariant?.type === v.type && selectedVariant?.value === v.value ? 600 : 400,
-                      }}
-                    >
-                      {v.value} {v.extra_price > 0 ? `(+S/ ${v.extra_price.toFixed(2)})` : ''}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ fontFamily: font.body, fontSize: '13px', fontWeight: 600, color: colors.primary, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                Cantidad
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0', border: `1px solid ${colors.border}`, borderRadius: '8px', overflow: 'hidden' }}>
-                  <Tooltip text="Disminuir cantidad">
-                    <button
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      disabled={quantity <= 1}
-                      style={{
-                        width: '36px', height: '36px', border: 'none',
-                        background: colors.grayLight, cursor: quantity <= 1 ? 'not-allowed' : 'pointer',
-                        fontSize: '16px', color: colors.text, opacity: quantity <= 1 ? 0.4 : 1,
-                      }}
-                    >−</button>
-                  </Tooltip>
-                  <span style={{
-                    width: '44px', textAlign: 'center',
-                    fontFamily: font.body, fontSize: '15px', fontWeight: 600, color: colors.text,
-                  }}>{quantity}</span>
-                  <Tooltip text="Aumentar cantidad">
-                    <button
-                      onClick={() => setQuantity(quantity + 1)}
-                      style={{
-                        width: '36px', height: '36px', border: 'none',
-                        background: colors.grayLight, cursor: 'pointer',
-                        fontSize: '16px', color: colors.text,
-                      }}
-                    >+</button>
-                  </Tooltip>
-                </div>
-                <div className="pd-presets" style={{ display: 'flex', gap: '6px' }}>
-                  {presetQuantities.map(q => (
-                    <button
-                      key={q}
-                      onClick={() => setQuantity(q)}
-                      style={{
-                        padding: '4px 12px', borderRadius: '6px', border: `1px solid ${quantity === q ? colors.accent : colors.border}`,
-                        background: quantity === q ? '#e1f5ee' : colors.white,
-                        cursor: 'pointer', fontFamily: font.body, fontSize: '12px',
-                        color: quantity === q ? colors.accent : colors.text,
-                        fontWeight: quantity === q ? 600 : 400,
-                        transition: 'all 0.15s',
-                      }}
-                    >{q}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={addToCart}
-              disabled={product.stock === 0}
-              style={{
-                ...btnPrimary,
-                width: '100%',
-                padding: '14px 24px',
-                fontSize: '15px',
-                opacity: product.stock === 0 ? 0.5 : 1,
-                cursor: product.stock === 0 ? 'not-allowed' : 'pointer',
-                background: added ? '#4caf50' : colors.accent,
-                transform: added ? 'scale(0.98)' : 'scale(1)',
-                transition: 'all 0.2s',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              }}
-            >
-              {product.stock === 0 ? <span>Agotado</span> : added ? <span>✓ Agregado</span> : <><span>🛒</span><span>Agregar al Carrito</span></>}
-              {product.stock !== 0 && <span style={{ fontSize: '13px', opacity: 0.8 }}>— S/ {totalPrice.toFixed(2)}</span>}
-            </button>
-          </div>
-        </div>
-
-        {related.length > 0 && (
-          <div style={{ marginTop: '48px', ...animFadeIn }}>
-            <h2 style={{
-              fontFamily: font.heading, fontSize: '20px',
-              fontWeight: 700, color: colors.primary,
-              margin: '0 0 16px',
-            }}>Productos Relacionados</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px' }}>
-              {related.map((p, i) => (
-                <div
-                  key={p.id}
-                  onClick={() => handleRelatedClick(p.id)}
-                  style={{
-                    ...animStagger(i * 0.06),
-                    background: colors.white, borderRadius: '12px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #efefef',
-                    overflow: 'hidden', cursor: 'pointer',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)'; }}
+            <Box>
+              {shop && (
+                <Flex
+                  display="inline-flex"
+                  align="center"
+                  gap={1.5}
+                  bg="accent.50"
+                  color="accent.600"
+                  px={3}
+                  py={1}
+                  borderRadius="99px"
+                  fontSize="11px"
+                  fontWeight={600}
+                  fontFamily="body"
+                  mb={2.5}
                 >
-                  {p.image_url ? (
-                    <img src={p.image_url} alt={p.name}
-                      style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }}
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                  ) : (
-                    <div style={{ width: '100%', height: '120px', background: colors.grayLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: colors.border }}>🧁</div>
-                  )}
-                  <div style={{ padding: '10px 12px' }}>
-                    <div style={{ fontFamily: font.heading, fontSize: '13px', fontWeight: 600, color: colors.primary, marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', fontWeight: 700, color: colors.accent, fontFamily: font.body }}>
-                        S/ {(p.price || 0).toFixed(2)}
-                      </span>
-                      {p.stock !== undefined && p.stock <= 5 && p.stock > 0 && (
-                        <span style={{ fontSize: '10px', color: '#f59e0b' }}>{p.stock} uds</span>
-                      )}
-                      {p.stock === 0 && (
-                        <span style={{ fontSize: '10px', color: '#dc2626' }}>Agotado</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+                  </svg>
+                  {shop.name}
+                </Flex>
+              )}
 
-      {toast && (
-        <div style={{
-          ...animFadeIn,
-          position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-          background: colors.primary, color: colors.white,
-          padding: '12px 24px', borderRadius: '99px',
-          fontFamily: font.body, fontSize: '14px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 1000,
-        }}>
-          {toast}
-        </div>
-      )}
-    </div>
+              <Heading as="h1" fontFamily="heading" fontSize="26px" fontWeight={700} color="brand.900" mb={2} lineHeight={1.2}>
+                {product.name}
+              </Heading>
+
+              <Flex align="baseline" gap={2.5} mb={4}>
+                <PastelPrice value={unitPrice} size="lg" />
+                {selectedVariant && selectedVariant.extra_price > 0 && (
+                  <Text fontSize="13px" color="warmGray.500" fontWeight={400}>
+                    (+S/ {selectedVariant.extra_price.toFixed(2)})
+                  </Text>
+                )}
+                {quantity > 1 && (
+                  <Text fontSize="13px" color="warmGray.400" fontWeight={400}>
+                    (S/ {totalPrice.toFixed(2)} total)
+                  </Text>
+                )}
+              </Flex>
+
+              {product.stock !== undefined && product.stock !== null && (
+                <Flex
+                  display="inline-flex"
+                  align="center"
+                  gap={1.5}
+                  fontFamily="body"
+                  fontSize="13px"
+                  px={3}
+                  py={1.5}
+                  borderRadius="99px"
+                  mb={5}
+                  bg={product.stock === 0 ? '#fee2e2' : product.stock <= 5 ? '#fef3c7' : '#e1f5ee'}
+                  color={product.stock === 0 ? '#dc2626' : product.stock <= 5 ? '#d97706' : '#059669'}
+                  fontWeight={500}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  {product.stock === 0
+                    ? 'Agotado'
+                    : product.stock <= 5
+                      ? `Solo quedan ${product.stock} unidades`
+                      : `${product.stock} en stock`
+                  }
+                </Flex>
+              )}
+
+              {product.description && (
+                <Text
+                  fontFamily="body"
+                  fontSize="14px"
+                  color="warmGray.500"
+                  lineHeight={1.8}
+                  mb={6}
+                  pt={4}
+                  borderTop="1px solid"
+                  borderTopColor="warmGray.100"
+                >
+                  {product.description}
+                </Text>
+              )}
+
+              {variants.length > 0 && (
+                <Box mb={5}>
+                  <Heading as="h4" fontFamily="heading" fontSize="13px" fontWeight={600} color="brand.900" mb={2} textTransform="uppercase" letterSpacing="0.03em">
+                    Variantes
+                  </Heading>
+                  <Flex flexWrap="wrap" gap={2}>
+                    {variants.map((v, i) => (
+                      <Button
+                        key={i}
+                        size="sm"
+                        borderRadius="99px"
+                        fontSize="13px"
+                        fontFamily="body"
+                        variant="outline"
+                        border="1.5px solid"
+                        borderColor={selectedVariant?.type === v.type && selectedVariant?.value === v.value ? 'accent.500' : 'warmGray.200'}
+                        bg={selectedVariant?.type === v.type && selectedVariant?.value === v.value ? '#e1f5ee' : 'white'}
+                        color={selectedVariant?.type === v.type && selectedVariant?.value === v.value ? 'accent.500' : 'brand.900'}
+                        fontWeight={selectedVariant?.type === v.type && selectedVariant?.value === v.value ? 600 : 400}
+                        _hover={{ bg: selectedVariant?.type === v.type && selectedVariant?.value === v.value ? '#e1f5ee' : 'warmGray.50' }}
+                        onClick={() => setSelectedVariant(selectedVariant?.type === v.type && selectedVariant?.value === v.value ? null : v)}
+                      >
+                        {v.value} {v.extra_price > 0 ? `(+S/ ${v.extra_price.toFixed(2)})` : ''}
+                      </Button>
+                    ))}
+                  </Flex>
+                </Box>
+              )}
+
+              <Box mb={5}>
+                <Heading as="h4" fontFamily="heading" fontSize="13px" fontWeight={600} color="brand.900" mb={2} textTransform="uppercase" letterSpacing="0.03em">
+                  Cantidad
+                </Heading>
+                <PastelQuantitySelector value={quantity} onChange={setQuantity} max={product.stock || 999} />
+              </Box>
+
+              <Button
+                variant="primary"
+                w="100%"
+                py={4}
+                fontSize="15px"
+                onClick={addToCart}
+                isDisabled={product.stock === 0}
+                opacity={product.stock === 0 ? 0.5 : 1}
+                bg={added ? 'green.500' : undefined}
+                colorScheme={added ? 'green' : undefined}
+                transform={added ? 'scale(0.98)' : 'scale(1)'}
+                transition="all 0.2s"
+                leftIcon={
+                  product.stock === 0 ? undefined : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                    </svg>
+                  )
+                }
+              >
+                {product.stock === 0 ? (
+                  'Agotado'
+                ) : (
+                  <>
+                    {added ? '✓ Agregado' : 'Agregar al Carrito'}
+                    <Box as="span" fontSize="13px" opacity={0.8} ml={2}>— S/ {totalPrice.toFixed(2)}</Box>
+                  </>
+                )}
+              </Button>
+            </Box>
+          </Grid>
+
+          {/* Related Products */}
+          {related.length > 0 && (
+            <Box mt={12}>
+              <Heading as="h2" fontFamily="heading" fontSize="20px" fontWeight={700} color="brand.900" mb={4}>
+                Productos Relacionados
+              </Heading>
+              <SimpleGrid columns={{ base: 2, sm: 3, md: 4 }} gap={3.5}>
+                {related.map((p) => (
+                  <PastelCard
+                    key={p.id}
+                    variant="elevated"
+                    p={0}
+                    cursor="pointer"
+                    onClick={() => handleRelatedClick(p.id)}
+                    _hover={{ transform: 'translateY(-3px)', boxShadow: '0 6px 16px rgba(0,0,0,0.1)' }}
+                    transition="transform 0.2s ease, box-shadow 0.2s ease"
+                    mb={0}
+                  >
+                    {p.image_url ? (
+                      <Box
+                        as="img"
+                        src={p.image_url}
+                        alt={p.name}
+                        w="100%" h="120px"
+                        objectFit="cover"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <Flex w="100%" h="120px" bg="warmGray.100" align="center" justify="center" color="warmGray.300">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                      </Flex>
+                    )}
+                    <Box px={3} py={2.5}>
+                      <Text fontFamily="heading" fontSize="13px" fontWeight={600} color="brand.900" mb={1} noOfLines={1}>
+                        {p.name}
+                      </Text>
+                      <Flex justify="space-between" align="center">
+                        <PastelPrice value={p.price || 0} size="xs" />
+                        {p.stock !== undefined && p.stock <= 5 && p.stock > 0 && (
+                          <Text fontSize="10px" color="#f59e0b">{p.stock} uds</Text>
+                        )}
+                        {p.stock === 0 && (
+                          <Text fontSize="10px" color="#dc2626">Agotado</Text>
+                        )}
+                      </Flex>
+                    </Box>
+                  </PastelCard>
+                ))}
+              </SimpleGrid>
+            </Box>
+          )}
+        </Box>
+
+        {/* Toast */}
+        {toast && (
+          <Box
+            position="fixed"
+            bottom="24px"
+            left="50%"
+            transform="translateX(-50%)"
+            bg="brand.900"
+            color="white"
+            px={6}
+            py={3}
+            borderRadius="99px"
+            fontFamily="body"
+            fontSize="14px"
+            boxShadow="0 4px 12px rgba(0,0,0,0.15)"
+            zIndex={1000}
+          >
+            {toast}
+          </Box>
+        )}
+      </Box>
+    </PastelPageTransition>
   );
 }
