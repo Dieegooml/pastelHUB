@@ -1,8 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../../components/Navbar';
-import Tooltip from '../../components/Tooltip';
-import { colors, font, btnPrimary, animFadeIn, animStagger } from '../../styles/theme';
+import {
+  Box, Flex, HStack, VStack, Text, Button, IconButton, Image, Tooltip,
+} from '@chakra-ui/react';
+import {
+  PastelPageHeader, PastelCard, PastelEmptyState, PastelSkeletonCard, PastelPrice, PastelPageTransition,
+} from '../../components/UI';
+
+const trashIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+  </svg>
+);
+
+const cartIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+  </svg>
+);
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -38,127 +55,115 @@ export default function Cart() {
   const total = items.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
 
   if (!loaded) return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
-        <div style={{ height: '28px', width: '120px', background: '#e0e0e0', borderRadius: '4px', marginBottom: '12px', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)' }} />
-        <div style={{ height: '3px', width: '60px', background: '#e0e0e0', borderRadius: '99px', marginBottom: '1.5rem', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)' }} />
-        {[1, 2, 3].map(i => (
-          <div key={i} style={{
-            display: 'flex', alignItems: 'center', gap: '16px',
-            background: colors.white, borderRadius: '12px', padding: '16px',
-            marginBottom: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-          }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '8px', background: '#e0e0e0', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ height: '15px', width: '60%', background: '#e0e0e0', borderRadius: '4px', marginBottom: '8px', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)' }} />
-              <div style={{ height: '13px', width: '30%', background: '#e0e0e0', borderRadius: '4px', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)' }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+    <Box maxW="800px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <Box h="28px" w="120px" bg="warmGray.200" borderRadius="md" mb={3} />
+      <Box h="3px" w="60px" bg="warmGray.200" borderRadius="full" mb={6} />
+      {[1, 2, 3].map(i => (
+        <PastelSkeletonCard key={i} h="70px" />
+      ))}
+    </Box>
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div
-        style={{ ...animFadeIn, maxWidth: '800px', margin: '0 auto', padding: '40px 2rem 2rem' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-          <div>
-            <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0 }}>Carrito</h2>
-            <span style={{ fontFamily: font.body, fontSize: '13px', color: colors.textMuted }}>{items.length} {items.length === 1 ? 'producto' : 'productos'}</span>
-          </div>
-          {items.length > 0 && (
-            <button onClick={clearCart} style={{
-              padding: '6px 14px', borderRadius: '99px', border: `1px solid ${colors.border}`,
-              fontSize: '12px', fontWeight: 500, fontFamily: font.body, cursor: 'pointer',
-              background: colors.white, color: colors.error,
-            }}>Vaciar carrito</button>
+    <PastelPageTransition>
+      <Box maxW="800px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+        <PastelPageHeader
+          title="Carrito"
+          description={`${items.length} ${items.length === 1 ? 'producto' : 'productos'}`}
+          actions={items.length > 0 && (
+            <Button variant="outline" size="sm" color="rose.500" borderColor="warmGray.300" onClick={clearCart} leftIcon={trashIcon}>
+              Vaciar carrito
+            </Button>
           )}
-        </div>
-
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.5rem' }} />
+        />
 
         {items.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', gap: '12px' }}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-              <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
-            </svg>
-            <p style={{ color: '#999', fontSize: '15px', margin: 0, fontFamily: font.body }}>Tu carrito está vacío</p>
-            <p style={{ color: '#bbb', fontSize: '13px', margin: 0, fontFamily: font.body }}>Explora las pastelerías y agrega productos</p>
-            <button onClick={() => navigate('/')} style={{ ...btnPrimary, marginTop: '8px' }}>Ver pastelerías</button>
-          </div>
+          <PastelEmptyState
+            title="Tu carrito está vacío"
+            description="Explora las pastelerías y agrega productos"
+            actionLabel="Ver pastelerías"
+            actionPath="/"
+          />
         ) : (
           <>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-              {items.map((item, i) => (
-                <div
-                  key={item.id}
-                  style={{ ...animStagger(i * 0.05),
-                    display: 'flex', alignItems: 'center', gap: '16px',
-                    background: colors.white, borderRadius: '12px', padding: '16px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef',
-                  }}
-                >
-                  {item.image_url && (
-                    <img src={item.image_url} alt={item.name} style={{ width: '56px', height: '56px', borderRadius: '8px', objectFit: 'cover' }} />
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '15px', fontWeight: 600, fontFamily: font.body, color: colors.text }}>{item.name}</div>
-                    <div style={{ fontSize: '13px', fontFamily: font.body, color: colors.accent, fontWeight: 600 }}>
-                      S/ {(item.price || 0).toFixed(2)}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Tooltip text="Disminuir cantidad">
-                      <button onClick={() => updateQuantity(item.id, -1)} style={{
-                        width: '30px', height: '30px', borderRadius: '50%', border: `1px solid ${colors.border}`,
-                        background: colors.white, cursor: 'pointer', fontSize: '16px', fontWeight: 600,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text,
-                      }}>−</button>
+            <VStack spacing={3} mb={6}>
+              {items.map((item) => (
+                <PastelCard key={item.id} variant="elevated" p={4}>
+                  <HStack spacing={4}>
+                    {item.image_url && (
+                      <Image src={item.image_url} alt={item.name} w="56px" h="56px" borderRadius="lg" objectFit="cover" />
+                    )}
+                    <Box flex={1} minW={0}>
+                      <Text fontSize="sm" fontWeight={600} color="warmGray.800">{item.name}</Text>
+                      <PastelPrice value={item.price || 0} size="xs" />
+                    </Box>
+                    <HStack spacing={2}>
+                      <Tooltip label="Disminuir cantidad">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          borderColor="warmGray.300"
+                          borderRadius="full"
+                          w="30px" h="30px" minW="30px" p={0}
+                          fontSize="md" fontWeight={600}
+                          onClick={() => updateQuantity(item.id, -1)}
+                        >
+                          −
+                        </Button>
+                      </Tooltip>
+                      <Text fontSize="sm" fontWeight={600} minW="24px" textAlign="center">{item.quantity}</Text>
+                      <Tooltip label="Aumentar cantidad">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          borderColor="warmGray.300"
+                          borderRadius="full"
+                          w="30px" h="30px" minW="30px" p={0}
+                          fontSize="md" fontWeight={600}
+                          onClick={() => updateQuantity(item.id, 1)}
+                        >
+                          +
+                        </Button>
+                      </Tooltip>
+                    </HStack>
+                    <PastelPrice value={(item.price || 0) * item.quantity} size="sm" minW="80px" textAlign="right" />
+                    <Tooltip label="Eliminar producto">
+                      <IconButton
+                        aria-label="Eliminar producto"
+                        icon={trashIcon}
+                        size="sm"
+                        variant="ghost"
+                        color="warmGray.400"
+                        _hover={{ color: 'rose.500' }}
+                        onClick={() => removeItem(item.id)}
+                      />
                     </Tooltip>
-                    <span style={{ fontSize: '15px', fontWeight: 600, fontFamily: font.body, minWidth: '24px', textAlign: 'center' }}>{item.quantity}</span>
-                    <Tooltip text="Aumentar cantidad">
-                      <button onClick={() => updateQuantity(item.id, 1)} style={{
-                        width: '30px', height: '30px', borderRadius: '50%', border: `1px solid ${colors.border}`,
-                        background: colors.white, cursor: 'pointer', fontSize: '16px', fontWeight: 600,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text,
-                      }}>+</button>
-                    </Tooltip>
-                  </div>
-                  <div style={{ fontSize: '15px', fontWeight: 700, fontFamily: font.body, color: colors.primary, minWidth: '80px', textAlign: 'right' }}>
-                    S/ {((item.price || 0) * item.quantity).toFixed(2)}
-                  </div>
-                  <Tooltip text="Eliminar producto">
-                    <button onClick={() => removeItem(item.id)} style={{
-                      background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px',
-                      color: colors.textMuted, padding: '4px',
-                    }}>✕</button>
-                  </Tooltip>
-                </div>
+                  </HStack>
+                </PastelCard>
               ))}
-            </div>
+            </VStack>
 
-            <div style={{
-              background: colors.white, borderRadius: '12px', padding: '20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-              <div>
-                <div style={{ fontSize: '13px', color: colors.textSecondary, fontFamily: font.body }}>Total</div>
-                <div style={{ fontSize: '24px', fontWeight: 700, fontFamily: font.heading, color: colors.primary }}>S/ {total.toFixed(2)}</div>
-              </div>
-              <button onClick={() => navigate('/checkout')} style={{ ...btnPrimary, fontSize: '15px', padding: '12px 32px' }}>
-                Ir a pagar
-              </button>
-            </div>
+            <PastelCard variant="elevated" p={6}>
+              <Flex justify="space-between" align="center" flexDir={{ base: 'column', md: 'row' }} gap={4}>
+                <Box>
+                  <Text fontSize="xs" color="warmGray.500">Total</Text>
+                  <PastelPrice value={total} size="lg" color="brand.700" />
+                </Box>
+                <Button
+                  variant="primary"
+                  fontSize="sm"
+                  px={8}
+                  py={6}
+                  onClick={() => navigate('/checkout')}
+                  leftIcon={cartIcon}
+                >
+                  Ir a pagar
+                </Button>
+              </Flex>
+            </PastelCard>
           </>
         )}
-      </div>
-    </div>
+      </Box>
+    </PastelPageTransition>
   );
 }
