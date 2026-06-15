@@ -5,6 +5,7 @@ const { verifyToken, requireAdmin, requireOwnerOrAdmin } = require('../middlewar
 const { validate } = require('../middlewares/validate');
 const { createPromotionSchema, updatePromotionSchema } = require('../validators/promotionValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
+const redisCache = require('../utils/redisCache');
 
 const col = db.collection('promotions');
 
@@ -15,6 +16,9 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
 
 // GET todas las promociones de una pastelería (público)
 router.get('/shop/:shopId', async (req, res) => {
+  const cacheKey = `promotions:shop:${req.params.shopId}`;
+  const cached = await redisCache.get(cacheKey);
+  if (cached) return res.json(cached);
   try {
     const now = new Date().toISOString();
     const result = await paginate(col, req.query, {
@@ -23,6 +27,7 @@ router.get('/shop/:shopId', async (req, res) => {
     });
     // Solo devolver activas y vigentes a público
     result.data = result.data.filter((p) => p.is_active && p.start_date <= now && p.end_date >= now);
+    redisCache.set(cacheKey, result);
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener promociones' });
@@ -43,10 +48,14 @@ router.get('/shop/:shopId/all', verifyToken, requireOwnerOrAdmin(async (req) => 
 
 // GET una promoción
 router.get('/:id', async (req, res) => {
+  const cached = await redisCache.get(`promotions:${req.params.id}`);
+  if (cached) return res.json(cached);
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Promoción no encontrada' });
-    res.json({ id: doc.id, ...doc.data() });
+    const result = { id: doc.id, ...doc.data() };
+    redisCache.set(`promotions:${req.params.id}`, result);
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener la promoción' });
   }
@@ -84,6 +93,7 @@ router.post('/', verifyToken, requireOwnerOrAdmin(async (req) => {
     };
 
     const ref = await col.add(data);
+    redisCache.invalidatePrefix(`promotions:shop:${shop_id}`);
     res.status(201).json({ id: ref.id, ...data });
   } catch (e) {
     res.status(500).json({ error: 'Error al crear la promoción' });
@@ -111,6 +121,8 @@ router.put('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
     };
 
     await col.doc(req.params.id).update(updates);
+    redisCache.del(`promotions:${req.params.id}`);
+    redisCache.invalidatePrefix(`promotions:shop:${doc.data().shop_id}`);
     res.json({ id: req.params.id, ...updates });
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar la promoción' });
@@ -137,6 +149,8 @@ router.patch('/:id/toggle', verifyToken, requireOwnerOrAdmin(async (req) => {
       is_active: newActive,
       updatedAt: new Date().toISOString(),
     });
+    redisCache.del(`promotions:${req.params.id}`);
+    redisCache.invalidatePrefix(`promotions:shop:${current.shop_id}`);
     res.json({ id: req.params.id, is_active: newActive });
   } catch (e) {
     res.status(500).json({ error: 'Error al cambiar estado de la promoción' });
@@ -156,7 +170,10 @@ router.delete('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Promoción no encontrada' });
 
+    const delShopId = doc.data().shop_id;
     await col.doc(req.params.id).delete();
+    redisCache.del(`promotions:${req.params.id}`);
+    redisCache.invalidatePrefix(`promotions:shop:${delShopId}`);
     res.json({ message: 'Promoción eliminada correctamente' });
   } catch (e) {
     res.status(500).json({ error: 'Error al eliminar la promoción' });

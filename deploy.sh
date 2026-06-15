@@ -65,7 +65,34 @@ deploy_backend() {
   docker push ${IMAGE_NAME}:latest
   cd ..
 
-  # 3. Desplegar Cloud Run
+  # 3. Crear Memorystore Redis si no existe
+  REDIS_INSTANCE="pastelhub-cache"
+  if ! gcloud redis instances describe ${REDIS_INSTANCE} --region=${REGION} >/dev/null 2>&1; then
+    info "Creando Memorystore Redis: ${REDIS_INSTANCE}"
+    gcloud redis instances create ${REDIS_INSTANCE} \
+      --size=1 \
+      --region=${REGION} \
+      --redis-version=redis_7_0
+  else
+    info "Memorystore Redis ${REDIS_INSTANCE} ya existe"
+  fi
+
+  REDIS_HOST=$(gcloud redis instances describe ${REDIS_INSTANCE} --region=${REGION} --format='get(host)')
+  REDIS_PORT=6379
+
+  # 4. Crear VPC connector si no existe
+  CONNECTOR="pastelhub-connector"
+  if ! gcloud compute networks vpc-access connectors describe ${CONNECTOR} --region=${REGION} >/dev/null 2>&1; then
+    info "Creando VPC connector: ${CONNECTOR}"
+    gcloud compute networks vpc-access connectors create ${CONNECTOR} \
+      --region=${REGION} \
+      --network=default \
+      --range=10.8.0.0/28
+  else
+    info "VPC connector ${CONNECTOR} ya existe"
+  fi
+
+  # 5. Desplegar Cloud Run
   info "Desplegando Cloud Run service: ${SERVICE_NAME}"
 
   gcloud run deploy ${SERVICE_NAME} \
@@ -78,11 +105,12 @@ deploy_backend() {
     --max-instances=25 \
     --concurrency=500 \
     --timeout=600 \
-    --set-env-vars="NODE_ENV=production,CLIENT_URL=https://${PROJECT_ID}.web.app" \
+    --vpc-connector=${CONNECTOR} \
+    --set-env-vars="NODE_ENV=production,CLIENT_URL=https://${PROJECT_ID}.web.app,REDIS_URL=redis://${REDIS_HOST}:${REDIS_PORT}" \
     --update-secrets="FIREBASE_PRIVATE_KEY=firebase-private-key:latest,GEMINI_API_KEY=gemini-api-key:latest" \
     --set-env-vars="FIREBASE_PROJECT_ID=${PROJECT_ID},FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@${PROJECT_ID}.iam.gserviceaccount.com"
 
-  # 4. Obtener URL
+  # 6. Obtener URL
   CLOUD_RUN_URL=$(gcloud run services describe ${SERVICE_NAME} --region=${REGION} --format='value(status.url)')
   echo ""
   info "Backend desplegado en: ${CLOUD_RUN_URL}"

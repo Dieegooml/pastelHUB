@@ -8,14 +8,21 @@ const { mapShopToResponse, mapShopFromRequest } = require('../utils/mappers');
 const { paginate } = require('../utils/paginate');
 const { createAuditLog } = require('../utils/auditLog');
 const { notifyUser } = require('../utils/autoNotify');
+const redisCache = require('../utils/redisCache');
 
 const col = db.collection('pastryShops');
 
 // GET todas las pastelerías (público)
 router.get('/', async (req, res) => {
+  const page = req.query.page || '1';
+  if (page === '1') {
+    const cached = await redisCache.get('shops:list:page_1');
+    if (cached) return res.json(cached);
+  }
   try {
     const result = await paginate(col, req.query, { orderBy: 'createdAt' });
     result.data = result.data.map(d => mapShopToResponse(d));
+    if (page === '1') redisCache.set('shops:list:page_1', result);
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener pastelerías' });
@@ -24,10 +31,14 @@ router.get('/', async (req, res) => {
 
 // GET una pastelería (público)
 router.get('/:id', async (req, res) => {
+  const cached = await redisCache.get(`shops:${req.params.id}`);
+  if (cached) return res.json(cached);
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
-    res.json(mapShopToResponse({ id: doc.id, ...doc.data() }));
+    const result = mapShopToResponse({ id: doc.id, ...doc.data() });
+    redisCache.set(`shops:${req.params.id}`, result);
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener la pastelería' });
   }
@@ -65,6 +76,7 @@ router.post('/', verifyToken, requireOwnerOrAdmin(async (req) => req.body.owner_
     };
 
     const ref = await col.add(data);
+    redisCache.invalidatePrefix('shops:list');
     res.status(201).json({ id: ref.id, ...data });
   } catch (e) {
     res.status(500).json({ error: 'Error al crear la pastelería' });
@@ -89,6 +101,8 @@ router.put('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
     const updates = { ...rest, updatedAt: new Date().toISOString() };
 
     await col.doc(req.params.id).update(updates);
+    redisCache.del(`shops:${req.params.id}`);
+    redisCache.invalidatePrefix('shops:list');
     res.json({ id: req.params.id, ...updates });
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar la pastelería' });
@@ -134,6 +148,8 @@ router.patch('/:id/status', verifyToken, requireAdmin, validate(shopStatusSchema
       }
     }
 
+    redisCache.del(`shops:${req.params.id}`);
+    redisCache.invalidatePrefix('shops:list');
     res.json({ id: req.params.id, status });
   } catch (e) {
     res.status(500).json({ error: 'Error al cambiar estado' });
@@ -152,6 +168,8 @@ router.delete('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
     if (!doc.exists) return res.status(404).json({ error: 'Pastelería no encontrada' });
 
     await col.doc(req.params.id).delete();
+    redisCache.del(`shops:${req.params.id}`);
+    redisCache.invalidatePrefix('shops:list');
     res.json({ message: 'Pastelería eliminada correctamente' });
   } catch (e) {
     res.status(500).json({ error: 'Error al eliminar la pastelería' });
@@ -211,6 +229,7 @@ router.post('/:id/schedules', verifyToken, requireOwnerOrAdmin(async (req) => {
       updatedAt: new Date().toISOString(),
     });
 
+    redisCache.del(`shops:${req.params.id}`);
     res.status(201).json(newSchedule);
   } catch (e) {
     res.status(500).json({ error: 'Error al agregar horario' });
@@ -244,6 +263,7 @@ router.put('/:id/schedules/:day', verifyToken, requireOwnerOrAdmin(async (req) =
       updatedAt: new Date().toISOString(),
     });
 
+    redisCache.del(`shops:${req.params.id}`);
     res.json(schedules[index]);
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar horario' });
@@ -273,6 +293,7 @@ router.delete('/:id/schedules/:day', verifyToken, requireOwnerOrAdmin(async (req
       updatedAt: new Date().toISOString(),
     });
 
+    redisCache.del(`shops:${req.params.id}`);
     res.json({ message: `Horario del ${req.params.day} eliminado correctamente` });
   } catch (e) {
     res.status(500).json({ error: 'Error al eliminar horario' });
@@ -315,6 +336,7 @@ router.post('/:id/categories', verifyToken, requireOwnerOrAdmin(async (req) => {
       updatedAt: new Date().toISOString(),
     });
 
+    redisCache.del(`shops:${req.params.id}`);
     res.status(201).json(newCategory);
   } catch (e) {
     res.status(500).json({ error: 'Error al agregar categoría' });
@@ -348,6 +370,7 @@ router.put('/:id/categories/:categoryId', verifyToken, requireOwnerOrAdmin(async
       updatedAt: new Date().toISOString(),
     });
 
+    redisCache.del(`shops:${req.params.id}`);
     res.json(categories[index]);
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar categoría' });
@@ -377,6 +400,7 @@ router.delete('/:id/categories/:categoryId', verifyToken, requireOwnerOrAdmin(as
       updatedAt:  new Date().toISOString(),
     });
 
+    redisCache.del(`shops:${req.params.id}`);
     res.json({ message: 'Categoría eliminada correctamente' });
   } catch (e) {
     res.status(500).json({ error: 'Error al eliminar categoría' });

@@ -9,6 +9,7 @@ const { paginate, tryPaginate } = require('../utils/paginate');
 const { createAuditLog } = require('../utils/auditLog');
 const { notifyUser } = require('../utils/autoNotify');
 const { mapReviewFromRequest, mapReviewToResponse } = require('../utils/mappers');
+const redisCache = require('../utils/redisCache');
 
 const col = db.collection('reviews');
 
@@ -21,13 +22,23 @@ router.get('/', verifyToken, requireModerator, async (req, res) => {
 
 // GET reseñas por pastelería (público)
 router.get('/shop/:shopId', async (req, res) => {
-  await tryPaginate(res, col, req.query, {
-    orderBy: 'created_at',
-    filters: [
-      { field: 'shop_id', value: req.params.shopId },
-      { field: 'status', value: 'approved' },
-    ],
-  }, 'Error al obtener reseñas de la pastelería');
+  const page = req.query.page || '1';
+  const cacheKey = `reviews:shop:${req.params.shopId}:page_${page}`;
+  const cached = await redisCache.get(cacheKey);
+  if (cached) return res.json(cached);
+  try {
+    const result = await paginate(col, req.query, {
+      orderBy: 'created_at',
+      filters: [
+        { field: 'shop_id', value: req.params.shopId },
+        { field: 'status', value: 'approved' },
+      ],
+    });
+    redisCache.set(cacheKey, result);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener reseñas de la pastelería' });
+  }
 });
 
 // GET reseñas por cliente (propio usuario o admin)
@@ -123,6 +134,7 @@ router.post('/', verifyToken, requireCustomer, validate(createReviewSchema), asy
     // Recalcular rating promedio de la pastelería
     await recalcShopRating(shopId);
 
+    redisCache.invalidatePrefix(`reviews:shop:${shopId}`);
     res.status(201).json({ id: ref.id, ...mapReviewToResponse(data) });
   } catch (e) {
     res.status(500).json({ error: 'Error al crear la reseña' });
@@ -161,6 +173,7 @@ router.patch('/:id/status', verifyToken, requireModerator, validate(reviewStatus
       message: `Tu reseña ha sido ${status === 'approved' ? 'aprobada' : 'rechazada'} por un moderador`,
     });
 
+    redisCache.invalidatePrefix(`reviews:shop:${doc.data().shop_id}`);
     res.json({ id: req.params.id, status });
   } catch (e) {
     res.status(500).json({ error: 'Error al moderar la reseña' });
@@ -197,6 +210,7 @@ router.patch('/:id/reply', verifyToken, validate(replySchema), async (req, res) 
     };
 
     await col.doc(req.params.id).update(updates);
+    redisCache.invalidatePrefix(`reviews:shop:${doc.data().shop_id}`);
     res.json({ id: req.params.id, ...mapReviewToResponse(updates) });
   } catch (e) {
     res.status(500).json({ error: 'Error al responder la reseña' });
@@ -231,6 +245,7 @@ router.put('/:id', verifyToken, validate(updateReviewSchema), async (req, res) =
     // Recalcular rating de la pastelería tras editar la reseña
     await recalcShopRating(shopId);
 
+    redisCache.invalidatePrefix(`reviews:shop:${shopId}`);
     res.json({ id: req.params.id, ...updates });
   } catch (e) {
     res.status(500).json({ error: 'Error al editar la reseña' });
@@ -254,6 +269,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
     // Recalcular rating de la pastelería tras eliminar
     await recalcShopRating(shopId);
 
+    redisCache.invalidatePrefix(`reviews:shop:${shopId}`);
     res.json({ message: 'Reseña eliminada correctamente' });
   } catch (e) {
     res.status(500).json({ error: 'Error al eliminar la reseña' });
@@ -282,6 +298,7 @@ async function recalcShopRating(shopId) {
       const avg   = parseFloat((total / snap.docs.length).toFixed(1));
       txn.update(db.collection('pastryShops').doc(shopId), { rating: avg });
     });
+    redisCache.del(`shops:${shopId}`);
   } catch (e) {
     logger.error('Error al recalcular rating', { error: e.message, shopId });
   }

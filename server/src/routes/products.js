@@ -6,14 +6,21 @@ const { validate } = require('../middlewares/validate');
 const { createProductSchema, updateProductSchema, updateProductAvailabilitySchema, variantSchema, updateVariantSchema } = require('../validators/productValidator');
 const { mapProductFromRequest, mapProductToResponse } = require('../utils/mappers');
 const { paginate } = require('../utils/paginate');
+const redisCache = require('../utils/redisCache');
 
 const col = db.collection('products');
 
 // GET todos los productos (público)
 router.get('/', async (req, res) => {
+  const page = req.query.page || '1';
+  if (page === '1') {
+    const cached = await redisCache.get('products:list:page_1');
+    if (cached) return res.json(cached);
+  }
   try {
     const result = await paginate(col, req.query, { orderBy: 'createdAt' });
     if (result.data) result.data = result.data.map(d => mapProductToResponse(d));
+    if (page === '1') redisCache.set('products:list:page_1', result);
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener productos' });
@@ -22,11 +29,16 @@ router.get('/', async (req, res) => {
 
 // GET productos por pastelería (público)
 router.get('/shop/:shopId', async (req, res) => {
+  const page = req.query.page || '1';
+  const cacheKey = `products:shop:${req.params.shopId}:page_${page}`;
+  const cached = await redisCache.get(cacheKey);
+  if (cached) return res.json(cached);
   try {
     const result = await paginate(col, req.query, {
       orderBy: 'createdAt', filters: [{ field: 'shop_id', value: req.params.shopId }],
     });
     if (result.data) result.data = result.data.map(d => mapProductToResponse(d));
+    redisCache.set(cacheKey, result);
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener productos de la pastelería' });
@@ -35,10 +47,14 @@ router.get('/shop/:shopId', async (req, res) => {
 
 // GET un producto (público)
 router.get('/:id', async (req, res) => {
+  const cached = await redisCache.get(`products:${req.params.id}`);
+  if (cached) return res.json(cached);
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
-    res.json(mapProductToResponse({ id: doc.id, ...doc.data() }));
+    const result = mapProductToResponse({ id: doc.id, ...doc.data() });
+    redisCache.set(`products:${req.params.id}`, result);
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener el producto' });
   }
@@ -82,6 +98,8 @@ router.post('/', verifyToken, requireOwnerOrAdmin(async (req) => {
     };
 
     const ref = await col.add(data);
+    redisCache.invalidatePrefix(`products:shop:${shop_id}`);
+    redisCache.invalidatePrefix('products:list');
     res.status(201).json({ id: ref.id, ...data });
   } catch (e) {
     res.status(500).json({ error: 'Error al crear el producto' });
@@ -111,6 +129,8 @@ router.put('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
 
     const updates = { ...rest, updatedAt: new Date().toISOString() };
     await col.doc(req.params.id).update(updates);
+    redisCache.del(`products:${req.params.id}`);
+    redisCache.invalidatePrefix(`products:shop:${doc.data().shop_id}`);
     res.json({ id: req.params.id, ...updates });
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar el producto' });
@@ -136,6 +156,8 @@ router.patch('/:id/availability', verifyToken, requireOwnerOrAdmin(async (req) =
       is_available,
       updatedAt: new Date().toISOString(),
     });
+    redisCache.del(`products:${req.params.id}`);
+    redisCache.invalidatePrefix(`products:shop:${doc.data().shop_id}`);
     res.json({ id: req.params.id, is_available });
   } catch (e) {
     res.status(500).json({ error: 'Error al cambiar disponibilidad' });
@@ -155,7 +177,10 @@ router.delete('/:id', verifyToken, requireOwnerOrAdmin(async (req) => {
     const doc = req.resourceDoc || await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Producto no encontrado' });
 
+    const delShopId = doc.data().shop_id;
     await col.doc(req.params.id).delete();
+    redisCache.del(`products:${req.params.id}`);
+    redisCache.invalidatePrefix(`products:shop:${delShopId}`);
     res.json({ message: 'Producto eliminado correctamente' });
   } catch (e) {
     res.status(500).json({ error: 'Error al eliminar el producto' });
@@ -205,6 +230,7 @@ router.post('/:id/variants', verifyToken, requireOwnerOrAdmin(async (req) => {
       updatedAt: new Date().toISOString(),
     });
 
+    redisCache.del(`products:${req.params.id}`);
     res.status(201).json(newVariant);
   } catch (e) {
     res.status(500).json({ error: 'Error al agregar variante' });
@@ -241,6 +267,7 @@ router.put('/:id/variants/:variantId', verifyToken, requireOwnerOrAdmin(async (r
       updatedAt: new Date().toISOString(),
     });
 
+    redisCache.del(`products:${req.params.id}`);
     res.json(variants[index]);
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar variante' });
@@ -272,6 +299,7 @@ router.delete('/:id/variants/:variantId', verifyToken, requireOwnerOrAdmin(async
       updatedAt: new Date().toISOString(),
     });
 
+    redisCache.del(`products:${req.params.id}`);
     res.json({ message: 'Variante eliminada correctamente' });
   } catch (e) {
     res.status(500).json({ error: 'Error al eliminar variante' });
