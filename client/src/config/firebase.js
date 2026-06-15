@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, FacebookAuthProvider, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -15,5 +15,8 @@ export const auth = getAuth(app);
 setPersistence(auth, browserSessionPersistence);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+export const facebookProvider = new FacebookAuthProvider();
+facebookProvider.setCustomParameters({ display: 'popup' });
 export const storage = getStorage(app);
 export default app;
