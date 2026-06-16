@@ -16,7 +16,7 @@ export function I18nProvider({ children }) {
     setLangState(l);
     try {
       localStorage.setItem('pastelhub-lang', l);
-    } catch {}
+    } catch (e) { console.warn('Failed to persist language preference:', e); }
   }, []);
 
   const t = useCallback((key, fallback) => {

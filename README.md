@@ -564,7 +564,7 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 |---|---|
 | `npm run dev` | Servidor en modo desarrollo con hot reload |
 | `npm run start` | Servidor en producción |
-| `npm run start:load-test` | Servidor con ventanas de rate limit de 5s y bypass de Firebase Auth |
+| `npm run start:load-test` | Servidor con bypass de Firebase Auth para load testing |
 | `npm run test` | Tests unitarios (Jest, 338 tests) + genera `test-report.html` |
 | `npm run test:coverage` | Tests unitarios con reporte de cobertura HTML |
 | `npm run load-test` | Prueba de carga: 100 VUs, bypass auth |
@@ -576,7 +576,7 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 | `npm run load-test:k6:10000` | k6: 10000 VUs completo |
 | `npm run load-test:k6:50000` | k6: 50000 VUs completo |
 | `npm run load-test:k6:quick` | k6: 100 VUs rápido (~45s) |
-| `npm run test:rate-limit` | Test de rate limiting (automático, genera reporte HTML) |
+
 
 ### Frontend (`/client`) — React
 
@@ -772,7 +772,7 @@ pastelhub/
 │
 ├── server/                        # Backend Express
 │   ├── src/
-│   │   ├── app.js                 # Express app (routes, cors, rate limiters)
+│   │   ├── app.js                 # Express app (routes, cors)
 │   │   ├── server.js              # Entry point (app.listen)
 │   │   ├── routes/                # 14 routers: auth, users, shops, products, orders,
 │   │   │                          #   reviews, payments, notifications, reports, customers,
@@ -808,19 +808,15 @@ pastelhub/
 │   │   │   └── customers.test.js
 │   │   ├── load/
 │   │   │   └── load-test.js       # k6: 100-50000 VUs, reporte HTML
-│   │   └── rate-limit/
-│   │       └── rate-limit-test.js
 │   ├── backup.js                  # Script de backup Firestore → JSON
 │   └── package.json
 │
 ├── assets/
 │   ├── diagramaPastelHUB.png
 │
-├── test-rate-limit.js             # Script de prueba de rate limiting
 ├── AGENTS.md                      # Memoria para asistentes IA
 ├── API_ENDPOINTS.md               # Documentación completa de endpoints
 ├── CLOUD_SETUP.md                 # Guía de despliegue en la nube
-├── RATE_LIMITING.md               # Documentación de rate limiting
 ├── README.md
 └── STATUS.md
 ```

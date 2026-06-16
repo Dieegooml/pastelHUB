@@ -1,26 +1,20 @@
 import { useEffect, useState, Fragment } from 'react';
-import Navbar from '../../components/Navbar';
+import {
+  Box, Flex, Heading, Text, Button, Select, Table, Thead, Tbody, Tr, Th, Td,
+  Tag, Alert, AlertIcon, useToast, HStack, SimpleGrid
+} from '@chakra-ui/react';
 import AdminNav from './AdminNav';
 import ModeratorNav from '../moderator/ModeratorNav';
+import { PastelPageHeader, PastelCard, PastelStatusBadge, PastelEmptyState, PastelFilterBar, PastelSkeletonTable } from '../../components/UI';
 import { useAuth } from '../../context/AuthContext';
-import { colors, font, inputStyle, selectStyle, tableHeaderStyle, btnSmallPrimary, btnDanger, badge as badgeStyle, statusTab, animStagger, animFadeIn, animFadeInLeft } from '../../styles/theme';
 import { reportsService } from '../../services/reportsService';
 
 const STATUSES = ['all', 'open', 'resolved', 'dismissed'];
-const STATUS_TRANSLATIONS = {
-  open: 'Abierto',
-  resolved: 'Resuelto',
-  dismissed: 'Descartado',
-};
-const STATUS_COLORS = {
-  open: { bg: '#fff8e1', color: '#f59e0b' },
-  resolved: { bg: '#e8f5e9', color: '#2e7d32' },
-  dismissed: { bg: '#fce4ec', color: '#c62828' },
-};
-const TARGET_TRANSLATIONS = { all: 'Todos', review: 'Reseña', shop: 'Pastelería', product: 'Producto' };
+const STATUS_TRANSLATIONS = { open: 'Abierto', resolved: 'Resuelto', dismissed: 'Descartado' };
 
 export default function Reports() {
   const { user } = useAuth();
+  const toast = useToast();
   const isPureModerator = user?.roles?.includes('moderator') && !user?.roles?.includes('admin');
   const isMod = user?.roles?.includes('moderator') || user?.roles?.includes('admin');
   const [reports, setReports] = useState([]);
@@ -60,136 +54,93 @@ export default function Reports() {
     catch (e) { console.error(e); setError('Error al asignar'); }
   };
 
-  const badge = (statusKey) => {
-    const c = STATUS_COLORS[statusKey] || STATUS_COLORS.open;
-    return <span style={badgeStyle(c.bg, c.color)}>{STATUS_TRANSLATIONS[statusKey] || statusKey}</span>;
-  };
+  const filterOptions = STATUSES.map((s) => ({
+    value: s,
+    label: s === 'all' ? 'Todos' : STATUS_TRANSLATIONS[s],
+  }));
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
-        <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '24px' }}>Reportes</h2>
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.2rem' }} />
-        <div style={{ marginBottom: '16px' }}>{isPureModerator ? <ModeratorNav /> : <AdminNav />}</div>
+    <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <PastelPageHeader title="Reportes" />
+      <Box mb={4}>{isPureModerator ? <ModeratorNav /> : <AdminNav />}</Box>
 
-        {success && <div style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
-        {error && <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
+      {success && <Alert status="success" mb={4} borderRadius="lg">{success}</Alert>}
+      {error && <Alert status="error" mb={4} borderRadius="lg">{error}</Alert>}
 
-        <div style={{ ...animFadeIn, display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          {STATUSES.map((s) => (
-            <button key={s} onClick={() => setStatusFilter(s)} style={statusTab(statusFilter === s)}>
-              {s === 'all' ? 'Todos' : STATUS_TRANSLATIONS[s]}
-            </button>
-          ))}
-        </div>
+      <PastelFilterBar options={filterOptions} active={statusFilter} onChange={setStatusFilter} />
 
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {[1, 2, 3].map((i) => <div key={i} style={{ height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '8px', animation: 'shimmer 1.5s infinite' }} />)}
-          </div>
-        ) : (
-          <div style={{ ...animStagger(0.04), background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
-            {reports.length === 0 ? (
-              <div style={{ padding: '60px 20px', textAlign: 'center', color: '#999', fontFamily: font.body, fontSize: '15px' }}>No hay reportes que mostrar</div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-                      <th style={tableHeaderStyle}>ID</th>
-                      <th style={tableHeaderStyle}>Tipo</th>
-                      <th style={tableHeaderStyle}>Usuario</th>
-                      <th style={tableHeaderStyle}>Motivo</th>
-                      <th style={tableHeaderStyle}>Estado</th>
-                      <th style={tableHeaderStyle}>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reports.map((r, i) => (
-                      <Fragment key={r.id}>
-                        <tr
-                          style={{ ...animStagger(i * 0.03), borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, transition: 'background 0.15s ease', cursor: 'pointer' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
-                          onClick={() => setDetail(detail === r.id ? null : r.id)}
-                        >
-                          <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{r.id?.slice(0, 8)}</td>
-                          <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{r.targetType || '—'}</td>
-                          <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, color: colors.textSecondary }}>{r.reportedBy?.slice(0, 8) || '—'}</td>
-                          <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: colors.textSecondary }} title={r.reason || ''}>{r.reason || '—'}</td>
-                          <td style={{ padding: '12px 16px' }}>{badge(r.status)}</td>
-                          <td style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
-                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                              {r.status === 'open' && (
-                                <>
-                                  <button onClick={() => handleStatus(r.id, 'resolved')} style={{ padding: '4px 12px', background: '#e8f5e9', color: '#2e7d32', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body }}>Resolver</button>
-                                  <button onClick={() => handleStatus(r.id, 'dismissed')} style={btnDanger}>Descartar</button>
-                                  {isMod && (
-                                    <button onClick={() => handleAssignSelf(r.id)} style={{ padding: '4px 10px', background: colors.primary, color: '#fff', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body }}>Asignarme</button>
-                                  )}
-                                </>
-                              )}
-                              {r.status === 'resolved' && (
-                                <span style={{ fontSize: '11px', color: colors.textMuted, fontFamily: font.body }}>
-                                  {r.assignedTo ? `Mod: ${r.assignedTo.slice(0, 8)}` : 'Sin asignar'}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                        {detail === r.id && (
-                          <tr key={`${r.id}-detail`}>
-                            <td colSpan={6} style={{ padding: '0 16px 16px', background: colors.tableStripe }}>
-                              <div style={{ ...animFadeIn, borderTop: `1px solid ${colors.tableBorder}`, paddingTop: '12px' }}
-                              >
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '13px', fontFamily: font.body }}>
-                                  <div>
-                                    <strong style={{ color: colors.textSecondary }}>ID completo:</strong>
-                                    <div style={{ color: colors.text, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '12px', marginTop: 2 }}>{r.id}</div>
-                                  </div>
-                                  <div>
-                                    <strong style={{ color: colors.textSecondary }}>Reportado por:</strong>
-                                    <div style={{ color: colors.text, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '12px', marginTop: 2 }}>{r.reportedBy}</div>
-                                  </div>
-                                  <div>
-                                    <strong style={{ color: colors.textSecondary }}>Target ID:</strong>
-                                    <div style={{ color: colors.text, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '12px', marginTop: 2 }}>{r.targetId}</div>
-                                  </div>
-                                  <div>
-                                    <strong style={{ color: colors.textSecondary }}>Creado:</strong>
-                                    <div style={{ color: colors.text, marginTop: 2 }}>{r.createdAt ? new Date(r.createdAt).toLocaleString() : '—'}</div>
-                                  </div>
-                                  {r.assignedTo && (
-                                    <div>
-                                      <strong style={{ color: colors.textSecondary }}>Moderador asignado:</strong>
-                                      <div style={{ color: colors.text, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '12px', marginTop: 2 }}>{r.assignedTo}</div>
-                                    </div>
-                                  )}
-                                  {r.resolvedAt && (
-                                    <div>
-                                      <strong style={{ color: colors.textSecondary }}>Resuelto en:</strong>
-                                      <div style={{ color: colors.text, marginTop: 2 }}>{new Date(r.resolvedAt).toLocaleString()}</div>
-                                    </div>
-                                  )}
-                                </div>
-                                <div style={{ marginTop: 12, fontSize: '13px', fontFamily: font.body }}>
-                                  <strong style={{ color: colors.textSecondary }}>Motivo completo:</strong>
-                                  <div style={{ color: colors.text, marginTop: 4, padding: '8px 12px', background: colors.white, borderRadius: '8px', border: `1px solid ${colors.border}`, lineHeight: 1.6 }}>{r.reason}</div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+      {loading ? (
+        <PastelSkeletonTable rows={5} cols={6} />
+      ) : (
+        <PastelCard p={0} overflow="hidden">
+          {reports.length === 0 ? (
+            <PastelEmptyState icon="🚩" title="No hay reportes que mostrar" />
+          ) : (
+            <Box overflowX="auto">
+              <Table variant="pastel">
+                <Thead>
+                  <Tr><Th>ID</Th><Th>Tipo</Th><Th>Usuario</Th><Th>Motivo</Th><Th>Estado</Th><Th>Acciones</Th></Tr>
+                </Thead>
+                <Tbody>
+                  {reports.map((r) => (
+                    <Fragment key={r.id}>
+                      <Tr _hover={{ bg: 'warmGray.100' }} cursor="pointer" onClick={() => setDetail(detail === r.id ? null : r.id)}>
+                        <Td fontFamily="mono" fontSize="xs" color="warmGray.500">{r.id?.slice(0, 8)}</Td>
+                        <Td fontSize="sm">{r.targetType || '—'}</Td>
+                        <Td fontSize="sm" color="warmGray.500">{r.reportedBy?.slice(0, 8) || '—'}</Td>
+                        <Td fontSize="sm" color="warmGray.500" maxW="200px" isTruncated title={r.reason || ''}>{r.reason || '—'}</Td>
+                        <Td><PastelStatusBadge status={r.status} /></Td>
+                        <Td onClick={(e) => e.stopPropagation()}>
+                          <HStack spacing={1} flexWrap="wrap" align="center">
+                            {r.status === 'open' && (
+                              <>
+                                <Button size="xs" colorScheme="green" variant="ghost" bg="#e8f5e9" color="#2e7d32" borderRadius="full" onClick={() => handleStatus(r.id, 'resolved')}>Resolver</Button>
+                                <Button size="xs" variant="ghost" colorScheme="red" onClick={() => handleStatus(r.id, 'dismissed')}>Descartar</Button>
+                                {isMod && (
+                                  <Button size="xs" bg="brand.500" color="white" borderRadius="full" _hover={{ bg: 'brand.600' }} onClick={() => handleAssignSelf(r.id)}>Asignarme</Button>
+                                )}
+                              </>
+                            )}
+                            {r.status === 'resolved' && (
+                              <Text fontSize="xs" color="warmGray.400">{r.assignedTo ? `Mod: ${r.assignedTo.slice(0, 8)}` : 'Sin asignar'}</Text>
+                            )}
+                          </HStack>
+                        </Td>
+                      </Tr>
+                      {detail === r.id && (
+                        <Tr>
+                          <Td colSpan={6} bg="warmGray.50" p={4}>
+                            <Box borderTop="1px solid" borderColor="warmGray.200" pt={3}>
+                              <SimpleGrid columns={2} spacing={4} fontSize="sm">
+                                <Box><Text fontWeight={600} color="warmGray.500">ID completo:</Text><Text fontFamily="mono" fontSize="xs" wordBreak="break-all">{r.id}</Text></Box>
+                                <Box><Text fontWeight={600} color="warmGray.500">Reportado por:</Text><Text fontFamily="mono" fontSize="xs" wordBreak="break-all">{r.reportedBy}</Text></Box>
+                                <Box><Text fontWeight={600} color="warmGray.500">Target ID:</Text><Text fontFamily="mono" fontSize="xs" wordBreak="break-all">{r.targetId}</Text></Box>
+                                <Box><Text fontWeight={600} color="warmGray.500">Creado:</Text><Text>{r.createdAt ? new Date(r.createdAt).toLocaleString() : '—'}</Text></Box>
+                                {r.assignedTo && (
+                                  <Box><Text fontWeight={600} color="warmGray.500">Moderador asignado:</Text><Text fontFamily="mono" fontSize="xs" wordBreak="break-all">{r.assignedTo}</Text></Box>
+                                )}
+                                {r.resolvedAt && (
+                                  <Box><Text fontWeight={600} color="warmGray.500">Resuelto en:</Text><Text>{new Date(r.resolvedAt).toLocaleString()}</Text></Box>
+                                )}
+                              </SimpleGrid>
+                              <Box mt={4}>
+                                <Text fontWeight={600} color="warmGray.500" fontSize="sm">Motivo completo:</Text>
+                                <Box bg="white" p={3} borderRadius="lg" border="1px solid" borderColor="warmGray.200" mt={1} lineHeight={1.6} fontSize="sm">
+                                  {r.reason}
+                                </Box>
+                              </Box>
+                            </Box>
+                          </Td>
+                        </Tr>
+                      )}
+                    </Fragment>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
+        </PastelCard>
+      )}
+    </Box>
   );
 }

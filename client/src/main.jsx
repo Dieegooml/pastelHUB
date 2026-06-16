@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { ChakraProvider } from '@chakra-ui/react'
+import { ChakraProvider, CSSReset } from '@chakra-ui/react'
+import theme from './styles/chakraTheme'
 import './index.css'
 import App from './App.jsx'
 
@@ -22,7 +23,8 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ChakraProvider>
+    <ChakraProvider theme={theme}>
+      <CSSReset />
       <App />
     </ChakraProvider>
   </StrictMode>,

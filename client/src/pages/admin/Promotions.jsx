@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import Navbar from '../../components/Navbar';
+import {
+  Box, Heading, Text, Button, Table, Thead, Tbody, Tr, Th, Td,
+  Tag, Alert, AlertIcon, useToast, HStack
+} from '@chakra-ui/react';
 import AdminNav from './AdminNav';
-import { colors, font, tableHeaderStyle, btnDanger, badge as badgeStyle, statusTab, animStagger, animFadeIn, animFadeInLeft } from '../../styles/theme';
+import { PastelPageHeader, PastelCard, PastelStatusBadge, PastelEmptyState, PastelSkeletonTable } from '../../components/UI';
 import { promotionsService } from '../../services/promotionsService';
 
 const TYPES = { discount: 'Descuento', combo: 'Combo', bogo: '2x1' };
@@ -20,17 +23,15 @@ const formatDate = (d) => {
 };
 
 export default function Promotions() {
+  const toast = useToast();
   const [promotions, setPromotions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const load = async () => {
-    try {
-      setLoading(true);
-      const data = await promotionsService.getAll();
-      setPromotions(data?.data || []);
-    } catch (e) { console.error(e); setError('Error al cargar promociones'); } finally { setLoading(false); }
+    try { setLoading(true); const data = await promotionsService.getAll(); setPromotions(data?.data || []); }
+    catch (e) { console.error(e); setError('Error al cargar promociones'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -48,78 +49,60 @@ export default function Promotions() {
 
   const typeBadge = (type) => {
     const c = TYPE_COLORS[type] || { bg: '#f0f0f0', color: '#666' };
-    return <span style={badgeStyle(c.bg, c.color)}>{TYPES[type] || type}</span>;
-  };
-
-  const activeBadge = (active) => {
-    if (active) return <span style={badgeStyle('#e8f5e9', '#2e7d32')}>Activa</span>;
-    return <span style={badgeStyle('#fee2e2', '#ef4444')}>Inactiva</span>;
+    return <Tag bg={c.bg} color={c.color} borderRadius="full" fontSize="xs" fontWeight={500}>{TYPES[type] || type}</Tag>;
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
-        <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '24px' }}>Promociones</h2>
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.2rem' }} />
-        <div style={{ marginBottom: '16px' }}><AdminNav /></div>
+    <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <PastelPageHeader title="Promociones" />
+      <Box mb={4}><AdminNav /></Box>
 
-        {success && <div style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
-        {error && <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
+      {success && <Alert status="success" mb={4} borderRadius="lg">{success}</Alert>}
+      {error && <Alert status="error" mb={4} borderRadius="lg">{error}</Alert>}
 
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {[1, 2, 3].map((i) => <div key={i} style={{ height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '8px', animation: 'shimmer 1.5s infinite' }} />)}
-          </div>
-        ) : (
-          <div style={{ ...animStagger(0.04), background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
-            {promotions.length === 0 ? (
-              <div style={{ padding: '60px 20px', textAlign: 'center', color: '#999', fontFamily: font.body, fontSize: '15px' }}>No hay promociones registradas</div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-                      <th style={tableHeaderStyle}>Nombre</th>
-                      <th style={tableHeaderStyle}>Pastelería</th>
-                      <th style={tableHeaderStyle}>Tipo</th>
-                      <th style={tableHeaderStyle}>Estado</th>
-                      <th style={tableHeaderStyle}>Inicio</th>
-                      <th style={tableHeaderStyle}>Fin</th>
-                      <th style={tableHeaderStyle}>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {promotions.map((p, i) => (
-                      <tr
-                        key={p.id}
-                        style={{ ...animStagger(i * 0.03), borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, transition: 'background 0.15s ease' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
-                      >
-                        <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: 600, fontFamily: font.body, color: colors.primary }}>{p.name || '—'}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{p.shop_id?.slice(0, 8) || '—'}</td>
-                        <td style={{ padding: '12px 16px' }}>{typeBadge(p.type)}</td>
-                        <td style={{ padding: '12px 16px' }}>{activeBadge(p.is_active)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, color: colors.textSecondary }}>{formatDate(p.start_date)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, color: colors.textSecondary }}>{formatDate(p.end_date)}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button onClick={() => handleToggle(p.id)} style={{ padding: '4px 12px', background: p.is_active ? '#fff8e1' : '#e8f5e9', color: p.is_active ? '#f59e0b' : '#2e7d32', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body }}>
-                              {p.is_active ? 'Desactivar' : 'Activar'}
-                            </button>
-                            <button onClick={() => handleDelete(p.id)} style={btnDanger}>Eliminar</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+      {loading ? (
+        <PastelSkeletonTable rows={5} cols={7} />
+      ) : (
+        <PastelCard p={0} overflow="hidden">
+          {promotions.length === 0 ? (
+            <PastelEmptyState icon="🎉" title="No hay promociones registradas" />
+          ) : (
+            <Box overflowX="auto">
+              <Table variant="pastel">
+                <Thead>
+                  <Tr><Th>Nombre</Th><Th>Pastelería</Th><Th>Tipo</Th><Th>Estado</Th><Th>Inicio</Th><Th>Fin</Th><Th>Acciones</Th></Tr>
+                </Thead>
+                <Tbody>
+                  {promotions.map((p) => (
+                    <Tr key={p.id} _hover={{ bg: 'warmGray.100' }}>
+                      <Td fontWeight={600} color="brand.700">{p.name || '—'}</Td>
+                      <Td fontFamily="mono" fontSize="xs" color="warmGray.500">{p.shop_id?.slice(0, 8) || '—'}</Td>
+                      <Td>{typeBadge(p.type)}</Td>
+                      <Td><PastelStatusBadge status={p.is_active ? 'active' : 'inactive'} /></Td>
+                      <Td fontSize="sm" color="warmGray.500">{formatDate(p.start_date)}</Td>
+                      <Td fontSize="sm" color="warmGray.500">{formatDate(p.end_date)}</Td>
+                      <Td>
+                        <HStack spacing={2}>
+                          <Button size="xs" variant="ghost"
+                            bg={p.is_active ? '#fff8e1' : '#e8f5e9'}
+                            color={p.is_active ? '#f59e0b' : '#2e7d32'}
+                            borderRadius="full"
+                            _hover={{ opacity: 0.8 }}
+                            onClick={() => handleToggle(p.id)}
+                          >
+                            {p.is_active ? 'Desactivar' : 'Activar'}
+                          </Button>
+                          <Button size="xs" variant="ghost" colorScheme="red" onClick={() => handleDelete(p.id)}>Eliminar</Button>
+                        </HStack>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
+        </PastelCard>
+      )}
+    </Box>
   );
 }

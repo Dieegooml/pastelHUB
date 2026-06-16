@@ -15,14 +15,21 @@ if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   });
 } else {
   // Opción A: archivo local serviceAccountKey.json
-  const serviceAccount = require('../../serviceAccountKey.json');
-  credential = admin.credential.cert(serviceAccount);
+  try {
+    const serviceAccount = require('../../serviceAccountKey.json');
+    credential = admin.credential.cert(serviceAccount);
+  } catch {
+    console.warn('No se encontró serviceAccountKey.json — usando aplicación por defecto');
+  }
 }
 
-admin.initializeApp({
-  credential,
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'pastehub-2d2b2.appspot.com',
-});
+const projectId = process.env.FIREBASE_PROJECT_ID || 'pastehub-2d2b2';
+const bucketName = process.env.FIREBASE_STORAGE_BUCKET || `${projectId}.appspot.com`;
+
+const initConfig = { storageBucket: bucketName };
+if (credential) initConfig.credential = credential;
+
+admin.initializeApp(initConfig);
 
 const db = admin.firestore();
 db.settings({

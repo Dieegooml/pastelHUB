@@ -16,6 +16,7 @@ const COLLECTION_ORDER = [
   'users', 'customers', 'pastryShops', 'products',
   'orders', 'payments', 'reviews', 'notifications',
   'reports', 'promotions', 'chatSessions', 'supportTickets',
+  'invoices',
 ];
 
 async function listBackups(options = {}) {

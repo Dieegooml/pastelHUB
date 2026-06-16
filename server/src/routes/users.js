@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { db, admin } = require('../config/firebase');
-const { verifyToken, requireAdmin, requireSelfOrAdmin } = require('../middlewares/auth');
+const { verifyToken, requireAdmin, requireSelfOrAdmin, requireModerator, requireSelfOrStaff } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { createUserSchema, updateUserSchema, addressSchema, updateUserStatusSchema, updateUserAddressSchema } = require('../validators/userValidator');
 const { paginate, tryPaginate } = require('../utils/paginate');
@@ -9,12 +9,12 @@ const { paginate, tryPaginate } = require('../utils/paginate');
 const col = db.collection('users');
 
 // GET todos los usuarios
-router.get('/', verifyToken, requireAdmin, async (req, res) => {
+router.get('/', verifyToken, requireModerator, async (req, res) => {
   await tryPaginate(res, col, req.query, { orderBy: 'createdAt' }, 'Error al obtener usuarios');
 });
 
-// GET un usuario (propio usuario o admin)
-router.get('/:id', verifyToken, requireSelfOrAdmin(), async (req, res) => {
+// GET un usuario (propio usuario, admin o moderator)
+router.get('/:id', verifyToken, requireSelfOrStaff(), async (req, res) => {
   try {
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -55,8 +55,8 @@ router.post('/', verifyToken, requireAdmin, validate(createUserSchema), async (r
   }
 });
 
-// PUT actualizar usuario (propio usuario o admin; solo admin cambia roles)
-router.put('/:id', verifyToken, requireSelfOrAdmin(), validate(updateUserSchema), async (req, res) => {
+// PUT actualizar usuario (propio usuario, admin o moderator; solo admin/moderator cambia roles)
+router.put('/:id', verifyToken, requireSelfOrStaff(), validate(updateUserSchema), async (req, res) => {
   try {
     const userRoles = req.user?.roles || [];
     const doc = await col.doc(req.params.id).get();
@@ -64,8 +64,13 @@ router.put('/:id', verifyToken, requireSelfOrAdmin(), validate(updateUserSchema)
 
     const { full_name, phone, photo_url, roles: newRoles } = req.body;
 
-    if (newRoles && !userRoles.includes('admin')) {
-      return res.status(403).json({ error: 'Solo admins pueden cambiar roles' });
+    if (newRoles) {
+      if (!userRoles.includes('admin') && !userRoles.includes('moderator')) {
+        return res.status(403).json({ error: 'Solo admins o moderadores pueden cambiar roles' });
+      }
+      if (newRoles.includes('admin') && !userRoles.includes('admin')) {
+        return res.status(403).json({ error: 'Solo admins pueden asignar el rol admin' });
+      }
     }
 
     if (newRoles && newRoles.length > 0) {

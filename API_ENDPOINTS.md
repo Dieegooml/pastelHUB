@@ -16,10 +16,10 @@ PastelHub implementa una API REST completa con **11 módulos principales** y **8
 
 | Método | Ruta | Descripción | Auth | Status |
 |--------|------|-------------|------|--------|
-| GET | `/users` | Listar todos los usuarios | ✅ Admin | 200 |
-| GET | `/users/:id` | Obtener un usuario | ✅ Admin / Propio usuario | 200, 404 |
+| GET | `/users` | Listar todos los usuarios | ✅ Moderator / Admin | 200 |
+| GET | `/users/:id` | Obtener un usuario | ✅ Staff (admin/moderator) / Propio usuario | 200, 404 |
 | POST | `/users` | Crear usuario | ✅ Admin | 201, 400, 404 |
-| PUT | `/users/:id` | Actualizar usuario (roles solo admin) | ✅ Admin / Propio usuario | 200, 404 |
+| PUT | `/users/:id` | Actualizar usuario (roles: admin/moderator, rol admin solo admin) | ✅ Staff (admin/moderator) / Propio usuario | 200, 404 |
 | DELETE | `/users/:id` | Eliminar usuario | ✅ Admin | 200, 404 |
 | PATCH | `/users/:id/status` | Cambiar estado activo/inactivo | ✅ Admin | 200, 404 |
 
@@ -289,7 +289,7 @@ PastelHub implementa una API REST completa con **11 módulos principales** y **8
 |--------|------|-------------|------|--------|
 | POST | `/auth/sync` | Sincronizar usuario tras login (auto-crea customer) | ✅ Token | 200 |
 | GET | `/auth/me` | Obtener perfil del usuario autenticado | ✅ Token | 200 |
-| POST | `/auth/assign-role` | Asignar roles a usuario | ✅ Admin | 201, 400, 404 |
+| POST | `/auth/assign-role` | Asignar roles a usuario (admin: cualquier rol, moderator: excepto admin) | ✅ Moderator / Admin | 200, 400, 404, 403 |
 
 ---
 
@@ -348,7 +348,7 @@ PastelHub implementa una API REST completa con **11 módulos principales** y **8
 | **400** | Bad Request — Datos inválidos | Falta parámetro requerido |
 | **403** | Forbidden — Sin permisos | Rol insuficiente |
 | **404** | Not Found — Recurso no existe | ID inválido |
-| **429** | Too Many Requests — Rate limit | Demasiadas solicitudes |
+
 | **500** | Server Error — Error interno | Error del servidor |
 
 ---

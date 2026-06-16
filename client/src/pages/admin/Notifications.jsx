@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
-import Navbar from '../../components/Navbar';
+import {
+  Box, Flex, Heading, Text, Button, Input, Select, Textarea,
+  Table, Thead, Tbody, Tr, Th, Td, Tag, Alert, AlertIcon,
+  useToast, Stack, HStack, SimpleGrid
+} from '@chakra-ui/react';
 import AdminNav from './AdminNav';
-import { colors, font, inputStyle, textareaStyle, tableHeaderStyle, btnSmallPrimary, btnDanger, badge as badgeStyle, animStagger, animFadeIn, animFadeInLeft } from '../../styles/theme';
+import { PastelPageHeader, PastelCard, PastelEmptyState, PastelSkeletonTable } from '../../components/UI';
 import { notificationsService } from '../../services/notificationsService';
 import { usersService } from '../../services/usersService';
 
 export default function Notifications() {
+  const toast = useToast();
   const [notifs, setNotifs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -13,11 +18,8 @@ export default function Notifications() {
   const [form, setForm] = useState({ userId: '', title: '', message: '', type: 'info' });
 
   const load = async () => {
-    try {
-      setLoading(true);
-      const data = await notificationsService.getAll();
-      setNotifs(data?.data || []);
-    } catch (e) { console.error(e); setError('Error al cargar notificaciones'); } finally { setLoading(false); }
+    try { setLoading(true); const data = await notificationsService.getAll(); setNotifs(data?.data || []); }
+    catch (e) { console.error(e); setError('Error al cargar notificaciones'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -50,100 +52,85 @@ export default function Notifications() {
     catch (e) { console.error(e); setError('Error al marcar'); }
   };
 
+  const typeBadge = (type) => {
+    const map = { warning: { bg: '#fff8e1', color: '#f57f17' }, order: { bg: '#e3f2fd', color: '#1565c0' } };
+    const c = map[type] || { bg: '#f0f0f0', color: '#666' };
+    return <Tag bg={c.bg} color={c.color} borderRadius="full" fontSize="xs" fontWeight={500}>{type || 'info'}</Tag>;
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
-        <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '24px' }}>Notificaciones</h2>
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.2rem' }} />
-        <div style={{ marginBottom: '16px' }}><AdminNav /></div>
+    <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <PastelPageHeader title="Notificaciones" />
+      <Box mb={4}><AdminNav /></Box>
 
-        {success && <div style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
-        {error && <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
+      {success && <Alert status="success" mb={4} borderRadius="lg">{success}</Alert>}
+      {error && <Alert status="error" mb={4} borderRadius="lg">{error}</Alert>}
 
-        <div style={{ background: colors.white, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '24px' }}>
-          <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '14px' }}>Crear notificación</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div>
-                <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body, display: 'block', marginBottom: '4px' }}>User ID (opcional — vacío = broadcast)</label>
-                <input style={{ ...inputStyle, height: '40px', fontSize: '13px' }} value={form.userId} onChange={(e) => setForm((p) => ({ ...p, userId: e.target.value }))} placeholder="Dejar vacío para todos" />
-              </div>
-              <div>
-                <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body, display: 'block', marginBottom: '4px' }}>Tipo</label>
-                <select style={{ ...inputStyle, height: '40px', fontSize: '13px' }} value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}>
-                  <option value="info">Info</option>
-                  <option value="warning">Advertencia</option>
-                  <option value="order">Orden</option>
-                  <option value="promo">Promoción</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body, display: 'block', marginBottom: '4px' }}>Título</label>
-              <input style={{ ...inputStyle, height: '40px', fontSize: '13px' }} value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="Título de la notificación" />
-            </div>
-            <div>
-              <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body, display: 'block', marginBottom: '4px' }}>Mensaje</label>
-              <textarea style={{ ...inputStyle, height: 'auto', minHeight: '60px', padding: '10px 14px', fontSize: '13px', resize: 'vertical' }} value={form.message} onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))} placeholder="Contenido de la notificación" />
-            </div>
-            <button onClick={handleCreate} style={btnSmallPrimary}>Crear notificación</button>
-          </div>
-        </div>
+      <PastelCard title="Crear notificación" variant="elevated" mb={6}>
+        <Stack spacing={3}>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <Box>
+              <Text fontSize="xs" color="warmGray.500" mb={1}>User ID (opcional — vacío = broadcast)</Text>
+              <Input size="sm" value={form.userId} onChange={(e) => setForm((p) => ({ ...p, userId: e.target.value }))} placeholder="Dejar vacío para todos" />
+            </Box>
+            <Box>
+              <Text fontSize="xs" color="warmGray.500" mb={1}>Tipo</Text>
+              <Select size="sm" value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}>
+                <option value="info">Info</option>
+                <option value="warning">Advertencia</option>
+                <option value="order">Orden</option>
+                <option value="promo">Promoción</option>
+              </Select>
+            </Box>
+          </SimpleGrid>
+          <Box>
+            <Text fontSize="xs" color="warmGray.500" mb={1}>Título</Text>
+            <Input size="sm" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="Título de la notificación" />
+          </Box>
+          <Box>
+            <Text fontSize="xs" color="warmGray.500" mb={1}>Mensaje</Text>
+            <Textarea size="sm" value={form.message} onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))} placeholder="Contenido de la notificación" minH="60px" />
+          </Box>
+          <Button colorScheme="brand" alignSelf="flex-start" onClick={handleCreate}>Crear notificación</Button>
+        </Stack>
+      </PastelCard>
 
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {[1, 2, 3].map((i) => <div key={i} style={{ height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '8px', animation: 'shimmer 1.5s infinite' }} />)}
-          </div>
-        ) : (
-          <div style={{ ...animStagger(0.04), background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
-            {notifs.length === 0 ? (
-              <div style={{ padding: '60px 20px', textAlign: 'center', color: '#999', fontFamily: font.body, fontSize: '15px' }}>No hay notificaciones</div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-                      <th style={tableHeaderStyle}>ID</th>
-                      <th style={tableHeaderStyle}>Usuario</th>
-                      <th style={tableHeaderStyle}>Título</th>
-                      <th style={tableHeaderStyle}>Tipo</th>
-                      <th style={tableHeaderStyle}>Leída</th>
-                      <th style={tableHeaderStyle}>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {notifs.map((n, i) => (
-                      <tr
-                        key={n.id}
-                        style={{ ...animStagger(i * 0.03), borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, transition: 'background 0.15s ease', opacity: n.read ? 0.6 : 1 }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
-                      >
-                        <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{n.id?.slice(0, 8)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, color: colors.textSecondary }}>{n.user_id?.slice(0, 8) || '—'}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={n.title || ''}>{n.title || '—'}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <span style={{ padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 500, fontFamily: font.body, background: n.type === 'warning' ? '#fff8e1' : n.type === 'order' ? '#e3f2fd' : '#f0f0f0', color: n.type === 'warning' ? '#f57f17' : n.type === 'order' ? '#1565c0' : '#666' }}>
-                            {n.type || 'info'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{n.read ? '✅' : '⏳'}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            {!n.read && <button onClick={() => handleMarkRead(n.id)} style={{ padding: '4px 10px', borderRadius: '99px', border: `1px solid ${colors.border}`, background: colors.white, cursor: 'pointer', fontSize: '11px', fontWeight: 500, fontFamily: font.body, color: colors.textSecondary }}>Leído</button>}
-                            <button onClick={() => handleDelete(n.id)} style={btnDanger}>Eliminar</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+      {loading ? (
+        <PastelSkeletonTable rows={5} cols={6} />
+      ) : (
+        <PastelCard p={0} overflow="hidden">
+          {notifs.length === 0 ? (
+            <PastelEmptyState icon="🔔" title="No hay notificaciones" />
+          ) : (
+            <Box overflowX="auto">
+              <Table variant="pastel">
+                <Thead>
+                  <Tr><Th>ID</Th><Th>Usuario</Th><Th>Título</Th><Th>Tipo</Th><Th>Leída</Th><Th>Acciones</Th></Tr>
+                </Thead>
+                <Tbody>
+                  {notifs.map((n) => (
+                    <Tr key={n.id} opacity={n.read ? 0.6 : 1} _hover={{ bg: 'warmGray.100' }}>
+                      <Td fontFamily="mono" fontSize="xs" color="warmGray.500">{n.id?.slice(0, 8)}</Td>
+                      <Td fontSize="sm" color="warmGray.500">{n.user_id?.slice(0, 8) || '—'}</Td>
+                      <Td fontSize="sm" maxW="200px" isTruncated title={n.title || ''}>{n.title || '—'}</Td>
+                      <Td>{typeBadge(n.type)}</Td>
+                      <Td fontSize="sm">{n.read ? '✅' : '⏳'}</Td>
+                      <Td>
+                        <HStack spacing={2}>
+                          {!n.read && (
+                            <Button size="xs" variant="outline" borderRadius="full" onClick={() => handleMarkRead(n.id)}>Leído</Button>
+                          )}
+                          <Button size="xs" variant="ghost" colorScheme="red" onClick={() => handleDelete(n.id)}>Eliminar</Button>
+                        </HStack>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
+        </PastelCard>
+      )}
+    </Box>
   );
 }

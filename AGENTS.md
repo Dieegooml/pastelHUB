@@ -46,25 +46,24 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
       styles/                 # theme.js (inline style constants + CSS animation names)
   server/                     # Express backend
     src/
-      app.js                  # Express app (15 routers, cache middleware, trace ID, role-based rate limiting)
+      app.js                  # Express app (16 routers, cache middleware, trace ID)
       server.js               # Entry point (app.listen + WebSocket + cron backup)
       constants.js            # Constantes centralizadas (ORDER_STATUSES, PAYMENT_METHODS, PROMOTION_TYPES, etc.)
       config/                 # firebase.js (admin SDK init), mercadopago.js
-      middlewares/             # auth.js (7 middlewares), validate.js (Zod), rateLimiter.js (role-based)
+      middlewares/             # auth.js (9 middlewares), validate.js (Zod)
       routes/                 # 16 routers: auth, users, shops, products, orders, reviews, payments, notifications, reports, customers, promotions, support, invoices, chat, backups, uploads
-      validators/             # 15 Zod validators: auth, user, shop, product, order, review, payment, notification, report, customer, promotion, support, invoice, chat, upload
+      validators/             # 14 Zod validators: auth, user, shop, product, order, review, payment, notification, report, customer, promotion, support, invoice, chat
       utils/                  # cache.js, mappers.js, paginate.js, backupService.js, restoreService.js, websocket.js, aiHelper.js, fcmService.js, autoNotify.js, auditLog.js, logger.js
     tests/
       unit/                   # 17 test files (~450+ tests)
       load/                   # k6 + Node.js load test scripts
-      rate-limit/             # Rate limit demo
       setup.js                # Jest setup (mocks firebase-admin)
       setup-backup.js         # Backup test helpers
     TESTING.md
   assets/                     # diagramaPastelHUB.png
   cloud-monitoring.json       # Cloud Monitoring dashboard (10 widgets)
   deploy/                     # alert-policies.yaml (5 alerts)
-  *.md                        # README, API_ENDPOINTS, CLOUD_SETUP, RATE_LIMITING
+  *.md                        # README, API_ENDPOINTS, CLOUD_SETUP
 ```
 
 ## Key Design Decisions
@@ -76,22 +75,21 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
 6. **Multiple roles via array** — `roles: ['admin','moderator','owner','customer']` in Firestore + synced to Custom Claims
 7. **Auth handles password hashing** — Firebase Auth manages passwords, Firestore stores `password_hash: ''`
 8. **No bcrypt** — Firebase Auth handles hashing natively
-9. **Rate limiting** — Role-based: admin 2000/15min, moderator 1000, owner 1000, customer 500, anonymous 200 (100k/20k en LOAD_TEST)
 10. **clearMocks: true** — Global in jest.config, no manual `beforeEach` in test files
-11. **Validation via Zod** — All mutation endpoints use Zod schemas via `validate()` middleware
-12. **Snake_case in Firestore** — Fields like `shop_id`, `is_active`, `owner_id`, `start_date`, `end_date`
-13. **Seed masivo** — `npm run seed-data` (o `seed-data:clean` para limpiar antes) genera ~285 documentos con @faker-js/faker
-14. **Cache system** — In-memory TTL cache with LRU eviction, 5 named stores (shops, products, promotions, reviews, notificationCount), per-store stats, periodic cleanup
-15. **Backup history persisted** — Backup metadata stored in Firestore `backupHistory` collection, survives restarts
-16. **i18n internal** — Custom zero-dependency i18n with `t(key)` function and `I18nContext`
-17. **WebSocket** — Real-time chat + notifications via `ws` library, auto-reconnect, heartbeat
-18. **MercadoPago** — Real payment gateway with webhook HMAC verification, auto-fallback to simulated
+10. **Validation via Zod** — All mutation endpoints use Zod schemas via `validate()` middleware
+11. **Snake_case in Firestore** — Fields like `shop_id`, `is_active`, `owner_id`, `start_date`, `end_date`
+12. **Seed masivo** — `npm run seed-data` (o `seed-data:clean` para limpiar antes) genera ~285 documentos con @faker-js/faker
+13. **Cache system** — In-memory TTL cache with LRU eviction, 5 named stores (shops, products, promotions, reviews, notificationCount), per-store stats, periodic cleanup
+14. **Backup history persisted** — Backup metadata stored in Firestore `backupHistory` collection, survives restarts
+15. **i18n internal** — Custom zero-dependency i18n with `t(key)` function and `I18nContext`
+16. **WebSocket** — Real-time chat + notifications via `ws` library, auto-reconnect, heartbeat
+17. **MercadoPago** — Real payment gateway with webhook HMAC verification, auto-fallback to simulated
 
 ## Route Structure (16 routers)
 | Route | Mounted At | Auth Model | Notes |
 |-------|-----------|-----------|-------|
-| Auth | `/api/auth` | verifyToken (sync/me), admin (assign-role) | Role-based rate limiter |
-| Users | `/api/users` | admin (list/create), self/admin (get/update), admin (delete/status) | Embedded addresses |
+| Auth | `/api/auth` | verifyToken (sync/me), admin/moderator (assign-role) |
+| Users | `/api/users` | moderator/admin (list), admin (create), self/staff (get/update), admin (delete/status) | Embedded addresses |
 | Shops | `/api/shops` | **PUBLIC** (GETs), ownerOrAdmin (POST/PUT/DELETE), admin (status) | Schedules + categories subcollections |
 | Products | `/api/products` | **PUBLIC** (GETs), ownerOrAdmin (POST/PUT/PATCH/DELETE) | Variants subcollection |
 | Orders | `/api/orders` | admin (list), ownerOrAdmin (shop/status), customer (create/my/cancel), self/owner/admin (get) | Status machine |
@@ -103,24 +101,25 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
 | Promotions | `/api/promotions` | **PUBLIC** (GET active), ownerOrAdmin (CRUD/toggle) | Types: discount, combo, bogo |
 | Support | `/api/support` | authenticated (tickets), moderator (status/assign) | Messages subcollection |
 | Invoices | `/api/invoices` | admin (generate), authenticated (list), ownerOrAdmin (by-shop) | PDF via PDFKit |
-| Chat | `/api/chat` | verifyToken, rate limited (10/min) | Gemini AI + WebSocket |
+| Chat | `/api/chat` | verifyToken | Gemini AI + WebSocket |
 | Backups | `/api/admin/backup` | admin only | GCS upload + Firestore history + restore |
 | Uploads | `/api/uploads` | verifyToken (self), admin | Firebase Storage images (base64) |
 
 ## Middlewares (server/src/middlewares/)
-### auth.js (7 middlewares)
+### auth.js (9 middlewares)
 | Middleware | Logic | Used By |
 |-----------|-------|---------|
 | `verifyToken` | Verifies Firebase ID token, sets `req.user` | All protected routes |
 | `requireAdmin` | `roles.includes('admin')` | Admin-only endpoints |
 | `requireOwner` | `roles.includes('admin')` or `roles.includes('owner')` | Simple role gate |
-| `requireModerator` | `admin` or `moderator` roles | Reviews (status), Reports (list/assign) |
+| `requireModerator` | `admin` or `moderator` roles | Reviews (status), Reports (list/assign), Users (list) |
 | `requireCustomer` | `customer` or `admin` roles | Orders (create, my), Customers (create), Payments (create) |
 | `requireOwnerOrAdmin(fn)` | Dynamic — calls `fn(req)` to get owner ID | Shops, Products, Orders, Promotions CRUD |
-| `requireSelfOrAdmin(param)` | Factory: admin or `uid === param` | Users, Customers, Notifications |
+| `requireSelfOrAdmin(param)` | Factory: admin or `uid === param` | Customers, Notifications |
+| `requireAssignRole` | admin (any), moderator (except admin) | Auth (assign-role) |
+| `requireSelfOrStaff(param)` | Factory: admin/moderator or `uid === param` | Users (get/update) |
 
-### rateLimiter.js
-Role-based rate limiting: `createRoleLimiter({ auth: true })` for auth endpoints, `createRoleLimiter()` for general. Limits scale by role (admin=2000, moderator=1000, owner=1000, customer=500, anonymous=200). Uses `req.user.uid` as key (falls back to IP).
+
 
 ## Cache System (server/src/utils/cache.js)
 - `createStore(name, { ttl, maxEntries })` — Creates a named cache store
@@ -134,7 +133,6 @@ Role-based rate limiting: `createRoleLimiter({ auth: true })` for auth endpoints
 ## WebSocket (server/src/utils/websocket.js)
 - Attached to HTTP server, authenticated via `?token=` query (Firebase ID token)
 - Events: `chat:message`, `chat:typing`, `chat:read`, `notification:read`, `notification:new`
-- Rate limit: 10 messages/min per connection
 - Heartbeat: server ping every 30s, disconnect stale
 - `pushNotification(userId, data)` — Push to all user's WS connections
 
@@ -183,8 +181,9 @@ Role-based rate limiting: `createRoleLimiter({ auth: true })` for auth endpoints
 ### Owner (1)
 - `/owner` (OwnerDashboard) — 5 tabs: shop info (edit + ImageUploader), products (CRUD + ImageUploader), orders (status filter), promotions (CRUD + toggle), summary (sales analytics)
 
-### Moderator (1)
+### Moderator (2)
 - `/moderator` (ModeratorDashboard) — Review moderation + report management
+- `/moderator/usuarios` (ModeratorUsers) — User listing and role management
 
 ### Admin (14)
 - Dashboard, Users, Shops, Products, Orders, Reviews, Customers, Reports, Notifications, Payments, Promotions, Invoices, Chat, AdminNav
@@ -194,12 +193,12 @@ Role-based rate limiting: `createRoleLimiter({ auth: true })` for auth endpoints
 - **Client tests:** `npm test` (Vitest) — 13 suites, ~175 tests
 - **E2E tests:** `npm run test:e2e` (Playwright) — 7 spec files, 42 tests
 - **Load tests:** `npm run load-test:k6:*` (k6, 100-50000 VUs) / `npm run load-test` (Node.js)
-- **Rate limit:** `npm run test:rate-limit` (Node.js, spawns servers)
+
 
 ## CI/CD Pipeline (Cloud Build)
 - 10-step pipeline: test server → test client → build image → push → deploy staging → smoke tests → promote/rollback → build frontend → deploy hosting
 - **Rollback automático:** Restaura revisión anterior si smoke tests fallan
-- **Gating:** Pre-deploy tests (server + rate limit + client lint + client unit)
+- **Gating:** Pre-deploy tests (server + client lint + client unit)
 - **Smoke tests:** 6 tests post-deploy (health, products, shops, 404, response time, frontend)
 
 ## Backups & Restore
@@ -213,7 +212,7 @@ Role-based rate limiting: `createRoleLimiter({ auth: true })` for auth endpoints
 
 ## Deployment (deploy.sh)
 - `--min-instances=5` en Cloud Run para reducir cold start
-- Cache, rate limiting por rol, trace ID en headers/logs
+- Cache, trace ID en headers/logs
 
 ## Monitoring (cloud-monitoring.json)
 10 widgets: P50/P95/P99 latency, error rate by endpoint, request count, Firestore R/W, CPU/memory, active instances, concurrent requests, status distribution, top slowest endpoints.

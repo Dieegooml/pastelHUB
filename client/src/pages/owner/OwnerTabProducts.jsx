@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
-import { colors, font, inputStyle, btnSmallPrimary, btnGhost, btnDanger, tableHeaderStyle, animStagger } from '../../styles/theme';
+import {
+  Box, Flex, Text, Button, Input, Textarea, Table, Thead, Tbody, Tr, Th, Td,
+  Tag, Checkbox, useToast, Card, SimpleGrid, HStack
+} from '@chakra-ui/react';
 import { productsService } from '../../services/productsService';
-import { smallInput, sectionTitle } from './ownerConstants';
 import ImageUploader from '../../components/ImageUploader';
 import PropTypes from 'prop-types';
 
 export default function OwnerTabProducts({ selectedShop, setError, setSuccess }) {
+  const toast = useToast();
   const [products, setProducts] = useState([]);
   const [showProductForm, setShowProductForm] = useState(false);
   const [editProductId, setEditProductId] = useState(null);
@@ -26,17 +29,11 @@ export default function OwnerTabProducts({ selectedShop, setError, setSuccess })
 
   const handleProductSave = async () => {
     if (!productForm.productName || !productForm.price) { setError('Nombre y precio obligatorios'); return; }
-    setError('');
-    setSuccess('');
+    setError(''); setSuccess('');
     try {
       const payload = { ...productForm, shop_id: selectedShop.id, price: Number(productForm.price), stock: productForm.stock ? Number(productForm.stock) : 0 };
-      if (editProductId) {
-        await productsService.update(editProductId, payload);
-        setSuccess('Producto actualizado');
-      } else {
-        await productsService.create(payload);
-        setSuccess('Producto creado');
-      }
+      if (editProductId) { await productsService.update(editProductId, payload); setSuccess('Producto actualizado'); }
+      else { await productsService.create(payload); setSuccess('Producto creado'); }
       resetProductForm();
       const data = await productsService.getByShop(selectedShop.id);
       setProducts(data?.data || []);
@@ -45,92 +42,82 @@ export default function OwnerTabProducts({ selectedShop, setError, setSuccess })
 
   const handleProductDelete = async (id) => {
     if (!confirm('¿Eliminar este producto?')) return;
-    try {
-      await productsService.delete(id);
-      setSuccess('Producto eliminado');
-      const data = await productsService.getByShop(selectedShop.id);
-      setProducts(data?.data || []);
-    } catch (e) { console.error(e); setError('Error al eliminar'); }
+    try { await productsService.delete(id); setSuccess('Producto eliminado'); const data = await productsService.getByShop(selectedShop.id); setProducts(data?.data || []); }
+    catch (e) { console.error(e); setError('Error al eliminar'); }
   };
 
   const handleEditProduct = (p) => {
     setProductForm({
-      productName: p.productName || p.name || '',
-      productDescription: p.productDescription || p.description || '',
-      price: p.price || '',
-      stock: p.stock || '',
-      categoryId: p.categoryId || p.category_id || '',
-      imageUrl: p.imageUrl || p.image_url || '',
-      isAvailable: p.isAvailable !== false,
+      productName: p.productName || p.name || '', productDescription: p.productDescription || p.description || '',
+      price: p.price || '', stock: p.stock || '', categoryId: p.categoryId || p.category_id || '',
+      imageUrl: p.imageUrl || p.image_url || '', isAvailable: p.isAvailable !== false,
     });
     setEditProductId(p.id);
     setShowProductForm(true);
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <span style={{ fontSize: '13px', color: colors.textMuted, fontFamily: font.body }}>{products.length} {products.length === 1 ? 'producto' : 'productos'}</span>
-        <button onClick={() => { resetProductForm(); setShowProductForm(!showProductForm); }} style={btnSmallPrimary}>{showProductForm ? 'Cancelar' : '+ Nuevo producto'}</button>
-      </div>
+    <Box>
+      <Flex justify="space-between" align="center" mb={4}>
+        <Text fontSize="sm" color="warmGray.400">{products.length} {products.length === 1 ? 'producto' : 'productos'}</Text>
+        <Button size="sm" colorScheme="brand" onClick={() => { resetProductForm(); setShowProductForm(!showProductForm); }}>
+          {showProductForm ? 'Cancelar' : '+ Nuevo producto'}
+        </Button>
+      </Flex>
 
       {showProductForm && (
-        <div style={{ background: colors.white, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '20px' }}>
-          <h4 style={{ fontFamily: font.heading, fontSize: '15px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '14px' }}>{editProductId ? 'Editar producto' : 'Nuevo producto'}</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div><label style={sectionTitle}>Nombre *</label><input style={smallInput} value={productForm.productName} onChange={(e) => setProductForm((p) => ({ ...p, productName: e.target.value }))} /></div>
-            <div><label style={sectionTitle}>Precio S/ *</label><input style={smallInput} type="number" step="0.01" value={productForm.price} onChange={(e) => setProductForm((p) => ({ ...p, price: e.target.value }))} /></div>
-            <div><label style={sectionTitle}>Stock</label><input style={smallInput} type="number" value={productForm.stock} onChange={(e) => setProductForm((p) => ({ ...p, stock: e.target.value }))} /></div>
-            <div><label style={sectionTitle}>Categoría</label><input style={smallInput} value={productForm.categoryId} onChange={(e) => setProductForm((p) => ({ ...p, categoryId: e.target.value }))} /></div>
-            <div style={{ gridColumn: '1 / -1' }}><label style={sectionTitle}>Descripción</label><textarea style={{ ...inputStyle, height: 'auto', minHeight: '50px', padding: '10px 14px', fontSize: '13px', resize: 'vertical' }} value={productForm.productDescription} onChange={(e) => setProductForm((p) => ({ ...p, productDescription: e.target.value }))} /></div>
-            <div style={{ gridColumn: '1 / -1' }}><label style={sectionTitle}>Imagen</label><ImageUploader folder="products" currentImageUrl={productForm.imageUrl} onUploadComplete={(url) => setProductForm((p) => ({ ...p, imageUrl: url }))} label="Producto" aspectRatio="1/1" /></div>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontFamily: font.body, color: colors.text, cursor: 'pointer' }}>
-                <input type="checkbox" checked={productForm.isAvailable} onChange={(e) => setProductForm((p) => ({ ...p, isAvailable: e.target.checked }))} />
+        <Card p={5} mb={5}>
+          <Text fontWeight={600} fontSize="md" color="brand.700" mb={4}>{editProductId ? 'Editar producto' : 'Nuevo producto'}</Text>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <Box><Text fontSize="xs" color="warmGray.500" textTransform="uppercase" letterSpacing="0.05em" fontWeight={600} mb={1}>Nombre *</Text><Input size="sm" value={productForm.productName} onChange={(e) => setProductForm((p) => ({ ...p, productName: e.target.value }))} /></Box>
+            <Box><Text fontSize="xs" color="warmGray.500" textTransform="uppercase" letterSpacing="0.05em" fontWeight={600} mb={1}>Precio S/ *</Text><Input size="sm" type="number" step="0.01" value={productForm.price} onChange={(e) => setProductForm((p) => ({ ...p, price: e.target.value }))} /></Box>
+            <Box><Text fontSize="xs" color="warmGray.500" textTransform="uppercase" letterSpacing="0.05em" fontWeight={600} mb={1}>Stock</Text><Input size="sm" type="number" value={productForm.stock} onChange={(e) => setProductForm((p) => ({ ...p, stock: e.target.value }))} /></Box>
+            <Box><Text fontSize="xs" color="warmGray.500" textTransform="uppercase" letterSpacing="0.05em" fontWeight={600} mb={1}>Categoría</Text><Input size="sm" value={productForm.categoryId} onChange={(e) => setProductForm((p) => ({ ...p, categoryId: e.target.value }))} /></Box>
+            <Box gridColumn={{ md: '1 / -1' }}><Text fontSize="xs" color="warmGray.500" textTransform="uppercase" letterSpacing="0.05em" fontWeight={600} mb={1}>Descripción</Text><Textarea size="sm" value={productForm.productDescription} onChange={(e) => setProductForm((p) => ({ ...p, productDescription: e.target.value }))} minH="50px" /></Box>
+            <Box gridColumn={{ md: '1 / -1' }}><Text fontSize="xs" color="warmGray.500" textTransform="uppercase" letterSpacing="0.05em" fontWeight={600} mb={1}>Imagen</Text><ImageUploader folder="products" currentImageUrl={productForm.imageUrl} onUploadComplete={(url) => setProductForm((p) => ({ ...p, imageUrl: url }))} label="Producto" aspectRatio="1/1" /></Box>
+            <Box gridColumn={{ md: '1 / -1' }}>
+              <Checkbox isChecked={productForm.isAvailable} onChange={(e) => setProductForm((p) => ({ ...p, isAvailable: e.target.checked }))} colorScheme="accent">
                 Producto disponible
-              </label>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
-            <button onClick={handleProductSave} style={btnSmallPrimary}>{editProductId ? 'Actualizar' : 'Crear producto'}</button>
-            <button onClick={resetProductForm} style={btnGhost}>Cancelar</button>
-          </div>
-        </div>
+              </Checkbox>
+            </Box>
+          </SimpleGrid>
+          <HStack spacing={3} mt={4}>
+            <Button size="sm" colorScheme="brand" onClick={handleProductSave}>{editProductId ? 'Actualizar' : 'Crear producto'}</Button>
+            <Button size="sm" variant="ghost" onClick={resetProductForm}>Cancelar</Button>
+          </HStack>
+        </Card>
       )}
 
       {products.length === 0 && !showProductForm ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#999', fontFamily: font.body, fontSize: '14px' }}>Aún no tienes productos. Crea tu primer producto.</div>
+        <Box textAlign="center" py={10} color="warmGray.400" fontSize="sm">Aún no tienes productos. Crea tu primer producto.</Box>
       ) : (
-        <div style={{ background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-                <th style={tableHeaderStyle}>Nombre</th><th style={tableHeaderStyle}>Precio</th><th style={tableHeaderStyle}>Stock</th><th style={tableHeaderStyle}>Disponible</th><th style={tableHeaderStyle}>Acciones</th>
-              </tr></thead>
-              <tbody>
-                {products.map((p, i) => (
-                  <tr
-                    style={{ ...animStagger(i * 0.03), borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }} onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
-                  >
-                    <td style={{ padding: '12px 16px', fontSize: '14px', fontFamily: font.body }}>{p.productName || p.name}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: 600, color: colors.accent, fontFamily: font.body }}>S/ {(p.price || 0).toFixed(2)}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{p.stock ?? '—'}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{p.isAvailable !== false ? '✅' : '❌'}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button onClick={() => handleEditProduct(p)} style={btnGhost}>Editar</button>
-                        <button onClick={() => handleProductDelete(p.id)} style={btnDanger}>Eliminar</button>
-                      </div>
-                    </td>
-                  </tr>
+        <Card p={0} overflow="hidden">
+          <Box overflowX="auto">
+            <Table variant="pastel">
+              <Thead>
+                <Tr><Th>Nombre</Th><Th>Precio</Th><Th>Stock</Th><Th>Disponible</Th><Th>Acciones</Th></Tr>
+              </Thead>
+              <Tbody>
+                {products.map((p) => (
+                  <Tr key={p.id} _hover={{ bg: 'warmGray.100' }}>
+                    <Td fontSize="sm">{p.productName || p.name}</Td>
+                    <Td fontSize="sm" fontWeight={600} color="accent.500">S/ {(p.price || 0).toFixed(2)}</Td>
+                    <Td fontSize="sm">{p.stock ?? '—'}</Td>
+                    <Td fontSize="sm">{p.isAvailable !== false ? '✅' : '❌'}</Td>
+                    <Td>
+                      <HStack spacing={2}>
+                        <Button size="xs" variant="ghost" onClick={() => handleEditProduct(p)}>Editar</Button>
+                        <Button size="xs" variant="ghost" colorScheme="red" onClick={() => handleProductDelete(p.id)}>Eliminar</Button>
+                      </HStack>
+                    </Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </Tbody>
+            </Table>
+          </Box>
+        </Card>
       )}
-    </div>
+    </Box>
   );
 }
 

@@ -1,8 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { colors, font } from '../../styles/theme';
+import { HStack, Button } from '@chakra-ui/react';
 
 const links = [
   { path: '/moderator', label: 'Dashboard' },
+  { path: '/moderator/users', label: 'Usuarios' },
   { path: '/support', label: 'Tickets' },
   { path: '/admin/reviews', label: 'Reseñas' },
   { path: '/admin/reports', label: 'Reportes' },
@@ -18,49 +19,28 @@ export default function ModeratorNav() {
   };
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap',
-      position: 'relative',
-    }}>
+    <HStack spacing={1} flexWrap="wrap">
       {links.map((link) => {
         const active = isActive(link.path);
         return (
-          <button
+          <Button
             key={link.path}
+            size="sm"
+            variant={active ? 'solid' : 'ghost'}
+            colorScheme={active ? 'brand' : undefined}
+            bg={active ? 'brand.500' : undefined}
+            color={active ? 'white' : 'warmGray.600'}
+            borderRadius="full"
+            fontWeight={active ? 600 : 500}
+            fontSize="xs"
+            whiteSpace="nowrap"
             onClick={() => navigate(link.path)}
-            style={{
-              position: 'relative',
-              padding: '8px 14px',
-              border: 'none',
-              borderRadius: '99px',
-              fontSize: '12px',
-              fontWeight: active ? 600 : 500,
-              fontFamily: font.body,
-              cursor: 'pointer',
-              background: 'transparent',
-              color: active ? colors.primary : colors.textSecondary,
-              transition: 'color 0.2s ease',
-              whiteSpace: 'nowrap',
-            }}
-            onMouseEnter={(e) => {
-              if (!active) e.target.style.color = colors.primary;
-            }}
-            onMouseLeave={(e) => {
-              if (!active) e.target.style.color = colors.textSecondary;
-            }}
+            _hover={!active ? { color: 'brand.500' } : undefined}
           >
-            {active && (
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: colors.bgBeige,
-                borderRadius: '99px',
-                border: `1px solid ${colors.border}`,
-              }} />
-            )}
-            <span style={{ position: 'relative', zIndex: 1 }}>{link.label}</span>
-          </button>
+            {link.label}
+          </Button>
         );
       })}
-    </div>
+    </HStack>
   );
 }

@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
-import { colors, font, selectStyle, badge, btnSmallPrimary, tableHeaderStyle, animStagger } from '../../styles/theme';
+import {
+  Box, Flex, Text, Button, Select, Table, Thead, Tbody, Tr, Th, Td,
+  Tag, useToast, Card, HStack
+} from '@chakra-ui/react';
 import { ordersService } from '../../services/ordersService';
 import { STATUS_TRANSLATIONS, STATUS_COLORS, ALL_STATUSES } from './ownerConstants';
 import PropTypes from 'prop-types';
 
 export default function OwnerTabOrders({ selectedShop, setError, setSuccess }) {
+  const toast = useToast();
   const [orders, setOrders] = useState([]);
   const [statusUpdate, setStatusUpdate] = useState({});
 
@@ -26,46 +30,42 @@ export default function OwnerTabOrders({ selectedShop, setError, setSuccess }) {
 
   const statusBadge = (key) => {
     const c = STATUS_COLORS[key] || STATUS_COLORS.pending;
-    return <span style={badge(c.bg, c.color)}>{STATUS_TRANSLATIONS[key] || key}</span>;
+    return <Tag bg={c.bg} color={c.color} borderRadius="full" fontSize="xs" fontWeight={500}>{STATUS_TRANSLATIONS[key] || key}</Tag>;
   };
 
   return (
-    <div style={{ background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
+    <Card p={0} overflow="hidden">
       {orders.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#999', fontFamily: font.body, fontSize: '14px' }}>No hay órdenes para esta pastelería</div>
+        <Box textAlign="center" py={10} color="warmGray.400" fontSize="sm">No hay órdenes para esta pastelería</Box>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-              <th style={tableHeaderStyle}>Orden</th><th style={tableHeaderStyle}>Cliente</th><th style={tableHeaderStyle}>Total</th><th style={tableHeaderStyle}>Estado</th><th style={tableHeaderStyle}>Actualizar</th>
-            </tr></thead>
-            <tbody>
-              {orders.map((o, i) => (
-                <tr
-                  style={{ ...animStagger(i * 0.03), borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }} onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
-                >
-                  <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{o.id?.slice(0, 8)}</td>
-                  <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{o.customer?.name || '—'}</td>
-                  <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: 600, color: colors.primary, fontFamily: font.body }}>S/ {(o.totals?.total || 0).toFixed(2)}</td>
-                  <td style={{ padding: '12px 16px' }}>{statusBadge(o.status)}</td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <select style={{ ...selectStyle, height: '32px', padding: '0 8px', fontSize: '11px', width: '120px' }}
-                        value={statusUpdate[o.id] || ''} onChange={(e) => setStatusUpdate((s) => ({ ...s, [o.id]: e.target.value }))}>
+        <Box overflowX="auto">
+          <Table variant="pastel">
+            <Thead>
+              <Tr><Th>Orden</Th><Th>Cliente</Th><Th>Total</Th><Th>Estado</Th><Th>Actualizar</Th></Tr>
+            </Thead>
+            <Tbody>
+              {orders.map((o) => (
+                <Tr key={o.id} _hover={{ bg: 'warmGray.100' }}>
+                  <Td fontFamily="mono" fontSize="xs" color="warmGray.500">{o.id?.slice(0, 8)}</Td>
+                  <Td fontSize="sm">{o.customer?.name || '—'}</Td>
+                  <Td fontSize="sm" fontWeight={600} color="brand.700">S/ {(o.totals?.total || 0).toFixed(2)}</Td>
+                  <Td>{statusBadge(o.status)}</Td>
+                  <Td>
+                    <HStack spacing={2}>
+                      <Select size="sm" w="120px" value={statusUpdate[o.id] || ''} onChange={(e) => setStatusUpdate((s) => ({ ...s, [o.id]: e.target.value }))}>
                         <option value="">—</option>
                         {ALL_STATUSES.map((s) => <option key={s} value={s}>{STATUS_TRANSLATIONS[s]}</option>)}
-                      </select>
-                      <button onClick={() => handleOrderStatus(o.id)} style={btnSmallPrimary}>OK</button>
-                    </div>
-                  </td>
-                </tr>
+                      </Select>
+                      <Button size="xs" colorScheme="brand" onClick={() => handleOrderStatus(o.id)}>OK</Button>
+                    </HStack>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </Tbody>
+          </Table>
+        </Box>
       )}
-    </div>
+    </Card>
   );
 }
 

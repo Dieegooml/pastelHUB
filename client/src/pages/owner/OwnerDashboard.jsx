@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import Navbar from '../../components/Navbar';
+import {
+  Box, Flex, Heading, Text, Button, Card, Tabs, TabList, Tab, TabPanels, TabPanel,
+  useToast, Spinner, Alert, AlertIcon
+} from '@chakra-ui/react';
 import { useAuth } from '../../context/AuthContext';
-import { colors, font, animFadeIn } from '../../styles/theme';
 import { shopsService } from '../../services/shopsService';
 import OwnerTabInfo from './OwnerTabInfo';
 import OwnerTabProducts from './OwnerTabProducts';
@@ -15,6 +17,7 @@ const TAB_LABELS = { info: 'Información', products: 'Productos', orders: 'Órde
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
+  const toast = useToast();
   const [shops, setShops] = useState([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [tab, setTab] = useState('info');
@@ -43,77 +46,69 @@ export default function OwnerDashboard() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-        <Navbar />
-        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 2rem' }}>
-          {[1, 2].map((i) => <div key={i} style={{ height: '80px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '12px', marginBottom: '16px', animation: 'shimmer 1.5s infinite' }} />)}
-        </div>
-      </div>
+      <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+        {[1, 2].map(i => <Box key={i} h="80px" bg="warmGray.100" borderRadius="xl" mb={4} />)}
+      </Box>
     );
   }
 
   if (shops.length === 0) {
     return (
-      <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-        <Navbar />
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '80px 20px', gap: '12px' }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          <p style={{ color: '#999', fontSize: '15px', margin: 0, fontFamily: font.body }}>No tienes pastelerías registradas</p>
-          <p style={{ color: '#bbb', fontSize: '13px', margin: 0, fontFamily: font.body }}>Solicita a un administrador que te asigne una pastelería</p>
-        </div>
-      </div>
+      <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+        <Flex direction="column" align="center" py={20} gap={3}>
+          <Box as="svg" w="48px" h="48px" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+          </Box>
+          <Text color="warmGray.400" fontSize="md">No tienes pastelerías registradas</Text>
+          <Text color="warmGray.300" fontSize="sm">Solicita a un administrador que te asigne una pastelería</Text>
+        </Flex>
+      </Box>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div style={{ ...animFadeIn, maxWidth: '1000px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
-        <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '4px' }}>Panel de Dueño</h2>
-        <p style={{ fontFamily: font.body, fontSize: '13px', color: colors.textMuted, margin: '0 0 24px' }}>Administra tus pastelerías, productos y órdenes</p>
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.5rem' }} />
+    <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <Heading fontSize={{ base: '2xl', md: '3xl' }} fontWeight={700} color="brand.700" mb={1}>Panel de Dueño</Heading>
+      <Text fontSize="sm" color="warmGray.400" mb={6}>Administra tus pastelerías, productos y órdenes</Text>
+      <Box h="3px" w="60px" bgGradient="linear(90deg, accent.500, brand.500)" borderRadius="full" mb={6} />
 
-        {shops.length > 1 && (
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
-            {shops.map((s, i) => (
-              <button key={s.id} onClick={() => { setSelectedIdx(i); setTab('info'); }}
-                style={{
-                  padding: '8px 18px', borderRadius: '99px', cursor: 'pointer', fontSize: '13px', fontWeight: selectedIdx === i ? 600 : 500,
-                  fontFamily: font.body, border: selectedIdx === i ? 'none' : `1px solid ${colors.border}`,
-                  background: selectedIdx === i ? colors.accent : colors.white,
-                  color: selectedIdx === i ? '#fff' : colors.textSecondary, transition: 'all 0.2s ease',
-                }}
-              >{s.shopName}</button>
-            ))}
-          </div>
-        )}
+      {shops.length > 1 && (
+        <Flex gap={2} flexWrap="wrap" mb={5}>
+          {shops.map((s, i) => (
+            <Button key={s.id} size="sm"
+              variant={selectedIdx === i ? 'solid' : 'outline'}
+              colorScheme={selectedIdx === i ? 'accent' : undefined}
+              bg={selectedIdx === i ? 'accent.500' : 'white'}
+              color={selectedIdx === i ? 'white' : 'warmGray.600'}
+              borderRadius="full"
+              fontWeight={selectedIdx === i ? 600 : 500}
+              onClick={() => { setSelectedIdx(i); setTab('info'); }}
+            >
+              {s.shopName}
+            </Button>
+          ))}
+        </Flex>
+      )}
 
-        {selectedShop && (
-          <>
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: `1px solid ${colors.border}`, paddingBottom: '4px' }}>
-              {TABS.map((t) => (
-                <button key={t} onClick={() => setTab(t)}
-                  style={{
-                    padding: '8px 18px', borderRadius: '99px', cursor: 'pointer', fontSize: '13px', fontWeight: tab === t ? 600 : 500,
-                    fontFamily: font.body, border: 'none', background: tab === t ? colors.primary : 'transparent',
-                    color: tab === t ? '#fff' : colors.textSecondary, transition: 'all 0.2s ease',
-                  }}
-                >{TAB_LABELS[t]}</button>
-              ))}
-            </div>
+      {selectedShop && (
+        <>
+          <Tabs variant="brand-underline" index={TABS.indexOf(tab)} onChange={(i) => setTab(TABS[i])} mb={6}>
+            <TabList>
+              {TABS.map((t) => <Tab key={t}>{TAB_LABELS[t]}</Tab>)}
+            </TabList>
+          </Tabs>
 
-            {error && <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
-            {success && <div style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
+          {error && <Alert status="error" mb={4} borderRadius="lg">{error}</Alert>}
+          {success && <Alert status="success" mb={4} borderRadius="lg">{success}</Alert>}
 
-            {tab === 'info' && <OwnerTabInfo selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} onShopUpdate={refreshShops} />}
-            {tab === 'products' && <OwnerTabProducts selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
-            {tab === 'orders' && <OwnerTabOrders selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
-            {tab === 'promotions' && <OwnerTabPromotions selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
-            {tab === 'summary' && <OwnerTabSummary selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
-            {tab === 'boletas' && <OwnerTabBoletas selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
-          </>
-        )}
-      </div>
-    </div>
+          {tab === 'info' && <OwnerTabInfo selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} onShopUpdate={refreshShops} />}
+          {tab === 'products' && <OwnerTabProducts selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
+          {tab === 'orders' && <OwnerTabOrders selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
+          {tab === 'promotions' && <OwnerTabPromotions selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
+          {tab === 'summary' && <OwnerTabSummary selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
+          {tab === 'boletas' && <OwnerTabBoletas selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
+        </>
+      )}
+    </Box>
   );
 }

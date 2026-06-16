@@ -1,9 +1,12 @@
 import { useEffect, useState, Fragment } from 'react';
-import { useIsMobile } from '../../styles/useIsMobile';
-import { usersService } from '../../services/usersService';
-import Navbar from '../../components/Navbar';
+import {
+  Box, Flex, Heading, Text, Button, Input, Select, Badge,
+  Table, Thead, Tbody, Tr, Th, Td, Alert, AlertIcon, useToast,
+  Checkbox, Stack, HStack, Tag
+} from '@chakra-ui/react';
 import AdminNav from './AdminNav';
-import { colors, font, inputStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary, btnSmallSecondary, cardStyle, tableHeaderStyle, labelStyle, animFadeIn, animFadeInLeft, animStagger } from '../../styles/theme';
+import { PastelPageHeader, PastelCard, PastelSkeletonTable } from '../../components/UI';
+import { usersService } from '../../services/usersService';
 
 const ROLES = ['admin', 'moderator', 'owner', 'customer'];
 
@@ -13,8 +16,6 @@ const emptyForm = {
 
 const emptyAddress = { street: '', city: '', is_default: false };
 
-const smallInput = { ...inputStyle, height: '36px' };
-
 const ROLE_BADGES = {
   admin:     { bg: '#fee2e2', color: '#ef4444' },
   moderator: { bg: '#e3f2fd', color: '#2196f3' },
@@ -23,14 +24,13 @@ const ROLE_BADGES = {
 };
 
 export default function Users() {
+  const toast = useToast();
   const [users, setUsers] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  const isMobile = useIsMobile(768);
 
   const [expandedUser, setExpandedUser] = useState(null);
   const [addresses, setAddresses] = useState([]);
@@ -176,298 +176,248 @@ export default function Users() {
     }
   };
 
-  const headers = isMobile ? ['Nombre', 'Roles', ''] : ['Nombre', 'Email', 'UID', 'Roles', 'Estado', 'Acciones'];
-
-  const sectionDivider = { height: '1px', background: colors.border, margin: '1.2rem 0' };
+  const showAlert = (msg, type) => {
+    toast({ title: msg, status: type, duration: 3000, isClosable: true, position: 'top-right' });
+  };
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div
-        style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2rem' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-          <h2 style={{ fontFamily: font.heading, fontSize: isMobile ? '22px' : '28px', fontWeight: 700, color: colors.primary, margin: 0 }}>
-            Usuarios
-          </h2>
-          <span style={{
-            background: colors.white, color: colors.textSecondary, padding: '2px 12px',
-            borderRadius: '99px', fontSize: '13px', fontWeight: 500, fontFamily: font.body,
-            border: `1px solid ${colors.border}`,
-          }}>
+    <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <PastelPageHeader
+        title="Usuarios"
+        actions={
+          <Tag bg="white" color="warmGray.500" border="1px solid" borderColor="warmGray.200" borderRadius="full" fontSize="sm" fontWeight={500}>
             {users.length}
-          </span>
-        </div>
+          </Tag>
+        }
+      />
 
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.2rem' }} />
+      <AdminNav />
 
-        <AdminNav />
+      {success && <Alert status="success" mt={4} mb={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="green.500">{success}</Alert>}
+      {error && <Alert status="error" mt={4} mb={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="red.500">{error}</Alert>}
 
-        {success && (
-          <div style={{ ...animFadeInLeft,
-            background: colors.successBg, color: colors.success, padding: '12px 16px',
-            borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
-            borderLeft: `4px solid ${colors.success}`,
-          }}>
-            {success}
-          </div>
-        )}
-        {error && (
-          <div style={{ ...animFadeInLeft,
-            background: colors.errorBg, color: colors.error, padding: '12px 16px',
-            borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
-            borderLeft: `4px solid ${colors.error}`,
-          }}>
-            {error}
-          </div>
-        )}
+      <PastelCard title={editingId ? 'Editar usuario' : 'Nuevo usuario'} variant="elevated" mt={4}>
+        <Box>
+          <Stack direction={{ base: 'column', md: 'row' }} spacing={4} mb={4}>
+            <Box flex={1}>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Nombre completo *</Text>
+              <Input name="name" value={form.name} onChange={handleChange} required={!editingId} placeholder="Juan Pérez" />
+            </Box>
+            <Box flex={1}>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Correo electrónico *</Text>
+              <Input type="email" name="email" value={form.email} onChange={handleChange} required={!editingId} isDisabled={!!editingId} placeholder="correo@ejemplo.com" />
+            </Box>
+          </Stack>
+          <Stack direction={{ base: 'column', md: 'row' }} spacing={4} mb={4}>
+            <Box flex={1}>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>{editingId ? 'Contraseña (dejar vacío)' : 'Contraseña *'}</Text>
+              <Input type="password" name="password" value={form.password} onChange={handleChange} required={!editingId} placeholder={editingId ? '••••••••' : 'Mínimo 8 caracteres'} />
+            </Box>
+            <Box flex={1}>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Teléfono</Text>
+              <Input name="phone" value={form.phone} onChange={handleChange} placeholder="+51 999 999 999" />
+            </Box>
+          </Stack>
 
-        <div style={{ ...cardStyle, marginTop: '1rem' }}>
-          <h3 style={{ fontFamily: font.heading, fontSize: '18px', fontWeight: 700, color: colors.primary, margin: '0 0 0.5rem' }}>
-            {editingId ? 'Editar usuario' : 'Nuevo usuario'}
-          </h3>
-          <div style={sectionDivider} />
+          <Box h="1px" bg="warmGray.200" my={4} />
 
-          <div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: isMobile ? '1' : '1 / 2' }}>
-                <label style={labelStyle}>Nombre completo *</label>
-                <input style={inputStyle} name="name" value={form.name} onChange={handleChange} required={!editingId} placeholder="Juan Pérez" />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: isMobile ? '1' : '2 / 3' }}>
-                <label style={labelStyle}>Correo electrónico *</label>
-                <input style={inputStyle} type="email" name="email" value={form.email} onChange={handleChange} required={!editingId} disabled={!!editingId} placeholder="correo@ejemplo.com" />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: isMobile ? '1' : '1 / 2' }}>
-                <label style={labelStyle}>{editingId ? 'Contraseña (dejar vacío)' : 'Contraseña *'}</label>
-                <input style={inputStyle} type="password" name="password" value={form.password} onChange={handleChange} required={!editingId} placeholder={editingId ? '••••••••' : 'Mínimo 8 caracteres'} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: isMobile ? '1' : '2 / 3' }}>
-                <label style={labelStyle}>Teléfono</label>
-                <input style={inputStyle} name="phone" value={form.phone} onChange={handleChange} placeholder="+51 999 999 999" />
-              </div>
-            </div>
+          <Box mb={4}>
+            <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={2}>Roles</Text>
+            <HStack spacing={2} flexWrap="wrap">
+              {ROLES.map((role) => {
+                const rb = ROLE_BADGES[role];
+                const selected = form.roles.includes(role);
+                return (
+                  <Tag
+                    key={role}
+                    as="label"
+                    cursor="pointer"
+                    px={4}
+                    py={2}
+                    borderRadius="full"
+                    bg={selected ? rb.bg : 'warmGray.50'}
+                    border="1.5px solid"
+                    borderColor={selected ? rb.color : 'warmGray.200'}
+                    transition="all 0.2s"
+                    fontWeight={500}
+                    fontSize="sm"
+                    _hover={{ opacity: 0.8 }}
+                  >
+                    <Checkbox
+                      isChecked={selected}
+                      onChange={() => handleRoleToggle(role)}
+                      colorScheme="accent"
+                      me={1}
+                    />
+                    {role}
+                  </Tag>
+                );
+              })}
+            </HStack>
+          </Box>
 
-            <div style={sectionDivider} />
+          <HStack spacing={3} mt={4}>
+            <Button colorScheme="brand" onClick={handleSubmit}>
+              {editingId ? 'Guardar cambios' : 'Crear usuario'}
+            </Button>
+            {editingId && (
+              <Button variant="ghost" onClick={handleCancel}>Cancelar</Button>
+            )}
+          </HStack>
+        </Box>
+      </PastelCard>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={labelStyle}>Roles</label>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                {ROLES.map((role) => {
-                  const rb = ROLE_BADGES[role];
-                  const selected = form.roles.includes(role);
-                  return (
-                    <label key={role} style={{
-                      display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px',
-                      cursor: 'pointer', padding: '7px 16px', borderRadius: '99px',
-                      background: selected ? rb.bg : colors.bgBeige,
-                      border: `1.5px solid ${selected ? rb.color : colors.border}`,
-                      transition: 'all 0.2s ease',
-                    }}>
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => handleRoleToggle(role)}
-                        style={{ accentColor: colors.accent, margin: 0 }}
-                      />
-                      {role}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
+      {loading ? (
+        <PastelSkeletonTable rows={5} cols={6} />
+      ) : (
+        <PastelCard mt={4} p={0} overflow="hidden">
+          <Box overflowX="auto">
+            <Table variant="pastel">
+              <Thead>
+                <Tr>
+                  <Th>Nombre</Th>
+                  <Th display={{ base: 'none', md: 'table-cell' }}>Email</Th>
+                  <Th display={{ base: 'none', md: 'table-cell' }}>UID</Th>
+                  <Th>Roles</Th>
+                  <Th display={{ base: 'none', md: 'table-cell' }}>Estado</Th>
+                  <Th>Acciones</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {users.length === 0 ? (
+                  <Tr>
+                    <Td colSpan={6} textAlign="center" py={12} color="warmGray.400">No hay usuarios registrados</Td>
+                  </Tr>
+                ) : (
+                  users.map((u) => (
+                    <Fragment key={u.id}>
+                      <Tr
+                        _hover={{ bg: 'warmGray.100' }}
+                        cursor="pointer"
+                        onClick={() => handleExpandUser(u)}
+                      >
+                        <Td>
+                          <Text fontWeight={500}>{u.full_name || '—'}</Text>
+                          <Text as="span" fontSize="xs" color="warmGray.400" ms={1}>
+                            {expandedUser === u.id ? '▲' : '▼'}
+                          </Text>
+                        </Td>
+                        <Td display={{ base: 'none', md: 'table-cell' }} fontSize="sm">{u.email || '—'}</Td>
+                        <Td display={{ base: 'none', md: 'table-cell' }}>
+                          <Text
+                            fontSize="xs" fontFamily="mono" color="warmGray.400" cursor="pointer" userSelect="all"
+                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(u.id); setSuccess('UID copiado'); }}
+                            title="Click para copiar"
+                          >
+                            {u.id ? `${u.id.slice(0, 12)}...` : '—'}
+                          </Text>
+                        </Td>
+                        <Td>
+                          <HStack spacing={1} flexWrap="wrap">
+                            {(u.roles || []).map((r) => {
+                              const rb = ROLE_BADGES[r] || ROLE_BADGES.customer;
+                              return (
+                                <Tag key={r} bg={rb.bg} color={rb.color} borderRadius="full" fontSize="xs" fontWeight={500}>
+                                  {r}
+                                </Tag>
+                              );
+                            })}
+                          </HStack>
+                        </Td>
+                        <Td display={{ base: 'none', md: 'table-cell' }}>
+                          <Tag
+                            cursor="pointer"
+                            borderRadius="full"
+                            fontSize="xs"
+                            fontWeight={500}
+                            bg={u.isActive !== false ? 'green.50' : 'red.50'}
+                            color={u.isActive !== false ? 'green.600' : 'red.600'}
+                            onClick={(e) => { e.stopPropagation(); handleToggleStatus(u.id, u.isActive !== false); }}
+                          >
+                            {u.isActive !== false ? 'Activo' : 'Inactivo'}
+                          </Tag>
+                        </Td>
+                        <Td onClick={(e) => e.stopPropagation()}>
+                          <HStack spacing={2}>
+                            <Button size="xs" variant="ghost" onClick={() => handleEdit(u)}>Editar</Button>
+                            <Button size="xs" variant="ghost" colorScheme="red" onClick={() => handleDelete(u.id)}>Eliminar</Button>
+                          </HStack>
+                        </Td>
+                      </Tr>
+                      {expandedUser === u.id && (
+                        <Tr>
+                          <Td colSpan={6} bg="warmGray.50" p={4}>
+                            <Box borderTop="1px solid" borderColor="warmGray.200" pt={4}>
+                              <Heading fontSize="md" color="brand.700" mb={3}>Direcciones</Heading>
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '1.2rem' }}>
-              <button onClick={handleSubmit} style={btnPrimary}
-                onMouseEnter={(e) => e.target.style.background = colors.accent}
-                onMouseLeave={(e) => e.target.style.background = colors.primary}
-              >
-                {editingId ? 'Guardar cambios' : 'Crear usuario'}
-              </button>
-              {editingId && (
-                <button type="button" onClick={handleCancel} style={btnGhost}>
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem' }}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} style={{
-                height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                backgroundSize: '200% 100%', borderRadius: '8px', marginBottom: '8px',
-                animation: 'shimmer 1.5s infinite',
-              }} />
-            ))}
-          </div>
-        ) : (
-          <div style={{ ...cardStyle, marginTop: '1rem', padding: 0, overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-                    {headers.map((h) => (
-                      <th key={h} style={tableHeaderStyle}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.length === 0 ? (
-                    <tr>
-                      <td colSpan={isMobile ? 3 : 6} style={{ padding: '3rem', textAlign: 'center', color: colors.textMuted, fontFamily: font.body }}>
-                        No hay usuarios registrados
-                      </td>
-                    </tr>
-                  ) : (
-                    users.map((u, i) => (
-                      <Fragment key={u.id}>
-                        <tr
-                          style={{
-                            borderTop: `1px solid ${colors.tableBorder}`,
-                            background: i % 2 === 0 ? colors.white : colors.tableStripe,
-                            transition: 'background 0.15s ease',
-                            ...animStagger(i * 0.03),
-                          }}
-                          onMouseEnter={(e) => { if (i % 2 === 0) e.currentTarget.style.background = '#f5f5f5'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
-                        >
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ fontWeight: 500, cursor: 'pointer', fontFamily: font.body }}
-                              onClick={() => handleExpandUser(u)}>
-                              {u.full_name || '—'}
-                              <span style={{ fontSize: '11px', color: colors.textMuted, marginLeft: '6px' }}>
-                                {expandedUser === u.id ? '▲' : '▼'}
-                              </span>
-                            </div>
-                          </td>
-                          {!isMobile && <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{u.email || '—'}</td>}
-                          {!isMobile && (
-                            <td style={{ padding: '12px 16px' }}>
-                              <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#888', userSelect: 'all', cursor: 'pointer' }}
-                                onClick={() => { navigator.clipboard.writeText(u.id); setSuccess('UID copiado'); }}
-                                title="Click para copiar"
-                              >
-                                {u.id ? `${u.id.slice(0, 12)}...` : '—'}
-                              </span>
-                            </td>
-                          )}
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                              {(u.roles || []).map((r) => {
-                                const rb = ROLE_BADGES[r] || ROLE_BADGES.customer;
-                                return (
-                                  <span key={r} style={{
-                                    padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 500,
-                                    background: rb.bg, color: rb.color, fontFamily: font.body,
-                                  }}>
-                                    {r}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          </td>
-                          {!isMobile && (
-                            <td style={{ padding: '12px 16px' }}>
-                              <span
-                                onClick={() => handleToggleStatus(u.id, u.isActive !== false)}
-                                style={{
-                                  cursor: 'pointer', padding: '4px 12px', borderRadius: '99px',
-                                  fontSize: '12px', fontWeight: 500, fontFamily: font.body,
-                                  background: u.isActive !== false ? colors.successBg : colors.errorBg,
-                                  color: u.isActive !== false ? colors.success : colors.error,
-                                  transition: 'all 0.2s ease',
-                                }}
-                              >
-                                {u.isActive !== false ? 'Activo' : 'Inactivo'}
-                              </span>
-                            </td>
-                          )}
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button onClick={() => handleEdit(u)} style={btnGhost}>Editar</button>
-                              <button onClick={() => handleDelete(u.id)} style={btnDanger}>Eliminar</button>
-                            </div>
-                          </td>
-                        </tr>
-                        {expandedUser === u.id && (
-                          <tr key={`${u.id}-addr`}>
-                            <td colSpan={isMobile ? 3 : 6} style={{ padding: '0 16px 16px', background: colors.grayLight }}>
-                              <div style={{ borderTop: `1px solid ${colors.tableBorder}`, paddingTop: '16px' }}>
-                                <h4 style={{ fontFamily: font.heading, fontSize: '15px', color: colors.primary, margin: '0 0 12px' }}>
-                                  Direcciones
-                                </h4>
-
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'end', flexWrap: 'wrap', marginBottom: '12px' }}>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: isMobile ? '100%' : 'auto' }}>
-                                    <label style={{ ...labelStyle, fontSize: '11px' }}>Calle *</label>
-                                    <input style={{ ...smallInput, width: isMobile ? '100%' : '180px' }} name="street" value={addressForm.street} onChange={handleAddrChange} placeholder="Av. Principal 123" />
-                                  </div>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: isMobile ? '100%' : 'auto' }}>
-                                    <label style={{ ...labelStyle, fontSize: '11px' }}>Ciudad *</label>
-                                    <input style={{ ...smallInput, width: isMobile ? '100%' : '120px' }} name="city" value={addressForm.city} onChange={handleAddrChange} placeholder="Lima" />
-                                  </div>
-                                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer', fontFamily: font.body }}>
-                                    <input type="checkbox" checked={addressForm.is_default} onChange={(e) => setAddressForm({ ...addressForm, is_default: e.target.checked })} style={{ accentColor: colors.accent }} />
-                                    Default
-                                  </label>
-                                  <button onClick={handleAddrSubmit} style={btnSmallPrimary}
-                                    onMouseEnter={(e) => e.target.style.background = colors.accent}
-                                    onMouseLeave={(e) => e.target.style.background = colors.primary}
-                                  >
-                                    {editingAddrId ? 'Actualizar' : 'Agregar'}
-                                  </button>
-                                  {editingAddrId && (
-                                    <button onClick={() => { setEditingAddrId(null); setAddressForm(emptyAddress); }} style={btnSmallSecondary}>
-                                      Cancelar
-                                    </button>
-                                  )}
-                                </div>
-
-                                {addresses.length === 0 ? (
-                                  <p style={{ color: colors.textMuted, fontSize: '13px', fontFamily: font.body }}>Sin direcciones registradas</p>
-                                ) : (
-                                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                      <tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-                                        <th style={{ ...tableHeaderStyle, padding: '8px 12px' }}>Calle</th>
-                                        <th style={{ ...tableHeaderStyle, padding: '8px 12px' }}>Ciudad</th>
-                                        <th style={{ ...tableHeaderStyle, padding: '8px 12px' }}>Default</th>
-                                        <th style={{ ...tableHeaderStyle, padding: '8px 12px' }}>Acciones</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {addresses.map((a) => (
-                                        <tr key={a.address_id} style={{ borderTop: `1px solid ${colors.tableBorder}` }}>
-                                          <td style={{ padding: '8px 12px', fontSize: '13px', fontFamily: font.body }}>{a.street}</td>
-                                          <td style={{ padding: '8px 12px', fontSize: '13px', fontFamily: font.body }}>{a.city}</td>
-                                          <td style={{ padding: '8px 12px', fontSize: '13px', fontFamily: font.body }}>{a.is_default ? '✅' : '—'}</td>
-                                          <td style={{ padding: '8px 12px' }}>
-                                          <div style={{ display: 'flex', gap: '6px' }}>
-                                              <button onClick={() => handleEditAddr(a)} style={btnGhost}>Editar</button>
-                                              <button onClick={() => handleDeleteAddr(a.address_id)} style={btnDanger}>Eliminar</button>
-                                          </div>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                              <Stack direction={{ base: 'column', md: 'row' }} spacing={2} mb={3} align="flex-end" flexWrap="wrap">
+                                <Box>
+                                  <Text fontSize="xs" color="warmGray.500" mb={1}>Calle *</Text>
+                                  <Input size="sm" name="street" value={addressForm.street} onChange={handleAddrChange} placeholder="Av. Principal 123" w={{ base: '100%', md: '180px' }} />
+                                </Box>
+                                <Box>
+                                  <Text fontSize="xs" color="warmGray.500" mb={1}>Ciudad *</Text>
+                                  <Input size="sm" name="city" value={addressForm.city} onChange={handleAddrChange} placeholder="Lima" w={{ base: '100%', md: '120px' }} />
+                                </Box>
+                                <Checkbox
+                                  isChecked={addressForm.is_default}
+                                  onChange={(e) => setAddressForm({ ...addressForm, is_default: e.target.checked })}
+                                  colorScheme="accent"
+                                  fontSize="sm"
+                                >
+                                  Default
+                                </Checkbox>
+                                <Button size="sm" colorScheme="brand" onClick={handleAddrSubmit}>
+                                  {editingAddrId ? 'Actualizar' : 'Agregar'}
+                                </Button>
+                                {editingAddrId && (
+                                  <Button size="sm" variant="ghost" onClick={() => { setEditingAddrId(null); setAddressForm(emptyAddress); }}>
+                                    Cancelar
+                                  </Button>
                                 )}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+                              </Stack>
+
+                              {addresses.length === 0 ? (
+                                <Text color="warmGray.400" fontSize="sm">Sin direcciones registradas</Text>
+                              ) : (
+                                <Table variant="pastel" size="sm">
+                                  <Thead>
+                                    <Tr>
+                                      <Th>Calle</Th>
+                                      <Th>Ciudad</Th>
+                                      <Th>Default</Th>
+                                      <Th>Acciones</Th>
+                                    </Tr>
+                                  </Thead>
+                                  <Tbody>
+                                    {addresses.map((a) => (
+                                      <Tr key={a.address_id}>
+                                        <Td fontSize="sm">{a.street}</Td>
+                                        <Td fontSize="sm">{a.city}</Td>
+                                        <Td fontSize="sm">{a.is_default ? '✅' : '—'}</Td>
+                                        <Td>
+                                          <HStack spacing={2}>
+                                            <Button size="xs" variant="ghost" onClick={() => handleEditAddr(a)}>Editar</Button>
+                                            <Button size="xs" variant="ghost" colorScheme="red" onClick={() => handleDeleteAddr(a.address_id)}>Eliminar</Button>
+                                          </HStack>
+                                        </Td>
+                                      </Tr>
+                                    ))}
+                                  </Tbody>
+                                </Table>
+                              )}
+                            </Box>
+                          </Td>
+                        </Tr>
+                      )}
+                    </Fragment>
+                  ))
+                )}
+              </Tbody>
+            </Table>
+          </Box>
+        </PastelCard>
+      )}
+    </Box>
   );
 }

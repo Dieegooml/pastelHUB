@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import Navbar from '../../components/Navbar';
+import {
+  Box, Flex, HStack, VStack, Text, Heading, Button, Card, Badge, Spinner,
+} from '@chakra-ui/react';
 import { useAuth } from '../../context/AuthContext';
-import { colors, font, badge as badgeStyle, btnDanger, btnSmallSecondary, cardStyle, animFadeIn, animStagger } from '../../styles/theme';
 import { notificationsService } from '../../services/notificationsService';
 import websocketService from '../../services/websocketService';
 
@@ -104,61 +105,77 @@ export default function Notifications() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div
-        style={{ ...animFadeIn, maxWidth: '700px', margin: '0 auto', padding: '40px 2rem 2rem' }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <div>
-            <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0 }}>Notificaciones</h2>
-            <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginTop: '12px' }} />
-          </div>
-          {notifs.some((n) => !n.isRead) && (
-            <button onClick={handleMarkAllRead} style={btnSmallSecondary}>Marcar todas como leídas</button>
-          )}
-        </div>
-
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} style={{ height: '64px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '10px', animation: 'shimmer 1.5s infinite' }} />
-            ))}
-          </div>
-        ) : notifs.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: colors.textMuted, fontFamily: font.body }}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔔</div>
-            <p style={{ fontSize: '15px', margin: 0 }}>No tienes notificaciones</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {notifs.map((n) => (
-              <div
-                key={n.id}
-                style={{
-                  ...cardStyle, padding: '14px 18px', marginBottom: 0, ...animStagger(0),
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                  borderLeft: n.isRead ? `1px solid ${colors.border}` : `3px solid ${colors.accent}`,
-                  background: n.isRead ? colors.white : '#fafffd',
-                  animation: newNotifIds.has(n.id) ? 'highlightFade 4s ease-out' : undefined,
-                }}
-              >
-                <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => handleMarkRead(n.id)}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                    <span style={{ fontFamily: font.body, fontSize: '13px', fontWeight: 600, color: colors.text }}>{TYPE_LABELS[n.type] || n.type}</span>
-                    {!n.isRead && <span style={badgeStyle(colors.accent, '#fff')}>Nueva</span>}
-                  </div>
-                  <p style={{ fontFamily: font.body, fontSize: '13px', color: colors.textSecondary, margin: 0, lineHeight: 1.5 }}>{n.message}</p>
-                  <span style={{ fontFamily: font.body, fontSize: '11px', color: colors.textMuted, marginTop: '4px', display: 'inline-block' }}>{formatDate(n.createdAt)}</span>
-                </div>
-                <button onClick={() => handleDelete(n.id)} disabled={deleting === n.id} style={{ ...btnDanger, padding: '4px 10px', fontSize: '11px', marginLeft: '12px', flexShrink: 0 }}>
-                  {deleting === n.id ? '...' : 'Eliminar'}
-                </button>
-                </div>
-            ))}
-          </div>
+    <Box maxW="700px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <Flex justify="space-between" align="center" mb={6}>
+        <Box>
+          <Heading as="h2" fontFamily="heading" fontSize={{ base: '2xl', md: '3xl' }} fontWeight={700} color="brand.700">
+            Notificaciones
+          </Heading>
+          <Box h="3px" w="60px" bgGradient="linear(90deg, accent.500, brand.500)" borderRadius="full" mt={3} />
+        </Box>
+        {notifs.some((n) => !n.isRead) && (
+          <Button variant="secondary" size="sm" onClick={handleMarkAllRead}>
+            Marcar todas como leídas
+          </Button>
         )}
-      </div>
-    </div>
+      </Flex>
+
+      {loading ? (
+        <VStack spacing={2}>
+          {[1, 2, 3].map((i) => (
+            <Box key={i} h="64px" w="full" bg="warmGray.200" borderRadius="lg" />
+          ))}
+        </VStack>
+      ) : notifs.length === 0 ? (
+        <Box textAlign="center" py={16} color="warmGray.500" fontFamily="body">
+          <Text fontSize="40px" mb={3}>🔔</Text>
+          <Text fontSize="sm">No tienes notificaciones</Text>
+        </Box>
+      ) : (
+        <VStack spacing={2}>
+          {notifs.map((n) => (
+            <Card
+              key={n.id}
+              variant="elevated"
+              p={3.5}
+              w="full"
+              borderLeft={n.isRead ? '1px' : '3px'}
+              borderLeftColor={n.isRead ? 'warmGray.200' : 'accent.500'}
+              bg={n.isRead ? 'white' : 'green.50'}
+            >
+              <Flex justify="space-between" align="flex-start">
+                <Box flex={1} cursor="pointer" onClick={() => handleMarkRead(n.id)}>
+                  <HStack spacing={2} mb={1} flexWrap="wrap">
+                    <Text fontSize="xs" fontWeight={600} color="warmGray.800">
+                      {TYPE_LABELS[n.type] || n.type}
+                    </Text>
+                    {!n.isRead && (
+                      <Badge colorScheme="accent" variant="subtle" borderRadius="full" px={2} fontSize="2xs">
+                        Nueva
+                      </Badge>
+                    )}
+                  </HStack>
+                  <Text fontSize="xs" color="warmGray.500" lineHeight={1.5}>{n.message}</Text>
+                  <Text fontSize="2xs" color="warmGray.400" mt={1} display="inline-block">
+                    {formatDate(n.createdAt)}
+                  </Text>
+                </Box>
+                <Button
+                  size="xs"
+                  variant="danger"
+                  ml={3}
+                  flexShrink={0}
+                  onClick={() => handleDelete(n.id)}
+                  isLoading={deleting === n.id}
+                  loadingText="..."
+                >
+                  Eliminar
+                </Button>
+              </Flex>
+            </Card>
+          ))}
+        </VStack>
+      )}
+    </Box>
   );
 }

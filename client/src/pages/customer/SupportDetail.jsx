@@ -1,16 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Navbar from '../../components/Navbar';
+import {
+  Box, Flex, HStack, VStack, Text, Heading, Button, Card, Badge, Textarea, Spinner,
+} from '@chakra-ui/react';
 import { useAuth } from '../../context/AuthContext';
 import { supportService } from '../../services/supportService';
-import { colors, font, textareaStyle, btnPrimary, btnSmallPrimary, badge as badgeStyle, animFadeIn, animStagger } from '../../styles/theme';
-import { useIsMobile } from '../../styles/useIsMobile';
 
 const STATUS_COLORS = {
-  open:         { bg: '#fff8e1', color: '#f59e0b' },
-  in_progress:  { bg: '#e3f2fd', color: '#2196f3' },
-  resolved:     { bg: '#e1f5ee', color: '#1D9E75' },
-  closed:       { bg: '#f5f5f5', color: '#999' },
+  open:         'yellow',
+  in_progress:  'blue',
+  resolved:     'green',
+  closed:       'gray',
 };
 
 const STATUS_TRANSLATIONS = {
@@ -28,17 +28,16 @@ const SENDER_LABELS = {
 };
 
 const SENDER_COLORS = {
-  customer:  { bg: '#e8f5e9', color: '#2e7d32' },
-  owner:     { bg: '#fff8e1', color: '#e65100' },
-  moderator: { bg: '#e3f2fd', color: '#1565c0' },
-  admin:     { bg: '#fce4ec', color: '#c62828' },
+  customer:  'green',
+  owner:     'orange',
+  moderator: 'blue',
+  admin:     'red',
 };
 
 export default function SupportDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isMobile = useIsMobile(768);
   const messagesEndRef = useRef(null);
 
   const [ticket, setTicket] = useState(null);
@@ -98,123 +97,162 @@ export default function SupportDetail() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-        <Navbar />
-        <div style={{ textAlign: 'center', padding: '3rem' }}>
-          {[1, 2, 3].map((i) => <div key={i} style={{ height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '8px', marginBottom: '8px', animation: 'shimmer 1.5s infinite' }} />)}
-        </div>
-      </div>
+      <Box maxW="800px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+        <VStack spacing={2}>
+          {[1, 2, 3].map((i) => (
+            <Box key={i} h="48px" w="full" bg="warmGray.200" borderRadius="lg" />
+          ))}
+        </VStack>
+      </Box>
     );
   }
 
   if (!ticket) {
     return (
-      <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-        <Navbar />
-        <div style={{ textAlign: 'center', padding: '3rem', color: '#999', fontFamily: font.body }}>Ticket no encontrado</div>
-      </div>
+      <Box maxW="800px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }} textAlign="center" color="warmGray.400" fontFamily="body">
+        <Text>Ticket no encontrado</Text>
+      </Box>
     );
   }
 
-  const sc = STATUS_COLORS[ticket.status] || STATUS_COLORS.open;
+  const sc = STATUS_COLORS[ticket.status] || 'yellow';
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div style={{ ...animFadeIn, maxWidth: '800px', margin: '0 auto', padding: isMobile ? '1rem' : '40px 2rem 2rem' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-          <button onClick={() => navigate('/support')} style={{ padding: '6px 12px', borderRadius: '99px', border: `1px solid ${colors.border}`, cursor: 'pointer', fontSize: '13px', fontFamily: font.body, background: colors.white }}>← Volver</button>
-          <h2 style={{ fontFamily: font.heading, fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: colors.primary, margin: 0, flex: 1 }}>{ticket.subject}</h2>
-          <span style={badgeStyle(sc.bg, sc.color)}>{STATUS_TRANSLATIONS[ticket.status] || ticket.status}</span>
-        </div>
+    <Box maxW="800px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <HStack spacing={3} mb={2}>
+        <Button
+          variant="outline"
+          borderColor="warmGray.300"
+          size="sm"
+          onClick={() => navigate('/support')}
+          leftIcon={<Box as="span">←</Box>}
+        >
+          Volver
+        </Button>
+        <Heading as="h2" fontFamily="heading" fontSize={{ base: 'xl', md: '2xl' }} fontWeight={700} color="brand.700" flex={1}>
+          {ticket.subject}
+        </Heading>
+        <Badge colorScheme={sc} variant="subtle" px={3} py={1} borderRadius="full" fontSize="xs">
+          {STATUS_TRANSLATIONS[ticket.status] || ticket.status}
+        </Badge>
+      </HStack>
 
-        <p style={{ fontFamily: font.body, fontSize: '13px', color: colors.textMuted, marginBottom: '24px' }}>
-          {isModerator && ticket.userId ? `Creado por ${ticket.userId.slice(0, 8)}…` : ''}
-          {ticket.createdAt ? ` — ${new Date(ticket.createdAt).toLocaleString('es-PE')}` : ''}
-        </p>
+      <Text fontFamily="body" fontSize="xs" color="warmGray.500" mb={6}>
+        {isModerator && ticket.userId ? `Creado por ${ticket.userId.slice(0, 8)}…` : ''}
+        {ticket.createdAt ? ` — ${new Date(ticket.createdAt).toLocaleString('es-PE')}` : ''}
+      </Text>
 
-        {isModerator && (
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-            {ticket.status === 'open' && !ticket.assignedTo && (
-              <button onClick={handleAssign} style={{ padding: '6px 16px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: font.body, background: '#e3f2fd', color: '#1565c0', fontWeight: 600 }}>Asignarme</button>
-            )}
-            {ticket.status === 'open' && (
-              <button onClick={() => handleStatus('in_progress')} style={{ padding: '6px 16px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: font.body, background: '#e3f2fd', color: '#1565c0', fontWeight: 600 }}>Marcar en progreso</button>
-            )}
-            {ticket.status === 'open' || ticket.status === 'in_progress' ? (
-              <button onClick={() => handleStatus('resolved')} style={{ padding: '6px 16px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: font.body, background: '#e1f5ee', color: '#1D9E75', fontWeight: 600 }}>Resolver</button>
-            ) : null}
-            {(ticket.status === 'resolved' || ticket.status === 'closed') && (
-              <button onClick={() => handleStatus('open')} style={{ padding: '6px 16px', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: font.body, background: '#fff8e1', color: '#f59e0b', fontWeight: 600 }}>Reabrir ticket</button>
-            )}
-          </div>
-        )}
+      {isModerator && (
+        <HStack spacing={2} mb={5} flexWrap="wrap">
+          {ticket.status === 'open' && !ticket.assignedTo && (
+            <Button size="xs" variant="outline" colorScheme="blue" fontWeight={600} onClick={handleAssign}>
+              Asignarme
+            </Button>
+          )}
+          {ticket.status === 'open' && (
+            <Button size="xs" variant="outline" colorScheme="blue" fontWeight={600} onClick={() => handleStatus('in_progress')}>
+              Marcar en progreso
+            </Button>
+          )}
+          {(ticket.status === 'open' || ticket.status === 'in_progress') && (
+            <Button size="xs" variant="outline" colorScheme="green" fontWeight={600} onClick={() => handleStatus('resolved')}>
+              Resolver
+            </Button>
+          )}
+          {(ticket.status === 'resolved' || ticket.status === 'closed') && (
+            <Button size="xs" variant="outline" colorScheme="yellow" fontWeight={600} onClick={() => handleStatus('open')}>
+              Reabrir ticket
+            </Button>
+          )}
+        </HStack>
+      )}
 
-        {error && (
-          <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>
-        )}
+      {error && (
+        <Box bg="rose.50" color="rose.500" p={3} borderRadius="lg" mb={4} fontSize="sm" fontFamily="body" borderLeft="4px" borderLeftColor="rose.500">
+          {error}
+        </Box>
+      )}
 
-        <div style={{ background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '16px' }}>
-          <div style={{ padding: '20px', maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <Card variant="elevated" mb={4}>
+        <Box p={5} maxH="400px" overflowY="auto">
+          <VStack spacing={3} align="stretch">
             {messages.length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#999', fontFamily: font.body, fontSize: '14px' }}>No hay mensajes aún</p>
+              <Text textAlign="center" color="warmGray.400" fontFamily="body" fontSize="sm">
+                No hay mensajes aún
+              </Text>
             ) : (
               messages.map((m, i) => {
                 const isMe = m.senderId === user?.uid;
-                const sc2 = SENDER_COLORS[m.senderRole] || SENDER_COLORS.customer;
+                const sc2 = SENDER_COLORS[m.senderRole] || 'green';
                 const showDate = i === 0 || new Date(m.createdAt).toDateString() !== new Date(messages[i - 1]?.createdAt).toDateString();
                 return (
-                  <div key={m.id}>
+                  <Box key={m.id}>
                     {showDate && (
-                      <div style={{ textAlign: 'center', fontSize: '11px', color: '#bbb', fontFamily: font.body, marginBottom: '8px' }}>
+                      <Text textAlign="center" fontSize="2xs" color="warmGray.300" fontFamily="body" mb={2}>
                         {new Date(m.createdAt).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                      </div>
+                      </Text>
                     )}
-                    <div style={{ ...animStagger(i * 0.03),
-                        display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '11px', padding: '1px 8px', borderRadius: '99px', background: sc2.bg, color: sc2.color, fontWeight: 600, fontFamily: font.body }}>
+                    <Flex direction="column" align={isMe ? 'flex-end' : 'flex-start'}>
+                      <HStack spacing={1.5} mb={1}>
+                        <Badge colorScheme={sc2} variant="subtle" borderRadius="full" px={2} fontSize="2xs" fontWeight={600}>
                           {SENDER_LABELS[m.senderRole] || m.senderRole}
-                        </span>
-                        <span style={{ fontSize: '11px', color: '#bbb', fontFamily: font.body }}>
+                        </Badge>
+                        <Text fontSize="2xs" color="warmGray.300" fontFamily="body">
                           {new Date(m.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <div style={{
-                        maxWidth: '80%', padding: '10px 14px', borderRadius: '12px',
-                        background: isMe ? colors.primary : colors.grayLight,
-                        color: isMe ? '#fff' : colors.text,
-                        fontSize: '14px', fontFamily: font.body, lineHeight: 1.6,
-                        whiteSpace: 'pre-wrap',
-                      }}>
+                        </Text>
+                      </HStack>
+                      <Box
+                        maxW="80%"
+                        px={3.5}
+                        py={2.5}
+                        borderRadius="lg"
+                        bg={isMe ? 'brand.700' : 'warmGray.100'}
+                        color={isMe ? '#fff' : 'warmGray.800'}
+                        fontSize="sm"
+                        fontFamily="body"
+                        lineHeight={1.6}
+                        whiteSpace="pre-wrap"
+                      >
                         {m.message}
-                      </div>
-                    </div>
-                  </div>
+                      </Box>
+                    </Flex>
+                  </Box>
                 );
-              }))
-            }
+              })
+            )}
             <div ref={messagesEndRef} />
-          </div>
-        </div>
+          </VStack>
+        </Box>
+      </Card>
 
-        {ticket.status !== 'resolved' && ticket.status !== 'closed' && (
-          <div style={{ background: colors.white, borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef' }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-              <textarea style={{ ...textareaStyle, minHeight: '60px', flex: 1, fontSize: '14px', resize: 'none' }}
-                value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Escribe tu mensaje..." onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              />
-              <button onClick={handleSend} disabled={sending || !newMessage.trim()}
-                style={{ ...btnSmallPrimary, height: '40px', whiteSpace: 'nowrap', opacity: sending || !newMessage.trim() ? 0.7 : 1 }}
-              >{sending ? '...' : 'Enviar'}</button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+      {ticket.status !== 'resolved' && ticket.status !== 'closed' && (
+        <Card variant="elevated" p={4}>
+          <HStack spacing={2} align="flex-end">
+            <Textarea
+              fontSize="sm"
+              minH="60px"
+              flex={1}
+              resize="none"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Escribe tu mensaje..."
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            />
+            <Button
+              variant="primary"
+              size="md"
+              h="40px"
+              whiteSpace="nowrap"
+              onClick={handleSend}
+              isLoading={sending}
+              isDisabled={!newMessage.trim()}
+              loadingText="..."
+            >
+              Enviar
+            </Button>
+          </HStack>
+        </Card>
+      )}
+    </Box>
   );
 }

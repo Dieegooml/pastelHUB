@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Box, Flex, Heading, Text, Button, Input, Select, Textarea,
+  Table, Thead, Tbody, Tr, Th, Td, Alert, AlertIcon, Tag,
+  useToast, Stack, SimpleGrid, HStack
+} from '@chakra-ui/react';
+import AdminNav from './AdminNav';
+import { PastelPageHeader, PastelCard, PastelStatusBadge, PastelSkeletonTable } from '../../components/UI';
 import { shopsService } from '../../services/shopsService';
 import { usersService } from '../../services/usersService';
-import Navbar from '../../components/Navbar';
-import AdminNav from './AdminNav';
-import { useIsMobile } from '../../styles/useIsMobile';
-import {
-  colors, font, pageStyle, cardStyle, inputStyle, selectStyle,
-  textareaStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary,
-  tableHeaderStyle, labelStyle, badge, animFadeIn, animFadeInLeft, animStagger,
-} from '../../styles/theme';
 import ImageUploader from '../../components/ImageUploader';
 
 const emptyForm = {
@@ -26,28 +25,9 @@ const STATUS_CONFIG = {
   suspended: { bg: '#f3f4f6', color: '#6b7280' },
 };
 
-const TH = ['Nombre', 'Ciudad', 'Estado', 'Acciones'];
-const TH_MOBILE = ['Nombre', 'Estado', ''];
-
-function ImagePreview({ url, alt }) {
-  if (!url) return null;
-  return (
-    <div style={{
-      width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden',
-      border: `1px solid ${colors.border}`, flexShrink: 0,
-      background: colors.bgBeige, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <img src={url} alt={alt || ''}
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        onError={(e) => { e.target.style.display = 'none'; }}
-      />
-    </div>
-  );
-}
-
 export default function Shops() {
   const navigate = useNavigate();
-  const isMobile = useIsMobile(768);
+  const toast = useToast();
   const [shops, setShops] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -139,244 +119,161 @@ export default function Shops() {
 
   const handleCancel = () => { setEditingId(null); setForm(emptyForm); };
 
-  const sectionDivider = { height: '1px', background: colors.border, margin: '1.2rem 0' };
-
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div
-        style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2rem' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-          <h2 style={{ fontFamily: font.heading, fontSize: isMobile ? '22px' : '28px', fontWeight: 700, color: colors.primary, margin: 0 }}>
-            Pastelerías
-          </h2>
-          <span style={{
-            background: colors.white, color: colors.textSecondary, padding: '2px 12px',
-            borderRadius: '99px', fontSize: '13px', fontWeight: 500, fontFamily: font.body,
-            border: `1px solid ${colors.border}`,
-          }}>
+    <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <PastelPageHeader
+        title="Pastelerías"
+        actions={
+          <Tag bg="white" color="warmGray.500" border="1px solid" borderColor="warmGray.200" borderRadius="full" fontSize="sm" fontWeight={500}>
             {shops.length}
-          </span>
-        </div>
+          </Tag>
+        }
+      />
 
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.2rem' }} />
+      <AdminNav />
 
-        <AdminNav />
+      {success && <Alert status="success" mt={4} mb={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="green.500">{success}</Alert>}
+      {error && <Alert status="error" mt={4} mb={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="red.500">{error}</Alert>}
 
-        {success && (
-          <div style={{ ...animFadeInLeft,
-            background: colors.successBg, color: colors.success, padding: '12px 16px',
-            borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
-            borderLeft: `4px solid ${colors.success}`,
-          }}>
-            {success}
-          </div>
-        )}
-        {error && (
-          <div style={{ ...animFadeInLeft,
-            background: colors.errorBg, color: colors.error, padding: '12px 16px',
-            borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
-            borderLeft: `4px solid ${colors.error}`,
-          }}>
-            {error}
-          </div>
-        )}
-
-        <div style={{ ...cardStyle, marginTop: '1rem' }}>
-          <h3 style={{ fontFamily: font.heading, fontSize: '18px', fontWeight: 700, color: colors.primary, margin: '0 0 0.5rem' }}>
-            {editingId ? 'Editar pastelería' : 'Nueva pastelería'}
-          </h3>
-          <div style={sectionDivider} />
-
-          <div>
-            {/* Basic info */}
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={labelStyle}>Nombre de la pastelería *</label>
-                <input style={inputStyle} name="shopName" value={form.shopName} onChange={handleChange} required placeholder="Ej: Dulce Tentación" />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={labelStyle}>Propietario *</label>
-                <select
-                  style={{ ...selectStyle, color: form.owner_id ? colors.text : '#aaa' }}
-                  name="owner_id" value={form.owner_id} onChange={handleChange} required
-                >
-                  <option value="">{loadingUsers ? 'Cargando usuarios...' : 'Selecciona un dueño'}</option>
-                  {ownerOptions.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name || u.email} {u.email ? `(${u.email})` : ''}
-                    </option>
-                  ))}
-                  {!loadingUsers && ownerOptions.length === 0 && (
-                    <option value="" disabled>No hay usuarios con rol owner</option>
-                  )}
-                </select>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: isMobile ? '1' : '1 / -1' }}>
-                <label style={labelStyle}>Descripción</label>
-                <textarea style={textareaStyle} name="description" value={form.description} onChange={handleChange} placeholder="Describe tu pastelería..." />
-              </div>
-            </div>
-
-            <div style={sectionDivider} />
-
-            {/* Location */}
-            <p style={{ fontSize: '13px', fontWeight: 600, color: colors.primary, fontFamily: font.body, margin: '0 0 10px' }}>Ubicación</p>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={labelStyle}>Dirección</label>
-                <input style={inputStyle} name="address" value={form.address} onChange={handleChange} placeholder="Av. Principal 123" />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={labelStyle}>Ciudad</label>
-                <input style={inputStyle} name="city" value={form.city} onChange={handleChange} placeholder="Lima" />
-              </div>
-            </div>
-
-            <div style={sectionDivider} />
-
-            {/* Contact */}
-            <p style={{ fontSize: '13px', fontWeight: 600, color: colors.primary, fontFamily: font.body, margin: '0 0 10px' }}>Contacto</p>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={labelStyle}>Teléfono</label>
-                <input style={inputStyle} name="phone" value={form.phone} onChange={handleChange} placeholder="+51 999 999 999" />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={labelStyle}>Email</label>
-                <input style={inputStyle} type="email" name="email" value={form.email} onChange={handleChange} placeholder="contacto@ejemplo.com" />
-              </div>
-            </div>
-
-            <div style={sectionDivider} />
-
-            {/* Media */}
-            <p style={{ fontSize: '13px', fontWeight: 600, color: colors.primary, fontFamily: font.body, margin: '0 0 10px' }}>Imágenes</p>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={labelStyle}>Logo</label>
-                <ImageUploader folder="shops/logos" currentUrl={form.logoUrl} onUpload={(url) => setForm(p => ({ ...p, logoUrl: url }))} label="Logo" />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={labelStyle}>Banner</label>
-                <ImageUploader folder="shops/banners" currentUrl={form.bannerUrl} onUpload={(url) => setForm(p => ({ ...p, bannerUrl: url }))} label="Banner" />
-              </div>
-            </div>
-
-            <div style={sectionDivider} />
-
-            {/* Status */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '280px' }}>
-              <label style={labelStyle}>Estado de aprobación</label>
-              <select style={selectStyle} name="approvalStatus" value={form.approvalStatus} onChange={handleChange}>
-                <option value="pending">Pendiente</option>
-                <option value="approved">Aprobado</option>
-                <option value="rejected">Rechazado</option>
-                <option value="suspended">Suspendido</option>
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', marginTop: '1.5rem' }}>
-              <button onClick={handleSubmit} style={btnPrimary}
-                onMouseEnter={(e) => e.target.style.background = colors.accent}
-                onMouseLeave={(e) => e.target.style.background = colors.primary}
-              >
-                {editingId ? 'Guardar cambios' : 'Crear pastelería'}
-              </button>
-              {editingId && (
-                <button type="button" onClick={handleCancel} style={btnGhost}>
-                  Cancelar
-                </button>
+      <PastelCard title={editingId ? 'Editar pastelería' : 'Nueva pastelería'} variant="elevated" mt={4}>
+        <Box>
+          <Text fontSize="sm" fontWeight={600} color="brand.700" mb={3}>Información básica</Text>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Nombre de la pastelería *</Text>
+              <Input name="shopName" value={form.shopName} onChange={handleChange} required placeholder="Ej: Dulce Tentación" />
+            </Box>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Propietario *</Text>
+              <Select name="owner_id" value={form.owner_id} onChange={handleChange} required placeholder={loadingUsers ? 'Cargando usuarios...' : 'Selecciona un dueño'}>
+                {ownerOptions.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.full_name || u.email} {u.email ? `(${u.email})` : ''}
+                  </option>
+                ))}
+              </Select>
+              {!loadingUsers && ownerOptions.length === 0 && (
+                <Text fontSize="xs" color="warmGray.400" mt={1}>No hay usuarios con rol owner</Text>
               )}
-            </div>
-          </div>
-        </div>
+            </Box>
+            <Box gridColumn={{ md: '1 / -1' }}>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Descripción</Text>
+              <Textarea name="description" value={form.description} onChange={handleChange} placeholder="Describe tu pastelería..." />
+            </Box>
+          </SimpleGrid>
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem' }}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} style={{
-                height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                backgroundSize: '200% 100%', borderRadius: '8px', marginBottom: '8px',
-                animation: 'shimmer 1.5s infinite',
-              }} />
-            ))}
-          </div>
-        ) : (
-          <div style={{ ...cardStyle, marginTop: '1rem', padding: 0, overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
-                <thead>
-                  <tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-                    {(isMobile ? TH_MOBILE : TH).map(h => (
-                      <th key={h} style={tableHeaderStyle}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {shops.length === 0 ? (
-                    <tr>
-                      <td colSpan={isMobile ? 3 : 4} style={{ padding: '3rem', textAlign: 'center', color: colors.textMuted, fontFamily: font.body }}>
-                        No hay pastelerías registradas aún
-                      </td>
-                    </tr>
-                  ) : (
-                    shops.map((shop, i) => {
-                      const sc = STATUS_CONFIG[shop.approvalStatus] || STATUS_CONFIG.pending;
-                      return (
-                        <tr
-                          key={shop.id}
-                          style={{
-                            borderTop: `1px solid ${colors.tableBorder}`,
-                            background: i % 2 === 0 ? colors.white : colors.tableStripe,
-                            transition: 'background 0.15s ease',
-                            ...animStagger(i * 0.03),
-                          }}
-                          onMouseEnter={(e) => { if (i % 2 === 0) e.currentTarget.style.background = '#f5f5f5'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
-                        >
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ fontWeight: 500, fontFamily: font.body }}>{shop.shopName}</div>
-                            {!isMobile && shop.shopDescription && (
-                              <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '2px', fontFamily: font.body }}>
-                                {shop.shopDescription.slice(0, 50)}{shop.shopDescription.length > 50 ? '…' : ''}
-                              </div>
-                            )}
-                            {isMobile && (
-                              <div style={{ fontSize: '11px', color: colors.textMuted, marginTop: '2px' }}>
-                                {shop.city || '—'} {shop.phone ? `· ${shop.phone}` : ''}
-                              </div>
-                            )}
-                          </td>
-                          {!isMobile && (
-                            <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{shop.city || '—'}</td>
-                          )}
-                          <td style={{ padding: '12px 16px' }}>
-                            <span style={badge(sc.bg, sc.color)}>
-                              {shop.approvalStatus || 'pending'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                              <button onClick={() => handleEdit(shop)} style={btnGhost}>Editar</button>
-                              <button onClick={() => navigate(`/admin/shops/${shop.id}/products`)} style={btnSmallPrimary}
-                                onMouseEnter={(e) => e.target.style.background = colors.accent}
-                                onMouseLeave={(e) => e.target.style.background = colors.primary}
-                              >Productos</button>
-                              <button onClick={() => handleDelete(shop.id)} style={btnDanger}>Eliminar</button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    }))
-                  }
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+          <Box h="1px" bg="warmGray.200" my={4} />
+
+          <Text fontSize="sm" fontWeight={600} color="brand.700" mb={3}>Ubicación</Text>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Dirección</Text>
+              <Input name="address" value={form.address} onChange={handleChange} placeholder="Av. Principal 123" />
+            </Box>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Ciudad</Text>
+              <Input name="city" value={form.city} onChange={handleChange} placeholder="Lima" />
+            </Box>
+          </SimpleGrid>
+
+          <Box h="1px" bg="warmGray.200" my={4} />
+
+          <Text fontSize="sm" fontWeight={600} color="brand.700" mb={3}>Contacto</Text>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Teléfono</Text>
+              <Input name="phone" value={form.phone} onChange={handleChange} placeholder="+51 999 999 999" />
+            </Box>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Email</Text>
+              <Input type="email" name="email" value={form.email} onChange={handleChange} placeholder="contacto@ejemplo.com" />
+            </Box>
+          </SimpleGrid>
+
+          <Box h="1px" bg="warmGray.200" my={4} />
+
+          <Text fontSize="sm" fontWeight={600} color="brand.700" mb={3}>Imágenes</Text>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Logo</Text>
+              <ImageUploader folder="shops/logos" currentUrl={form.logoUrl} onUpload={(url) => setForm(p => ({ ...p, logoUrl: url }))} label="Logo" />
+            </Box>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Banner</Text>
+              <ImageUploader folder="shops/banners" currentUrl={form.bannerUrl} onUpload={(url) => setForm(p => ({ ...p, bannerUrl: url }))} label="Banner" />
+            </Box>
+          </SimpleGrid>
+
+          <Box h="1px" bg="warmGray.200" my={4} />
+
+          <Box maxW="280px">
+            <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Estado de aprobación</Text>
+            <Select name="approvalStatus" value={form.approvalStatus} onChange={handleChange}>
+              <option value="pending">Pendiente</option>
+              <option value="approved">Aprobado</option>
+              <option value="rejected">Rechazado</option>
+              <option value="suspended">Suspendido</option>
+            </Select>
+          </Box>
+
+          <HStack spacing={3} mt={6}>
+            <Button colorScheme="brand" onClick={handleSubmit}>
+              {editingId ? 'Guardar cambios' : 'Crear pastelería'}
+            </Button>
+            {editingId && (
+              <Button variant="ghost" onClick={handleCancel}>Cancelar</Button>
+            )}
+          </HStack>
+        </Box>
+      </PastelCard>
+
+      {loading ? (
+        <PastelSkeletonTable rows={5} cols={4} />
+      ) : (
+        <PastelCard mt={4} p={0} overflow="hidden">
+          <Box overflowX="auto">
+            <Table variant="pastel">
+              <Thead>
+                <Tr>
+                  <Th>Nombre</Th>
+                  <Th display={{ base: 'none', md: 'table-cell' }}>Ciudad</Th>
+                  <Th>Estado</Th>
+                  <Th>Acciones</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {shops.length === 0 ? (
+                  <Tr>
+                    <Td colSpan={4} textAlign="center" py={12} color="warmGray.400">No hay pastelerías registradas aún</Td>
+                  </Tr>
+                ) : (
+                  shops.map((shop) => (
+                    <Tr key={shop.id} _hover={{ bg: 'warmGray.100' }}>
+                      <Td>
+                        <Text fontWeight={500}>{shop.shopName}</Text>
+                        {shop.shopDescription && (
+                          <Text fontSize="xs" color="warmGray.400">{shop.shopDescription.slice(0, 50)}{shop.shopDescription.length > 50 ? '…' : ''}</Text>
+                        )}
+                      </Td>
+                      <Td display={{ base: 'none', md: 'table-cell' }} fontSize="sm">{shop.city || '—'}</Td>
+                      <Td>
+                        <PastelStatusBadge status={shop.approvalStatus || 'pending'} />
+                      </Td>
+                      <Td>
+                        <HStack spacing={2} flexWrap="wrap">
+                          <Button size="xs" variant="ghost" onClick={() => handleEdit(shop)}>Editar</Button>
+                          <Button size="xs" colorScheme="brand" variant="ghost" onClick={() => navigate(`/admin/shops/${shop.id}/products`)}>Productos</Button>
+                          <Button size="xs" variant="ghost" colorScheme="red" onClick={() => handleDelete(shop.id)}>Eliminar</Button>
+                        </HStack>
+                      </Td>
+                    </Tr>
+                  ))
+                )}
+              </Tbody>
+            </Table>
+          </Box>
+        </PastelCard>
+      )}
+    </Box>
   );
 }

@@ -2,7 +2,7 @@
 const express = require('express');
 const router  = express.Router();
 const { admin, db } = require('../config/firebase');
-const { verifyToken, requireAdmin } = require('../middlewares/auth');
+const { verifyToken, requireAssignRole } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { assignRoleSchema } = require('../validators/authValidator');
 
@@ -91,8 +91,8 @@ router.get('/me', verifyToken, async (req, res) => {
   }
 });
 
-// POST — asignar rol (solo admin)
-router.post('/assign-role', verifyToken, requireAdmin, validate(assignRoleSchema), async (req, res) => {
+// POST — asignar rol (admin: cualquier rol, moderator: excepto admin)
+router.post('/assign-role', verifyToken, requireAssignRole, validate(assignRoleSchema), async (req, res) => {
   try {
     const { uid, roles } = req.body;
     const userDoc = await db.collection('users').doc(uid).get();

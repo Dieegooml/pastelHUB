@@ -1,5 +1,3 @@
-import { inputStyle, colors, font } from '../../styles/theme';
-
 export const STATUS_TRANSLATIONS = {
   pending: 'Pendiente', confirmed: 'Confirmado', preparing: 'Preparando',
   on_the_way: 'En camino', delivered: 'Entregado', cancelled: 'Cancelado',
@@ -17,11 +15,4 @@ export const formatDate = (d) => {
   const dt = new Date(d);
   if (isNaN(dt.getTime())) return (d || '').slice(0, 10);
   return `${dt.getDate()}/${dt.getMonth() + 1}/${dt.getFullYear()}`;
-};
-
-export const smallInput = { ...inputStyle, height: '40px', fontSize: '13px' };
-
-export const sectionTitle = {
-  fontSize: '11px', color: colors.textSecondary, fontFamily: font.body,
-  textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: '6px',
 };

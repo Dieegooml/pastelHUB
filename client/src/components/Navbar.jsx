@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
+import {
+  Box, Flex, Text, Button, IconButton, Badge, Menu, MenuButton, MenuList, MenuItem,
+  MenuDivider, HStack, Divider,
+} from '@chakra-ui/react';
 import { auth } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
-import Tooltip from './Tooltip';
-import { colors, font } from '../styles/theme';
 import { notificationsService } from '../services/notificationsService';
+import { PastelAvatar } from './UI';
 
 const TYPE_ICONS = {
   order_update: '\u{1F6F5}',
@@ -21,6 +24,21 @@ const TYPE_ICONS = {
   review_rejected: '\u{1F44E}',
 };
 
+const navItems = [
+  { path: '/', label: 'nav.home', roles: null },
+  { path: '/cart', label: 'nav.cart', roles: null },
+  { path: '/my-orders', label: 'nav.orders', roles: ['customer', 'admin'] },
+  { path: '/invoices', label: 'nav.invoices', roles: null },
+  { path: '/support', label: 'nav.support', roles: null },
+  { path: '/profile', label: 'nav.profile', roles: null },
+];
+
+const roleNavItems = [
+  { path: '/owner', label: 'nav.owner', roles: ['owner'], color: 'orange.500', activeColor: 'orange.600' },
+  { path: '/moderator', label: 'nav.moderate', roles: ['moderator'], color: 'purple.500', activeColor: 'purple.600' },
+  { path: '/admin', label: 'nav.admin', roles: ['admin'], color: 'accent.500', activeColor: 'accent.600' },
+];
+
 export default function Navbar() {
   const { user } = useAuth();
   const { t, lang, setLang } = useI18n();
@@ -28,15 +46,9 @@ export default function Navbar() {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentNotifs, setRecentNotifs] = useState([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showLang, setShowLang] = useState(false);
-  const bellRef = useRef(null);
-  const dropdownRef = useRef(null);
-  const langRef = useRef(null);
-
-  const isAdmin = user?.roles?.includes('admin');
-  const isOwner = user?.roles?.includes('owner');
-  const isModerator = user?.roles?.includes('moderator');
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const notifRef = useRef(null);
+  const notifBtnRef = useRef(null);
 
   const loadUnread = useCallback(async () => {
     if (!user?.uid) return;
@@ -59,283 +71,334 @@ export default function Navbar() {
     loadUnread();
     let interval = setInterval(loadUnread, 120000);
     const onVisibility = () => {
-      if (document.hidden) {
-        clearInterval(interval);
-      } else {
-        loadUnread();
-        interval = setInterval(loadUnread, 120000);
-      }
+      if (document.hidden) clearInterval(interval);
+      else { loadUnread(); interval = setInterval(loadUnread, 120000); }
     };
     document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisibility); };
   }, [loadUnread]);
 
   useEffect(() => {
-    if (showDropdown) loadRecent();
-  }, [showDropdown, loadRecent]);
+    if (showNotifDropdown) loadRecent();
+  }, [showNotifDropdown, loadRecent]);
 
   useEffect(() => {
     const handleClick = (e) => {
       if (
-        dropdownRef.current && !dropdownRef.current.contains(e.target) &&
-        bellRef.current && !bellRef.current.contains(e.target)
-      ) setShowDropdown(false);
-      if (
-        langRef.current && !langRef.current.contains(e.target)
-      ) setShowLang(false);
+        notifRef.current && !notifRef.current.contains(e.target) &&
+        notifBtnRef.current && !notifBtnRef.current.contains(e.target)
+      ) setShowNotifDropdown(false);
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const handleBellClick = () => {
-    setShowDropdown((prev) => !prev);
-  };
-
   const handleNotifClick = async (n) => {
     if (!n.isRead) {
       try { await notificationsService.markAsRead(n.id); } catch (e) { console.error(e); }
     }
-    setShowDropdown(false);
+    setShowNotifDropdown(false);
     loadUnread();
     navigate('/notifications');
   };
 
-  const btnStyle = (active) => ({
-    padding: '8px 16px', borderRadius: '99px', border: active ? 'none' : `1px solid ${colors.border}`,
-    fontSize: '13px', fontWeight: 500, fontFamily: font.body, cursor: 'pointer',
-    background: active ? colors.primary : colors.white,
-    color: active ? '#fff' : colors.textSecondary,
-    transition: 'all 0.2s ease',
-  });
+  const isActive = (path) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
 
   return (
-    <nav style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0 2rem', height: '64px',
-      background: colors.white, borderBottom: `1px solid ${colors.border}`,
-      fontFamily: font.body,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
-        onClick={() => navigate('/')}>
-        <img src="/favicon.png" alt="PastelHub" style={{ height: '32px', width: '32px', borderRadius: '6px' }} />
-        <span style={{ fontFamily: font.heading, fontSize: '20px', fontWeight: 700, color: colors.primary }}>
-          PastelHub
-        </span>
-      </div>
+    <Box
+      as="nav"
+      bg="white"
+      borderBottom="1px solid"
+      borderColor="brand.100"
+      h="64px"
+      px={{ base: 4, md: 8 }}
+      position="sticky"
+      top={0}
+      zIndex={100}
+      backdropFilter="blur(12px)"
+      bgColor="rgba(255,255,255,0.92)"
+    >
+      <Flex align="center" justify="space-between" h="full" maxW="1400px" mx="auto">
+        {/* Logo */}
+        <Flex align="center" gap={3} cursor="pointer" onClick={() => navigate('/')}>
+          <Box
+            w="32px" h="32px" borderRadius="md" bg="brand.900"
+            display="flex" alignItems="center" justifyContent="center"
+            fontSize="16px" fontWeight={900} color="white" fontFamily="heading"
+          >
+            P
+          </Box>
+          <Text fontFamily="heading" fontSize="xl" fontWeight={700} color="brand.900" display={{ base: 'none', md: 'block' }}>
+            PastelHub
+          </Text>
+        </Flex>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <button onClick={() => navigate('/')} style={btnStyle(location.pathname === '/')}>
-          {t('nav.home')}
-        </button>
-
-        <button onClick={() => navigate('/cart')} style={btnStyle(location.pathname === '/cart')}>
-          {t('nav.cart')}
-        </button>
-
-        <button onClick={() => navigate('/my-orders')} style={btnStyle(location.pathname.startsWith('/my-orders'))}>
-          {t('nav.orders')}
-        </button>
-
-        <button onClick={() => navigate('/invoices')} style={btnStyle(location.pathname.startsWith('/invoices'))}>
-          {t('nav.invoices')}
-        </button>
-
-        <button onClick={() => navigate('/support')} style={btnStyle(location.pathname.startsWith('/support'))}>
-          {t('nav.support')}
-        </button>
-
-        <button onClick={() => navigate('/profile')} style={btnStyle(location.pathname === '/profile')}>
-          {t('nav.profile')}
-        </button>
-
-        {isOwner && (
-          <button onClick={() => navigate('/owner')} style={{
-            ...btnStyle(location.pathname === '/owner'),
-            background: location.pathname === '/owner' ? '#e65100' : colors.white,
-            color: location.pathname === '/owner' ? '#fff' : colors.textSecondary,
-            border: location.pathname === '/owner' ? 'none' : `1px solid ${colors.border}`,
-          }}>
-            {t('nav.owner')}
-          </button>
-        )}
-
-        {isModerator && !isAdmin && (
-          <button onClick={() => navigate('/moderator')} style={{
-            padding: '8px 16px', borderRadius: '99px',
-            border: location.pathname.startsWith('/moderator') || location.pathname === '/support' ? 'none' : `1px solid ${colors.border}`,
-            fontSize: '13px', fontWeight: 500, fontFamily: font.body, cursor: 'pointer',
-            background: location.pathname.startsWith('/moderator') || location.pathname === '/support' ? '#7c3aed' : colors.white,
-            color: location.pathname.startsWith('/moderator') || location.pathname === '/support' ? '#fff' : colors.textSecondary,
-            transition: 'all 0.2s ease',
-          }}>
-            {t('nav.moderate')}
-          </button>
-        )}
-
-        {isAdmin && (
-          <button onClick={() => navigate('/admin')} style={{
-            padding: '8px 16px', borderRadius: '99px',
-            border: location.pathname.startsWith('/admin') ? 'none' : `1px solid ${colors.border}`,
-            fontSize: '13px', fontWeight: 500, fontFamily: font.body, cursor: 'pointer',
-            background: location.pathname.startsWith('/admin') ? colors.accent : colors.white,
-            color: location.pathname.startsWith('/admin') ? '#fff' : colors.textSecondary,
-            transition: 'all 0.2s ease',
-          }}>
-            {t('nav.admin')}
-          </button>
-        )}
-
-        <div ref={langRef} style={{ position: 'relative' }}>
-          <button onClick={() => setShowLang((p) => !p)} style={{
-            padding: '8px 10px', borderRadius: '99px', border: `1px solid ${colors.border}`,
-            fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-            background: colors.white, color: colors.text,
-            fontFamily: font.body, transition: 'all 0.2s ease',
-          }}>
-            {lang === 'es' ? 'ES' : 'EN'}
-          </button>
-          {showLang && (
-            <div ref={langRef} style={{
-              position: 'absolute', top: 'calc(100% + 4px)', right: 0,
-              background: colors.white, borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              border: `1px solid ${colors.border}`, overflow: 'hidden',
-              zIndex: 1001, minWidth: '110px',
-            }}>
-              {[
-                { code: 'es', label: t('nav.spanish') },
-                { code: 'en', label: t('nav.english') },
-              ].map((l) => (
-                <div key={l.code}
-                  onClick={() => { setLang(l.code); setShowLang(false); }}
-                  style={{
-                    padding: '8px 14px', cursor: 'pointer',
-                    fontSize: '13px', fontFamily: font.body,
-                    background: lang === l.code ? '#f0fdf4' : colors.white,
-                    color: lang === l.code ? '#1D9E75' : colors.text,
-                    fontWeight: lang === l.code ? 600 : 400,
-                    whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#f9f9f9'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = lang === l.code ? '#f0fdf4' : colors.white}
-                >
-                  {l.label}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div ref={bellRef} style={{ position: 'relative' }}>
-          <Tooltip text="Notificaciones">
-            <button onClick={handleBellClick} style={{
-              padding: '8px', borderRadius: '99px', border: `1px solid ${colors.border}`,
-              fontSize: '18px', lineHeight: '1', cursor: 'pointer',
-              background: colors.white, color: colors.text, transition: 'all 0.2s ease',
-              position: 'relative',
-            }}>
-              {'\u{1F514}'}
-            {unreadCount > 0 && (
-              <span style={{
-                position: 'absolute', top: '-4px', right: '-6px',
-                background: '#EF4444', color: '#fff',
-                fontSize: '10px', fontWeight: 700,
-                minWidth: '16px', height: '16px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '99px', padding: '0 4px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
-              }}>
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </button>
-          </Tooltip>
-
-          {showDropdown && (
-            <div ref={dropdownRef} style={{
-              position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-              width: '320px', background: colors.white,
-              borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-              border: `1px solid ${colors.border}`, overflow: 'hidden',
-              zIndex: 1000,
-            }}>
-              <div style={{
-                padding: '12px 16px', borderBottom: `1px solid ${colors.border}`,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              }}>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: colors.text }}>{t('notifications.title')}</span>
-                {unreadCount > 0 && (
-                  <span style={{
-                    fontSize: '11px', color: colors.textMuted,
-                  }}>
-                    {unreadCount} {t('notifications.unread')}
-                  </span>
-                )}
-              </div>
-
-              {recentNotifs.length === 0 ? (
-                <div style={{ padding: '24px 16px', textAlign: 'center', color: colors.textMuted, fontSize: '13px' }}>
-                  {t('notifications.noNotifications')}
-                </div>
-              ) : (
-                recentNotifs.map((n) => (
-                  <div key={n.id} onClick={() => handleNotifClick(n)} style={{
-                    padding: '10px 16px', cursor: 'pointer',
-                    borderBottom: `1px solid ${colors.border}`,
-                    background: n.isRead ? colors.white : '#fafffd',
-                    transition: 'background 0.15s ease',
-                    display: 'flex', alignItems: 'flex-start', gap: '10px',
-                  }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = colors.grayLight}
-                    onMouseLeave={(e) => e.currentTarget.style.background = n.isRead ? colors.white : '#fafffd'}
-                  >
-                    <span style={{ fontSize: '16px', flexShrink: 0 }}>{TYPE_ICONS[n.type] || '\u{1F514}'}</span>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: colors.text, marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {t(`notifications.types.${n.type}`, n.type)}
-                      </div>
-                      <div style={{ fontSize: '12px', color: colors.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {n.message}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-
-              <div onClick={() => { setShowDropdown(false); navigate('/notifications'); }} style={{
-                padding: '10px 16px', textAlign: 'center', cursor: 'pointer',
-                fontSize: '13px', fontWeight: 500, color: colors.accent,
-                borderTop: `1px solid ${colors.border}`,
-                transition: 'background 0.15s ease',
-              }}
-                onMouseEnter={(e) => e.currentTarget.style.background = colors.grayLight}
-                onMouseLeave={(e) => e.currentTarget.style.background = colors.white}
+        {/* Nav Items */}
+        <HStack spacing={1} display={{ base: 'none', md: 'flex' }}>
+          {navItems.map((item) => {
+            if (item.roles && !item.roles.some(r => user?.roles?.includes(r))) return null;
+            const active = isActive(item.path);
+            return (
+              <Button
+                key={item.path}
+                variant={active ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => navigate(item.path)}
+                borderRadius="full"
+                fontSize="13px"
+                fontWeight={500}
               >
-                {t('notifications.viewAll')}
-              </div>
-            </div>
-          )}
-        </div>
+                {t(item.label)}
+              </Button>
+            );
+          })}
+          {roleNavItems.map((item) => {
+            if (!item.roles.some(r => user?.roles?.includes(r))) return null;
+            const active = isActive(item.path);
+            return (
+              <Button
+                key={item.path}
+                size="sm"
+                onClick={() => navigate(item.path)}
+                borderRadius="full"
+                fontSize="13px"
+                fontWeight={500}
+                bg={active ? item.activeColor : 'transparent'}
+                color={active ? 'white' : 'warmGray.600'}
+                border={active ? 'none' : '1px solid'}
+                borderColor={active ? 'transparent' : 'brand.200'}
+                _hover={active ? {} : { bg: 'brand.50' }}
+              >
+                {t(item.label)}
+              </Button>
+            );
+          })}
+        </HStack>
 
-        <span style={{ fontSize: '13px', color: colors.textMuted, margin: '0 4px' }}>
-          {user?.email}
-        </span>
+        {/* Right side */}
+        <HStack spacing={2}>
+          {/* Language */}
+          <Menu>
+            <MenuButton
+              as={Button}
+              size="sm"
+              variant="outline"
+              borderRadius="full"
+              fontSize="12px"
+              fontWeight={600}
+              minW="44px"
+              h="34px"
+            >
+              {lang === 'es' ? 'ES' : 'EN'}
+            </MenuButton>
+            <MenuList borderRadius="xl" minW="120px" py={1}>
+              <MenuItem
+                fontSize="13px"
+                onClick={() => setLang('es')}
+                bg={lang === 'es' ? 'accent.50' : undefined}
+                color={lang === 'es' ? 'accent.700' : undefined}
+                fontWeight={lang === 'es' ? 600 : 400}
+                borderRadius="md" mx={1}
+              >
+                {t('nav.spanish')}
+              </MenuItem>
+              <MenuItem
+                fontSize="13px"
+                onClick={() => setLang('en')}
+                bg={lang === 'en' ? 'accent.50' : undefined}
+                color={lang === 'en' ? 'accent.700' : undefined}
+                fontWeight={lang === 'en' ? 600 : 400}
+                borderRadius="md" mx={1}
+              >
+                {t('nav.english')}
+              </MenuItem>
+            </MenuList>
+          </Menu>
 
-        <button onClick={async () => { await signOut(auth); }}
-          style={{
-            padding: '6px 14px', borderRadius: '99px', border: 'none',
-            fontSize: '12px', fontWeight: 500, fontFamily: font.body, cursor: 'pointer',
-            background: colors.errorBg, color: colors.error, transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => e.target.style.background = '#fee2e2'}
-          onMouseLeave={(e) => e.target.style.background = colors.errorBg}>
-          {t('nav.logout')}
-        </button>
-      </div>
-    </nav>
+          {/* Notifications */}
+          <Box position="relative" ref={notifBtnRef}>
+            <IconButton
+              icon={
+                <Box position="relative" fontSize="18px" lineHeight="1">
+                  {'\u{1F514}'}
+                  {unreadCount > 0 && (
+                    <Badge
+                      position="absolute"
+                      top="-6px"
+                      right="-8px"
+                      bg="rose.500"
+                      color="white"
+                      borderRadius="full"
+                      fontSize="10px"
+                      minW="18px"
+                      h="18px"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      px={1}
+                      boxShadow="0 2px 4px rgba(0,0,0,0.15)"
+                    >
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Badge>
+                  )}
+                </Box>
+              }
+              variant="outline"
+              borderRadius="full"
+              borderColor="brand.200"
+              size="sm"
+              w="36px"
+              h="36px"
+              onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+              aria-label="Notificaciones"
+            />
+
+            {showNotifDropdown && (
+              <Box
+                ref={notifRef}
+                position="absolute"
+                top="calc(100% + 8px)"
+                right={0}
+                w="340px"
+                bg="white"
+                borderRadius="xl"
+                boxShadow="0 8px 24px rgba(0,0,0,0.12)"
+                border="1px solid"
+                borderColor="brand.100"
+                overflow="hidden"
+                zIndex={1000}
+                animation="fadeIn 0.15s ease"
+              >
+                <Flex p={3} borderBottom="1px solid" borderColor="brand.100" justify="space-between" align="center">
+                  <Text fontSize="sm" fontWeight={600} color="brand.800">{t('notifications.title')}</Text>
+                  {unreadCount > 0 && (
+                    <Text fontSize="xs" color="warmGray.500">{unreadCount} {t('notifications.unread')}</Text>
+                  )}
+                </Flex>
+
+                {recentNotifs.length === 0 ? (
+                  <Box textAlign="center" py={8} px={4}>
+                    <Text fontSize="sm" color="warmGray.400">{t('notifications.noNotifications')}</Text>
+                  </Box>
+                ) : (
+                  recentNotifs.map((n) => (
+                    <Flex
+                      key={n.id}
+                      onClick={() => handleNotifClick(n)}
+                      p={3}
+                      cursor="pointer"
+                      borderBottom="1px solid"
+                      borderColor="brand.50"
+                      bg={n.isRead ? 'white' : 'accent.50'}
+                      _hover={{ bg: 'warmGray.50' }}
+                      gap={3}
+                      align="flex-start"
+                      transition="background 0.15s"
+                    >
+                      <Text fontSize="md" flexShrink={0}>{TYPE_ICONS[n.type] || '\u{1F514}'}</Text>
+                      <Box minW={0}>
+                        <Text fontSize="xs" fontWeight={600} color="brand.800" noOfLines={1}>
+                          {t(`notifications.types.${n.type}`, n.type)}
+                        </Text>
+                        <Text fontSize="xs" color="warmGray.500" noOfLines={1}>
+                          {n.message}
+                        </Text>
+                      </Box>
+                    </Flex>
+                  ))
+                )}
+
+                <Flex
+                  onClick={() => { setShowNotifDropdown(false); navigate('/notifications'); }}
+                  p={3}
+                  justify="center"
+                  cursor="pointer"
+                  borderTop="1px solid"
+                  borderColor="brand.100"
+                  _hover={{ bg: 'warmGray.50' }}
+                  transition="background 0.15s"
+                >
+                  <Text fontSize="sm" fontWeight={500} color="accent.600">
+                    {t('notifications.viewAll')}
+                  </Text>
+                </Flex>
+              </Box>
+            )}
+          </Box>
+
+          <Divider orientation="vertical" h="24px" borderColor="brand.200" display={{ base: 'none', md: 'block' }} />
+
+          {/* User email + Avatar */}
+          <Text fontSize="sm" color="warmGray.500" display={{ base: 'none', lg: 'block' }}>
+            {user?.email}
+          </Text>
+
+          <Menu>
+            <MenuButton
+              as={Box}
+              cursor="pointer"
+              borderRadius="full"
+              _hover={{ opacity: 0.8 }}
+            >
+              <PastelAvatar
+                name={user?.full_name || user?.email || ''}
+                src={user?.photoURL}
+                size="sm"
+                showBadge
+              />
+            </MenuButton>
+            <MenuList borderRadius="xl" minW="200px" py={2}>
+              <MenuItem
+                fontSize="13px"
+                onClick={() => navigate('/profile')}
+                borderRadius="md" mx={2}
+              >
+                {t('nav.profile')}
+              </MenuItem>
+              {user?.roles?.includes('owner') && (
+                <MenuItem
+                  fontSize="13px"
+                  onClick={() => navigate('/owner')}
+                  borderRadius="md" mx={2}
+                >
+                  {t('nav.owner')}
+                </MenuItem>
+              )}
+              {user?.roles?.includes('admin') && (
+                <MenuItem
+                  fontSize="13px"
+                  onClick={() => navigate('/admin')}
+                  borderRadius="md" mx={2}
+                >
+                  {t('nav.admin')}
+                </MenuItem>
+              )}
+              {user?.roles?.includes('moderator') && (
+                <MenuItem
+                  fontSize="13px"
+                  onClick={() => navigate('/moderator')}
+                  borderRadius="md" mx={2}
+                >
+                  {t('nav.moderate')}
+                </MenuItem>
+              )}
+              <MenuDivider />
+              <MenuItem
+                fontSize="13px"
+                color="rose.600"
+                onClick={async () => { await signOut(auth); }}
+                borderRadius="md" mx={2}
+                icon={<Text>🚪</Text>}
+              >
+                {t('nav.logout')}
+              </MenuItem>
+            </MenuList>
+          </Menu>
+        </HStack>
+      </Flex>
+    </Box>
   );
 }

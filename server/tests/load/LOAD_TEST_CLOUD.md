@@ -6,7 +6,7 @@ Servidor: **8 CPU / 4GB RAM / 500 concurrency / 5-25 instances / 600s timeout**
 
 ## Preparación
 
-Para tests con **>1000 VUs** es necesario activar el bypass de auth y rate limits:
+Para tests con **>1000 VUs** es necesario activar el bypass de auth:
 
 ```cmd
 REM Activar (antes del test)

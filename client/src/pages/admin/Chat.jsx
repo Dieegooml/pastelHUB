@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import Navbar from '../../components/Navbar';
+import {
+  Box, Flex, Heading, Text, Button, Card, useToast, HStack,
+  SimpleGrid, Spinner, Badge
+} from '@chakra-ui/react';
 import AdminNav from './AdminNav';
 import { chatService } from '../../services/chatService';
 import { renderMarkdown } from '../../utils/markdown';
-import { colors, font, pageStyle, cardStyle, btnSmallPrimary, btnDanger, badge } from '../../styles/theme';
 
 export default function AdminChat() {
+  const toast = useToast();
   const [sessions, setSessions] = useState([]);
   const [selected, setSelected] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -35,88 +38,95 @@ export default function AdminChat() {
       await chatService.deleteSession(id);
       if (selected?.id === id) { setSelected(null); setMessages([]); }
       loadSessions();
-    } catch (e) { alert('Error al eliminar'); }
+    } catch (e) { toast({ title: 'Error al eliminar', status: 'error', duration: 3000, isClosable: true }); }
   }
 
   return (
-    <div style={pageStyle}>
-      <Navbar />
+    <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
       <AdminNav />
-      <h1 style={{ fontSize: '22px', fontWeight: 700, color: colors.text, fontFamily: font.heading, margin: '1.5rem 0 1rem' }}>
+      <Heading fontSize="xl" fontWeight={700} color="brand.700" my={6}>
         💬 Chat Sessions
-      </h1>
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        {['all', 'active', 'closed'].map(s => (
-          <button key={s} onClick={() => setStatusFilter(s)} style={{
-            ...badge(statusFilter === s ? colors.primary : '#f3f4f6', statusFilter === s ? '#fff' : colors.textSecondary),
-            border: 'none', cursor: 'pointer',
-          }}>{s === 'all' ? 'Todos' : s === 'active' ? 'Activos' : 'Cerrados'}</button>
-        ))}
-        <button onClick={loadSessions} style={{ ...btnSmallPrimary, marginLeft: 'auto' }}>🔄 Recargar</button>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
-        <div style={cardStyle}>
-          <h2 style={{ fontSize: '14px', fontWeight: 600, color: colors.text, marginBottom: '12px' }}>Sesiones ({sessions.length})</h2>
-          {loading ? <div style={{ color: colors.textMuted, fontSize: '13px' }}>Cargando...</div> : sessions.length === 0 ? (
-            <div style={{ color: colors.textMuted, fontSize: '13px' }}>No hay sesiones</div>
+      </Heading>
+
+      <HStack spacing={3} mb={4} justify="space-between" flexWrap="wrap">
+        <HStack spacing={2}>
+          {['all', 'active', 'closed'].map(s => (
+            <Button key={s} size="sm" variant={statusFilter === s ? 'solid' : 'outline'}
+              bg={statusFilter === s ? 'brand.500' : 'transparent'}
+              color={statusFilter === s ? 'white' : 'warmGray.600'}
+              borderRadius="full" onClick={() => setStatusFilter(s)}>
+              {s === 'all' ? 'Todos' : s === 'active' ? 'Activos' : 'Cerrados'}
+            </Button>
+          ))}
+        </HStack>
+        <Button size="sm" colorScheme="brand" onClick={loadSessions}>🔄 Recargar</Button>
+      </HStack>
+
+      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+        <Card p={4} maxH="600px" overflowY="auto">
+          <Heading fontSize="sm" fontWeight={600} mb={3}>Sesiones ({sessions.length})</Heading>
+          {loading ? (
+            <Spinner size="sm" />
+          ) : sessions.length === 0 ? (
+            <Text color="warmGray.400" fontSize="sm">No hay sesiones</Text>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <Flex direction="column" gap={2}>
               {sessions.map(s => (
-                <div key={s.id} onClick={() => handleSelect(s)} style={{
-                  padding: '10px', borderRadius: '8px', cursor: 'pointer',
-                  background: selected?.id === s.id ? colors.grayLight : 'transparent',
-                  border: `1px solid ${selected?.id === s.id ? colors.accent : 'transparent'}`,
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                }}>
-                  <div style={{ fontSize: '13px', flex: 1 }}>
-                    <div style={{ fontWeight: 500, color: colors.text }}>{s.userId?.slice(0, 16) || 'Anónimo'}</div>
-                    <div style={{ fontSize: '11px', color: colors.textMuted }}>{s.createdAt ? new Date(s.createdAt).toLocaleString() : ''}</div>
-                    <div style={{ fontSize: '11px', color: colors.textMuted }}>Msgs: {s.messageCount || messages.length}</div>
-                  </div>
-                  <button onClick={e => { e.stopPropagation(); handleDelete(s.id); }} style={{ ...btnDanger, padding: '2px 8px', fontSize: '11px' }}>Eliminar</button>
-                </div>
+                <Flex key={s.id} p={3} borderRadius="lg" cursor="pointer"
+                  bg={selected?.id === s.id ? 'warmGray.100' : 'transparent'}
+                  border="1px solid"
+                  borderColor={selected?.id === s.id ? 'accent.500' : 'transparent'}
+                  justify="space-between" align="center"
+                  onClick={() => handleSelect(s)}
+                  _hover={{ bg: 'warmGray.50' }}
+                >
+                  <Box flex={1}>
+                    <Text fontWeight={500} fontSize="sm">{s.userId?.slice(0, 16) || 'Anónimo'}</Text>
+                    <Text fontSize="xs" color="warmGray.400">{s.createdAt ? new Date(s.createdAt).toLocaleString() : ''}</Text>
+                    <Text fontSize="xs" color="warmGray.400">Msgs: {s.messageCount || messages.length}</Text>
+                  </Box>
+                  <Button size="xs" variant="ghost" colorScheme="red" onClick={e => { e.stopPropagation(); handleDelete(s.id); }}>Eliminar</Button>
+                </Flex>
               ))}
-            </div>
+            </Flex>
           )}
-        </div>
-        <div style={cardStyle}>
+        </Card>
+
+        <Card p={4} gridColumn={{ md: '2 / 4' }} maxH="600px" overflowY="auto">
           {!selected ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: colors.textMuted, fontSize: '14px' }}>
-              Selecciona una sesión para ver los mensajes
-            </div>
+            <Text textAlign="center" py={10} color="warmGray.400" fontSize="sm">Selecciona una sesión para ver los mensajes</Text>
           ) : messages.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: colors.textMuted, fontSize: '14px' }}>
-              Sin mensajes en esta sesión
-            </div>
+            <Text textAlign="center" py={10} color="warmGray.400" fontSize="sm">Sin mensajes en esta sesión</Text>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '500px', overflowY: 'auto' }}>
-              <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '8px' }}>
+            <Box>
+              <Text fontSize="xs" color="warmGray.400" mb={2}>
                 Sesión: {selected.id?.slice(0, 12)}... · {messages.length} mensajes
-              </div>
-              {messages.map((msg, i) => (
-                <div key={msg.id || i} style={{
-                  display: 'flex', justifyContent: msg.senderRole === 'user' ? 'flex-end' : 'flex-start',
-                }}>
-                  <div style={{
-                    maxWidth: '75%', padding: '10px 14px', borderRadius: '14px',
-                    background: msg.senderRole === 'user' ? colors.accent : colors.grayBg,
-                    color: msg.senderRole === 'user' ? '#fff' : colors.text,
-                    fontSize: '13px', lineHeight: '1.5',
-                    borderBottomRightRadius: msg.senderRole === 'user' ? '4px' : '14px',
-                    borderBottomLeftRadius: msg.senderRole === 'user' ? '14px' : '4px',
-                  }}>
-                    {msg.senderRole === 'user' ? msg.message : (
-                      <div dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.message) }} />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+              </Text>
+              <Flex direction="column" gap={3}>
+                {messages.map((msg, i) => (
+                  <Flex key={msg.id || i} justify={msg.senderRole === 'user' ? 'flex-end' : 'flex-start'}>
+                    <Box
+                      maxW="75%"
+                      p={3}
+                      borderRadius="xl"
+                      bg={msg.senderRole === 'user' ? 'accent.500' : 'warmGray.100'}
+                      color={msg.senderRole === 'user' ? 'white' : 'warmGray.800'}
+                      fontSize="sm"
+                      lineHeight={1.5}
+                      borderBottomRightRadius={msg.senderRole === 'user' ? 'sm' : 'xl'}
+                      borderBottomLeftRadius={msg.senderRole === 'user' ? 'xl' : 'sm'}
+                    >
+                      {msg.senderRole === 'user' ? msg.message : (
+                        <Box dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.message) }} />
+                      )}
+                    </Box>
+                  </Flex>
+                ))}
+              </Flex>
+            </Box>
           )}
-        </div>
-      </div>
-    </div>
+        </Card>
+      </SimpleGrid>
+    </Box>
   );
 }
-
-

@@ -133,7 +133,6 @@ describe('POST /api/auth/assign-role', () => {
       .post('/api/auth/assign-role')
       .set('Authorization', 'Bearer token-valido')
       .send({ uid: 'ghost-uid', roles: ['moderator'] });
-    // Puede ser 404 o 429 si el rate limiter se ha agotado
-    expect([404, 429]).toContain(res.status);
+    expect(res.status).toBe(404);
   });
 });

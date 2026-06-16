@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
-import Navbar from '../../components/Navbar';
+import {
+  Box, Flex, Heading, Text, Button, Input, Select, Table, Thead, Tbody, Tr, Th, Td,
+  Tag, Alert, AlertIcon, useToast, HStack
+} from '@chakra-ui/react';
 import AdminNav from './AdminNav';
+import { PastelPageHeader, PastelCard, PastelStatusBadge, PastelEmptyState, PastelFilterBar, PastelSkeletonTable } from '../../components/UI';
 import { invoicesService } from '../../services/invoicesService';
-import { colors, font, badge as themeBadge, tableHeaderStyle, selectStyle, animFadeIn, animFadeInLeft } from '../../styles/theme';
-import { useIsMobile } from '../../styles/useIsMobile';
 
 const STATUSES = ['all', 'issued', 'cancelled'];
 const STATUS_TRANS = { issued: 'Emitida', cancelled: 'Anulada' };
-const STATUS_COLORS = { issued: { bg: '#e8f5e9', color: '#2e7d32' }, cancelled: { bg: '#fee2e2', color: '#ef4444' } };
-
-const smallSelect = { ...selectStyle, height: '36px', padding: '0 12px', fontSize: '13px' };
 
 const formatDate = (ts) => {
   if (!ts) return '—';
@@ -20,7 +19,7 @@ const formatDate = (ts) => {
 };
 
 export default function Invoices() {
-  const isMobile = useIsMobile(768);
+  const toast = useToast();
   const [invoices, setInvoices] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -68,122 +67,90 @@ export default function Invoices() {
 
   const handleDownload = async (id) => {
     setDownloading(id);
-    try {
-      await invoicesService.downloadPdf(id);
-    } catch (err) {
-      setError(err.message || 'Error al descargar PDF');
-    } finally {
-      setDownloading(null);
-    }
+    try { await invoicesService.downloadPdf(id); }
+    catch (err) { setError(err.message || 'Error al descargar PDF'); }
+    finally { setDownloading(null); }
   };
 
-  const statusBadge = (s) => {
-    const c = STATUS_COLORS[s] || STATUS_COLORS.issued;
-    return <span style={themeBadge(c.bg, c.color)}>{STATUS_TRANS[s] || s}</span>;
-  };
+  const filterOptions = STATUSES.map((s) => ({
+    value: s,
+    label: s === 'all' ? 'Todas' : STATUS_TRANS[s],
+  }));
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem 1rem 2rem' : '40px 2rem 2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '24px', flexWrap: 'wrap' }}>
-          <h2 style={{ fontFamily: font.heading, fontSize: isMobile ? '22px' : '28px', fontWeight: 700, color: colors.primary, margin: 0 }}>Boletas</h2>
-          <span style={{ background: '#f0f0f0', color: colors.primary, padding: '2px 10px', borderRadius: '12px', fontSize: '13px', fontWeight: 500, fontFamily: font.body }}>{invoices.length}</span>
-        </div>
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '24px' }} />
-        <div style={{ marginBottom: '16px' }}><AdminNav /></div>
+    <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <PastelPageHeader
+        title="Boletas"
+        actions={
+          <Tag bg="warmGray.100" color="brand.700" borderRadius="full" fontSize="sm" fontWeight={500}>{invoices.length}</Tag>
+        }
+      />
+      <Box mb={4}><AdminNav /></Box>
 
-        {success && <div style={{ ...animFadeInLeft, background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
-        {error && <div style={{ ...animFadeInLeft, background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
+      {success && <Alert status="success" mb={4} borderRadius="lg">{success}</Alert>}
+      {error && <Alert status="error" mb={4} borderRadius="lg">{error}</Alert>}
 
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'end', background: colors.white, padding: '16px', borderRadius: '12px', border: `1px solid ${colors.border}` }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body }}>Order ID</label>
-            <input value={orderId} onChange={(e) => setOrderId(e.target.value)} placeholder="Ingresa ID de orden" style={{
-              height: '36px', padding: '0 12px', fontSize: '13px', fontFamily: font.body,
-              border: `1px solid ${colors.border}`, borderRadius: '8px', background: colors.white,
-              outline: 'none', minWidth: '200px',
-            }} />
-          </div>
-          <button onClick={handleGenerate} disabled={generating || !orderId.trim()} style={{
-            padding: '8px 20px', background: colors.accent, color: '#fff', border: 'none', borderRadius: '99px',
-            cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: font.body,
-            opacity: generating || !orderId.trim() ? 0.6 : 1,
-          }}>{generating ? 'Generando...' : 'Generar boleta'}</button>
-        </div>
+      <PastelCard p={4} mb={5} variant="bordered">
+        <HStack spacing={3} align="flex-end" flexWrap="wrap">
+          <Box>
+            <Text fontSize="xs" color="warmGray.500" mb={1}>Order ID</Text>
+            <Input size="sm" value={orderId} onChange={(e) => setOrderId(e.target.value)} placeholder="Ingresa ID de orden" minW="200px" />
+          </Box>
+          <Button size="sm" colorScheme="accent" onClick={handleGenerate} isDisabled={generating || !orderId.trim()}>
+            {generating ? 'Generando...' : 'Generar boleta'}
+          </Button>
+        </HStack>
+      </PastelCard>
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          {STATUSES.map((s) => (
-            <button key={s} onClick={() => setFilter(s)} style={{
-              padding: '6px 14px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px',
-              fontWeight: filter === s ? 600 : 500, fontFamily: font.body,
-              border: filter === s ? 'none' : `1px solid #ddd`,
-              background: filter === s ? colors.primary : 'transparent',
-              color: filter === s ? '#fff' : '#666', transition: 'all 0.2s ease',
-            }}>{s === 'all' ? 'Todas' : STATUS_TRANS[s]}</button>
-          ))}
-        </div>
+      <PastelFilterBar options={filterOptions} active={filter} onChange={setFilter} />
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem' }}>
-            {[1, 2, 3].map((i) => <div key={i} style={{ height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '8px', marginBottom: '8px', animation: 'shimmer 1.5s infinite' }} />)}
-          </div>
-        ) : (
-          <div style={{ ...animFadeIn, background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
-            {invoices.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', gap: '12px' }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                </svg>
-                <p style={{ color: '#999', fontSize: '15px', margin: 0, fontFamily: font.body }}>No hay boletas que mostrar</p>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-                    {HEADERS.map((h) => <th key={h} style={tableHeaderStyle}>{h}</th>)}
-                  </tr></thead>
-                  <tbody>
-                    {invoices.map((inv, i) => (
-                      <tr key={inv.id} style={{ borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe }}>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: 'monospace', fontWeight: 700, color: colors.accent }}>{inv.invoiceNumber}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', color: colors.textSecondary, fontFamily: font.body }}>{formatDate(inv.issueDate)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', fontFamily: font.body }}>{inv.shopName}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', fontFamily: font.body }}>{inv.customerName}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: 600, fontFamily: font.body, color: colors.primary }}>S/ {(inv.total || 0).toFixed(2)}</td>
-                        <td style={{ padding: '12px 16px' }}>{statusBadge(inv.status)}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            {inv.status === 'issued' && (
-                              <button onClick={() => handleDownload(inv.id)} disabled={downloading === inv.id} style={{
-                                padding: '4px 12px', background: colors.accent, color: '#fff', border: 'none',
-                                borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body,
-                                opacity: downloading === inv.id ? 0.6 : 1,
-                              }}>{downloading === inv.id ? '...' : 'PDF'}</button>
-                            )}
-                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                              <select style={{ ...smallSelect, height: '30px', fontSize: '11px' }} value={newStatus[inv.id] || ''} onChange={(e) => setNewStatus((p) => ({ ...p, [inv.id]: e.target.value }))}>
-                                <option value="">—</option>
-                                <option value="cancelled">Anular</option>
-                              </select>
-                              <button onClick={() => handleUpdateStatus(inv.id)} disabled={!newStatus[inv.id]} style={{
-                                padding: '4px 10px', background: colors.error, color: '#fff', border: 'none',
-                                borderRadius: '99px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: font.body,
-                                opacity: newStatus[inv.id] ? 1 : 0.5,
-                              }}>OK</button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+      {loading ? (
+        <PastelSkeletonTable rows={5} cols={7} />
+      ) : (
+        <PastelCard p={0} overflow="hidden">
+          {invoices.length === 0 ? (
+            <PastelEmptyState icon="📄" title="No hay boletas que mostrar" />
+          ) : (
+            <Box overflowX="auto">
+              <Table variant="pastel">
+                <Thead>
+                  <Tr>{HEADERS.map((h) => <Th key={h}>{h}</Th>)}</Tr>
+                </Thead>
+                <Tbody>
+                  {invoices.map((inv) => (
+                    <Tr key={inv.id}>
+                      <Td fontFamily="mono" fontWeight={700} color="accent.500">{inv.invoiceNumber}</Td>
+                      <Td fontSize="sm" color="warmGray.500">{formatDate(inv.issueDate)}</Td>
+                      <Td fontSize="sm">{inv.shopName}</Td>
+                      <Td fontSize="sm">{inv.customerName}</Td>
+                      <Td fontSize="sm" fontWeight={600} color="brand.700">S/ {(inv.total || 0).toFixed(2)}</Td>
+                      <Td><PastelStatusBadge status={inv.status} /></Td>
+                      <Td>
+                        <HStack spacing={2}>
+                          {inv.status === 'issued' && (
+                            <Button size="xs" colorScheme="accent" borderRadius="full"
+                              onClick={() => handleDownload(inv.id)} isDisabled={downloading === inv.id}>
+                              {downloading === inv.id ? '...' : 'PDF'}
+                            </Button>
+                          )}
+                          <HStack spacing={1}>
+                            <Select size="xs" w="80px" value={newStatus[inv.id] || ''} onChange={(e) => setNewStatus((p) => ({ ...p, [inv.id]: e.target.value }))}>
+                              <option value="">—</option>
+                              <option value="cancelled">Anular</option>
+                            </Select>
+                            <Button size="xs" colorScheme="red" borderRadius="full"
+                              isDisabled={!newStatus[inv.id]} onClick={() => handleUpdateStatus(inv.id)}>OK</Button>
+                          </HStack>
+                        </HStack>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
+        </PastelCard>
+      )}
+    </Box>
   );
 }

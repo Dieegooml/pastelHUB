@@ -82,4 +82,26 @@ const requireOwnerOrAdmin = (getResourceOwnerId) => {
   };
 };
 
-module.exports = { verifyToken, requireAdmin, requireOwner, requireModerator, requireCustomer, requireOwnerOrAdmin, requireSelfOrAdmin };
+const requireAssignRole = (req, res, next) => {
+  const roles = req.user?.roles || [];
+  if (roles.includes('admin')) return next();
+  if (roles.includes('moderator')) {
+    const { roles: targetRoles } = req.body;
+    if (targetRoles && targetRoles.includes('admin')) {
+      return res.status(403).json({ error: 'Solo admins pueden asignar el rol admin' });
+    }
+    return next();
+  }
+  res.status(403).json({ error: 'Solo admins o moderadores' });
+};
+
+const requireSelfOrStaff = (paramName = 'id') => {
+  return (req, res, next) => {
+    const roles = req.user?.roles || [];
+    if (roles.includes('admin') || roles.includes('moderator')) return next();
+    if (req.user?.uid === req.params[paramName]) return next();
+    return res.status(403).json({ error: 'No tienes permiso' });
+  };
+};
+
+module.exports = { verifyToken, requireAdmin, requireOwner, requireModerator, requireCustomer, requireOwnerOrAdmin, requireSelfOrAdmin, requireAssignRole, requireSelfOrStaff };

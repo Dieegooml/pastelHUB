@@ -33,7 +33,7 @@ describe('requireAdmin middleware', () => {
       .get('/api/users')
       .set('Authorization', 'Bearer token-valido');
     expect(res.status).toBe(403);
-    expect(res.body.error).toBe('Solo admins');
+    expect(res.body.error).toBe('Solo moderadores o admins');
   });
 
   it('permite acceso si el usuario tiene rol admin', async () => {

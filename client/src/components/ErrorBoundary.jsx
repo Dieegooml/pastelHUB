@@ -1,6 +1,6 @@
 import { Component } from 'react';
+import { Box, Flex, Text, Heading, Button } from '@chakra-ui/react';
 import PropTypes from 'prop-types';
-import { colors, font } from '../styles/theme';
 
 export default class ErrorBoundary extends Component {
   static propTypes = {
@@ -24,29 +24,24 @@ export default class ErrorBoundary extends Component {
   render() {
     if (this.state.error) {
       return (
-        <div style={{
-          minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: colors.bgBeige, padding: '2rem',
-        }}>
-          <div style={{ textAlign: 'center', maxWidth: '400px' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
-            <h1 style={{ fontFamily: font.heading, fontSize: '24px', fontWeight: 700, color: colors.primary, margin: '0 0 8px' }}>
+        <Flex minH="100vh" align="center" justify="center" bg="warmGray.50" p={8}>
+          <Box textAlign="center" maxW="400px">
+            <Text fontSize="5xl" mb={4}>⚠️</Text>
+            <Heading fontFamily="heading" fontSize="2xl" fontWeight={700} color="brand.900" mb={2}>
               Algo salió mal
-            </h1>
-            <p style={{ fontFamily: font.body, fontSize: '14px', color: colors.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
+            </Heading>
+            <Text fontSize="sm" color="warmGray.500" mb={6} lineHeight={1.6}>
               Ocurrió un error inesperado. Intenta recargar la página.
-            </p>
-            <button
+            </Text>
+            <Button
+              variant="accent"
+              size="lg"
               onClick={() => window.location.reload()}
-              style={{
-                padding: '10px 24px', background: colors.accent, color: '#fff', border: 'none',
-                borderRadius: '99px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, fontFamily: font.body,
-              }}
             >
               Recargar página
-            </button>
-          </div>
-        </div>
+            </Button>
+          </Box>
+        </Flex>
       );
     }
 

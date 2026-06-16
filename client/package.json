@@ -13,12 +13,12 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@chakra-ui/react": "^2.10.4",
+    "@chakra-ui/react": "^2.10.10",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "axios": "^1.16.1",
     "firebase": "^12.13.0",
-    "framer-motion": "^11.18.2",
+    "framer-motion": "^12.40.0",
     "prop-types": "^15.8.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",

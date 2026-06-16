@@ -105,19 +105,6 @@ El modo `QUICK` usa rampas mínimas (5s→10s→15s + steady + 10s→5s bajada) 
 
 ---
 
-## Test de Rate Limiting
-
-| Comando | Qué verifica | Esperado |
-|---|---|---|
-| `npm run test:rate-limit` | Límite general (100 req/5s) | Bloquea en #101 |
-| | Límite auth (10 req/5s) | Bloquea en #11 |
-
-**No requiere servidor aparte** — spawnea servidores en puertos 3001 y 3002.
-
-Reporte: `rate-limit-test-report.html`
-
----
-
 ## Resumen rápido
 
 ```bash
@@ -136,6 +123,5 @@ npm run load-test:500
 # Carga (100 VUs, auth real)
 npm run load-test:real-auth
 
-# Rate limiting
-npm run test:rate-limit
+
 ```

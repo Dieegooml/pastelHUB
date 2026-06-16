@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Box, Flex, Heading, Text, Card, Button, Input, Select, Textarea,
+  Table, Thead, Tbody, Tr, Th, Td, Tag, Alert, AlertIcon, useToast,
+  Stack, SimpleGrid, HStack
+} from '@chakra-ui/react';
+import AdminNav from './AdminNav';
 import { productsService } from '../../services/productsService';
 import { shopsService } from '../../services/shopsService';
-import Navbar from '../../components/Navbar';
-import AdminNav from './AdminNav';
-import { useIsMobile } from '../../styles/useIsMobile';
-import {
-  colors, font, cardStyle, inputStyle, selectStyle,
-  textareaStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary,
-  btnSmallSecondary, tableHeaderStyle, labelStyle, badge,
-  animStagger, animFadeIn, animFadeInLeft,
-} from '../../styles/theme';
 import ImageUploader from '../../components/ImageUploader';
 
 const emptyForm = {
@@ -21,29 +18,10 @@ const emptyForm = {
 
 const emptyVariant = { type: 'size', value: '', extra_price: '' };
 
-const TH = ['Nombre', 'Precio', 'Stock', 'Disponible', 'Acciones'];
-const TH_MOBILE = ['Producto', 'Precio', ''];
-
-function ImagePreview({ url }) {
-  if (!url) return null;
-  return (
-    <div style={{
-      width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden',
-      border: `1px solid ${colors.border}`, flexShrink: 0,
-      background: colors.bgBeige, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <img src={url} alt=""
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        onError={(e) => { e.target.style.display = 'none'; }}
-      />
-    </div>
-  );
-}
-
 export default function Products() {
   const { shopId } = useParams();
   const navigate = useNavigate();
-  const isMobile = useIsMobile(768);
+  const toast = useToast();
 
   const [shop, setShop] = useState(null);
   const [products, setProducts] = useState([]);
@@ -199,275 +177,212 @@ export default function Products() {
     }
   };
 
-  const sectionDivider = { height: '1px', background: colors.border, margin: '1.2rem 0' };
-
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-          <button onClick={() => navigate('/admin/shops')} style={{ ...btnGhost, padding: '6px 14px', fontSize: '13px' }}>
-            Volver
-          </button>
-          <h2 style={{ fontFamily: font.heading, fontSize: isMobile ? '20px' : '26px', fontWeight: 700, color: colors.primary, margin: 0 }}>
-            {shop?.shopName || 'Cargando...'} — Productos
-          </h2>
-          <span style={{
-            background: colors.white, color: colors.textSecondary, padding: '2px 12px',
-            borderRadius: '99px', fontSize: '13px', fontWeight: 500, fontFamily: font.body,
-            border: `1px solid ${colors.border}`,
-          }}>
-            {products.length}
-          </span>
-        </div>
+    <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <Flex align="center" gap={4} mb={3} flexWrap="wrap">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/admin/shops')}>Volver</Button>
+        <Heading fontSize={{ base: 'xl', md: '2xl' }} fontWeight={700} color="brand.700">
+          {shop?.shopName || 'Cargando...'} — Productos
+        </Heading>
+        <Tag bg="white" color="warmGray.500" border="1px solid" borderColor="warmGray.200" borderRadius="full" fontSize="sm" fontWeight={500}>
+          {products.length}
+        </Tag>
+      </Flex>
 
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.2rem' }} />
+      <Box h="3px" w="60px" bgGradient="linear(90deg, accent.500, brand.500)" borderRadius="full" mb={4} />
 
-        <AdminNav />
+      <AdminNav />
 
-        {success && (
-          <div style={{ ...animFadeInLeft, background: colors.successBg, color: colors.success, padding: '12px 16px',
-            borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
-            borderLeft: `4px solid ${colors.success}`,
-          }}>
-            {success}
-          </div>
-        )}
-        {error && (
-          <div style={{ ...animFadeInLeft, background: colors.errorBg, color: colors.error, padding: '12px 16px',
-            borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
-            borderLeft: `4px solid ${colors.error}`,
-          }}>
-            {error}
-          </div>
-        )}
+      {success && <Alert status="success" mt={4} mb={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="green.500">{success}</Alert>}
+      {error && <Alert status="error" mt={4} mb={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="red.500">{error}</Alert>}
 
-        <div style={{ ...animFadeIn, ...cardStyle, marginTop: '1rem' }}>
-          <h3 style={{ fontFamily: font.heading, fontSize: '18px', fontWeight: 700, color: colors.primary, margin: '0 0 0.5rem' }}>
-            {editingId ? 'Editar producto' : 'Nuevo producto'}
-          </h3>
-          <div style={sectionDivider} />
+      <Card p={6} mt={4}>
+        <Heading fontSize="lg" fontWeight={700} color="brand.700" mb={2}>
+          {editingId ? 'Editar producto' : 'Nuevo producto'}
+        </Heading>
+        <Box h="1px" bg="warmGray.200" my={4} />
 
-          <div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: isMobile ? '1' : '1 / -1' }}>
-                <label style={labelStyle}>Pastelería</label>
-                <input style={inputStyle} value={shop?.shopName || ''} disabled />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={labelStyle}>Nombre del producto *</label>
-                <input style={inputStyle} name="name" value={form.name} onChange={handleChange} required placeholder="Ej: Torta de Chocolate" />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={labelStyle}>Precio (S/) *</label>
-                <input style={inputStyle} type="number" step="0.01" name="price" value={form.price} onChange={handleChange} required placeholder="0.00" />
-              </div>
-            </div>
+        <Box>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <Box gridColumn={{ md: '1 / -1' }}>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Pastelería</Text>
+              <Input value={shop?.shopName || ''} isDisabled />
+            </Box>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Nombre del producto *</Text>
+              <Input name="name" value={form.name} onChange={handleChange} required placeholder="Ej: Torta de Chocolate" />
+            </Box>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Precio (S/) *</Text>
+              <Input type="number" step="0.01" name="price" value={form.price} onChange={handleChange} required placeholder="0.00" />
+            </Box>
+          </SimpleGrid>
 
-            <div style={sectionDivider} />
+          <Box h="1px" bg="warmGray.200" my={4} />
 
-            <p style={{ fontSize: '13px', fontWeight: 600, color: colors.primary, fontFamily: font.body, margin: '0 0 10px' }}>Detalles</p>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={labelStyle}>Categoría</label>
-                <input style={inputStyle} name="category_id" value={form.category_id} onChange={handleChange} placeholder="ID de categoría" />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={labelStyle}>Stock</label>
-                <input style={inputStyle} type="number" name="stock" value={form.stock} onChange={handleChange} placeholder="0" />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={labelStyle}>Disponible</label>
-                <select style={selectStyle} name="is_available" value={form.is_available} onChange={(e) => setForm({ ...form, is_available: e.target.value === 'true' })}>
-                  <option value="true">Sí</option>
-                  <option value="false">No</option>
-                </select>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={labelStyle}>Imagen (URL)</label>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <div style={{ flex: 1 }}>
-                    <ImageUploader folder="products" currentUrl={form.image_url} onUpload={(url) => setForm(p => ({ ...p, image_url: url }))} label="Producto" />
-                  </div>
-                </div>
-              </div>
-            </div>
+          <Text fontSize="sm" fontWeight={600} color="brand.700" mb={3}>Detalles</Text>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Categoría</Text>
+              <Input name="category_id" value={form.category_id} onChange={handleChange} placeholder="ID de categoría" />
+            </Box>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Stock</Text>
+              <Input type="number" name="stock" value={form.stock} onChange={handleChange} placeholder="0" />
+            </Box>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Disponible</Text>
+              <Select name="is_available" value={form.is_available} onChange={(e) => setForm({ ...form, is_available: e.target.value === 'true' })}>
+                <option value="true">Sí</option>
+                <option value="false">No</option>
+              </Select>
+            </Box>
+            <Box>
+              <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Imagen</Text>
+              <ImageUploader folder="products" currentUrl={form.image_url} onUpload={(url) => setForm(p => ({ ...p, image_url: url }))} label="Producto" />
+            </Box>
+          </SimpleGrid>
 
-            <div style={sectionDivider} />
+          <Box h="1px" bg="warmGray.200" my={4} />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={labelStyle}>Descripción</label>
-              <textarea style={textareaStyle} name="description" value={form.description} onChange={handleChange} placeholder="Describe el producto..." />
-            </div>
+          <Box mb={4}>
+            <Text fontSize="sm" fontWeight={500} color="warmGray.600" mb={1}>Descripción</Text>
+            <Textarea name="description" value={form.description} onChange={handleChange} placeholder="Describe el producto..." />
+          </Box>
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '1.5rem' }}>
-              <button onClick={handleSubmit} style={btnPrimary}
-                onMouseEnter={(e) => e.target.style.background = colors.accent}
-                onMouseLeave={(e) => e.target.style.background = colors.primary}
-              >
-                {editingId ? 'Guardar cambios' : 'Crear producto'}
-              </button>
-              {editingId && (
-                <button type="button" onClick={handleCancel} style={btnGhost}>
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {showVariantPanel && editingId && (
-          <div style={{ ...animStagger(0.02), ...cardStyle, marginTop: '1rem' }}
-          >
-            <h3 style={{ fontFamily: font.heading, fontSize: '18px', fontWeight: 700, color: colors.primary, margin: '0 0 0.5rem' }}>
-              Variantes
-            </h3>
-            <div style={sectionDivider} />
-
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'end', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '120px' }}>
-                <label style={{ ...labelStyle, fontSize: '11px' }}>Tipo</label>
-                <select style={selectStyle} name="type" value={variantForm.type} onChange={handleVariantChange}>
-                  <option value="size">Tamaño</option>
-                  <option value="flavor">Sabor</option>
-                  <option value="decoration">Decoración</option>
-                </select>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '180px' }}>
-                <label style={{ ...labelStyle, fontSize: '11px' }}>Valor *</label>
-                <input style={inputStyle} name="value" value={variantForm.value} onChange={handleVariantChange} placeholder="Ej: Grande" />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '120px' }}>
-                <label style={{ ...labelStyle, fontSize: '11px' }}>Precio extra (S/)</label>
-                <input style={inputStyle} type="number" step="0.01" name="extra_price" value={variantForm.extra_price} onChange={handleVariantChange} placeholder="0.00" />
-              </div>
-              <button onClick={handleAddVariant} style={btnSmallPrimary}
-                onMouseEnter={(e) => e.target.style.background = colors.accent}
-                onMouseLeave={(e) => e.target.style.background = colors.primary}
-              >
-                {editingVariantId ? 'Actualizar' : 'Agregar'}
-              </button>
-              {editingVariantId && (
-                <button onClick={() => { setEditingVariantId(null); setVariantForm(emptyVariant); }} style={btnSmallSecondary}>
-                  Cancelar
-                </button>
-              )}
-            </div>
-
-            {variants.length > 0 && (
-              <div style={{ overflowX: 'auto', marginTop: '1rem' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-                      <th style={tableHeaderStyle}>Tipo</th>
-                      <th style={tableHeaderStyle}>Valor</th>
-                      <th style={tableHeaderStyle}>Extra</th>
-                      <th style={tableHeaderStyle}>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {variants.map((v, i) => (
-                      <tr key={v.variant_id} style={{
-                        borderTop: `1px solid ${colors.tableBorder}`,
-                        background: i % 2 === 0 ? colors.white : colors.tableStripe,
-                      }}>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{v.type}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>{v.value}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body }}>S/ {(v.extra_price || 0).toFixed(2)}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button onClick={() => handleEditVariant(v)} style={btnGhost}>Editar</button>
-                            <button onClick={() => handleDeleteVariant(v.variant_id)} style={btnDanger}>Eliminar</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          <HStack spacing={3}>
+            <Button colorScheme="brand" onClick={handleSubmit}>
+              {editingId ? 'Guardar cambios' : 'Crear producto'}
+            </Button>
+            {editingId && (
+              <Button variant="ghost" onClick={handleCancel}>Cancelar</Button>
             )}
-            {variants.length === 0 && <p style={{ color: colors.textMuted, fontSize: '13px', marginTop: '1rem', fontFamily: font.body }}>Sin variantes aún</p>}
-          </div>
-        )}
+          </HStack>
+        </Box>
+      </Card>
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem' }}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} style={{
-                height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                backgroundSize: '200% 100%', borderRadius: '8px', marginBottom: '8px',
-                animation: 'shimmer 1.5s infinite',
-              }} />
-            ))}
-          </div>
-        ) : (
-          <div style={{ ...animStagger(0.06), ...cardStyle, marginTop: '1rem', padding: 0, overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '400px' }}>
-                <thead>
-                  <tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-                    {(isMobile ? TH_MOBILE : TH).map(h => (
-                      <th key={h} style={tableHeaderStyle}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.length === 0 ? (
-                    <tr>
-                      <td colSpan={isMobile ? 3 : 5} style={{ padding: '3rem', textAlign: 'center', color: colors.textMuted, fontFamily: font.body }}>
-                        No hay productos en esta pastelería aún
-                      </td>
-                    </tr>
-                  ) : (
-                    products.map((p, i) => {
-                      const avBadge = p.is_available
-                        ? { bg: '#e1f5ee', color: '#1D9E75', label: 'Disponible' }
-                        : { bg: '#fee2e2', color: '#ef4444', label: 'No disponible' };
-                      return (
-                        <tr
-                          key={p.id}
-                          style={{
-                            ...animStagger(i * 0.03),
-                            borderTop: `1px solid ${colors.tableBorder}`,
-                            background: i % 2 === 0 ? colors.white : colors.tableStripe,
-                            transition: 'background 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => { if (i % 2 === 0) e.currentTarget.style.background = '#f5f5f5'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
-                        >
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ fontWeight: 500, fontFamily: font.body }}>{p.name}</div>
-                            {p.description && <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '2px', fontFamily: font.body }}>{p.description.slice(0, 40)}{p.description.length > 40 ? '…' : ''}</div>}
-                          </td>
-                          <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: 500, fontFamily: font.body }}>S/ {(p.price || 0).toFixed(2)}</td>
-                          {!isMobile && <td style={{ padding: '12px 16px', fontSize: '14px', fontFamily: font.body }}>{p.stock ?? '—'}</td>}
-                          {!isMobile && (
-                            <td style={{ padding: '12px 16px' }}>
-                              <span onClick={() => handleToggleAvailability(p.id, p.is_available)}
-                                style={{
-                                  cursor: 'pointer', ...badge(avBadge.bg, avBadge.color),
-                                  transition: 'all 0.2s ease',
-                                }}>
-                                {avBadge.label}
-                              </span>
-                            </td>
-                          )}
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                              <button onClick={() => handleEdit(p)} style={btnGhost}>Editar</button>
-                              <button onClick={() => handleDelete(p.id)} style={btnDanger}>Eliminar</button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+      {showVariantPanel && editingId && (
+        <Card p={6} mt={4}>
+          <Heading fontSize="lg" fontWeight={700} color="brand.700" mb={2}>Variantes</Heading>
+          <Box h="1px" bg="warmGray.200" my={4} />
+
+          <HStack spacing={3} align="flex-end" flexWrap="wrap">
+            <Box minW="120px">
+              <Text fontSize="xs" color="warmGray.500" mb={1}>Tipo</Text>
+              <Select name="type" value={variantForm.type} onChange={handleVariantChange} size="sm">
+                <option value="size">Tamaño</option>
+                <option value="flavor">Sabor</option>
+                <option value="decoration">Decoración</option>
+              </Select>
+            </Box>
+            <Box minW="180px">
+              <Text fontSize="xs" color="warmGray.500" mb={1}>Valor *</Text>
+              <Input size="sm" name="value" value={variantForm.value} onChange={handleVariantChange} placeholder="Ej: Grande" />
+            </Box>
+            <Box minW="120px">
+              <Text fontSize="xs" color="warmGray.500" mb={1}>Precio extra (S/)</Text>
+              <Input size="sm" type="number" step="0.01" name="extra_price" value={variantForm.extra_price} onChange={handleVariantChange} placeholder="0.00" />
+            </Box>
+            <Button size="sm" colorScheme="brand" onClick={handleAddVariant}>
+              {editingVariantId ? 'Actualizar' : 'Agregar'}
+            </Button>
+            {editingVariantId && (
+              <Button size="sm" variant="ghost" onClick={() => { setEditingVariantId(null); setVariantForm(emptyVariant); }}>Cancelar</Button>
+            )}
+          </HStack>
+
+          {variants.length > 0 && (
+            <Box overflowX="auto" mt={4}>
+              <Table variant="pastel" size="sm">
+                <Thead>
+                  <Tr>
+                    <Th>Tipo</Th><Th>Valor</Th><Th>Extra</Th><Th>Acciones</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {variants.map((v) => (
+                    <Tr key={v.variant_id}>
+                      <Td fontSize="sm">{v.type}</Td>
+                      <Td fontSize="sm">{v.value}</Td>
+                      <Td fontSize="sm">S/ {(v.extra_price || 0).toFixed(2)}</Td>
+                      <Td>
+                        <HStack spacing={2}>
+                          <Button size="xs" variant="ghost" onClick={() => handleEditVariant(v)}>Editar</Button>
+                          <Button size="xs" variant="ghost" colorScheme="red" onClick={() => handleDeleteVariant(v.variant_id)}>Eliminar</Button>
+                        </HStack>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
+          {variants.length === 0 && <Text color="warmGray.400" fontSize="sm" mt={4}>Sin variantes aún</Text>}
+        </Card>
+      )}
+
+      {loading ? (
+        <Stack spacing={2} mt={4}>
+          {[1, 2, 3].map(i => <Box key={i} h="48px" bg="warmGray.100" borderRadius="lg" />)}
+        </Stack>
+      ) : (
+        <Card mt={4} p={0} overflow="hidden">
+          <Box overflowX="auto">
+            <Table variant="pastel">
+              <Thead>
+                <Tr>
+                  <Th>Nombre</Th><Th>Precio</Th>
+                  <Th display={{ base: 'none', md: 'table-cell' }}>Stock</Th>
+                  <Th display={{ base: 'none', md: 'table-cell' }}>Disponible</Th>
+                  <Th>Acciones</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {products.length === 0 ? (
+                  <Tr>
+                    <Td colSpan={5} textAlign="center" py={12} color="warmGray.400">No hay productos en esta pastelería aún</Td>
+                  </Tr>
+                ) : (
+                  products.map((p) => {
+                    const avBadge = p.is_available
+                      ? { bg: '#e1f5ee', color: '#1D9E75', label: 'Disponible' }
+                      : { bg: '#fee2e2', color: '#ef4444', label: 'No disponible' };
+                    return (
+                      <Tr key={p.id} _hover={{ bg: 'warmGray.100' }}>
+                        <Td>
+                          <Text fontWeight={500}>{p.name}</Text>
+                          {p.description && <Text fontSize="xs" color="warmGray.400">{p.description.slice(0, 40)}{p.description.length > 40 ? '…' : ''}</Text>}
+                        </Td>
+                        <Td fontWeight={500}>S/ {(p.price || 0).toFixed(2)}</Td>
+                        <Td display={{ base: 'none', md: 'table-cell' }}>{p.stock ?? '—'}</Td>
+                        <Td display={{ base: 'none', md: 'table-cell' }}>
+                          <Tag
+                            cursor="pointer"
+                            borderRadius="full"
+                            fontSize="xs"
+                            fontWeight={500}
+                            bg={avBadge.bg}
+                            color={avBadge.color}
+                            onClick={() => handleToggleAvailability(p.id, p.is_available)}
+                          >
+                            {avBadge.label}
+                          </Tag>
+                        </Td>
+                        <Td>
+                          <HStack spacing={2}>
+                            <Button size="xs" variant="ghost" onClick={() => handleEdit(p)}>Editar</Button>
+                            <Button size="xs" variant="ghost" colorScheme="red" onClick={() => handleDelete(p.id)}>Eliminar</Button>
+                          </HStack>
+                        </Td>
+                      </Tr>
+                    );
+                  })
+                )}
+              </Tbody>
+            </Table>
+          </Box>
+        </Card>
+      )}
+    </Box>
   );
 }

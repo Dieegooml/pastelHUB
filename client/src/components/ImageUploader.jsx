@@ -1,13 +1,11 @@
 import { useState, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import { Box, Flex, Text, IconButton, Progress } from '@chakra-ui/react';
 import { storageService } from '../services/storageService';
-import { colors, font } from '../styles/theme';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 const MAX_SIZE = 5 * 1024 * 1024;
-const MAX_PREVIEW_WIDTH = 1024;
-
 function ImageUploader({
   currentImageUrl = '',
   onUploadComplete,
@@ -15,7 +13,6 @@ function ImageUploader({
   label = 'Imagen',
   aspectRatio,
 }) {
-
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState(currentImageUrl || '');
@@ -91,71 +88,23 @@ function ImageUploader({
     fileInputRef.current?.click();
   }
 
-  const containerStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  };
-
-  const dropZoneStyle = {
-    position: 'relative',
-    border: `2px dashed ${dragOver ? colors.accent : colors.border}`,
-    borderRadius: '12px',
-    padding: preview ? '8px' : '24px 16px',
-    textAlign: 'center',
-    cursor: uploading ? 'default' : 'pointer',
-    background: dragOver ? '#f0faf5' : colors.grayLight,
-    transition: 'all 0.2s ease',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: preview ? 'auto' : '100px',
-    opacity: uploading ? 0.7 : 1,
-  };
-
-  const previewContainerStyle = {
-    position: 'relative',
-    width: '100%',
-    maxWidth: aspectRatio ? '100%' : '200px',
-    margin: '0 auto',
-    ...(aspectRatio ? { aspectRatio: String(aspectRatio) } : {}),
-    borderRadius: '8px',
-    overflow: 'hidden',
-  };
-
-  const overlayStyle = {
-    position: 'absolute',
-    bottom: '8px',
-    right: '8px',
-    display: 'flex',
-    gap: '6px',
-  };
-
-  const iconBtnStyle = {
-    width: '32px',
-    height: '32px',
-    borderRadius: '50%',
-    border: 'none',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '14px',
-    fontWeight: 600,
-    fontFamily: font.body,
-    transition: 'all 0.2s ease',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-  };
-
   return (
-    <div style={containerStyle}>
-      <div
-        style={dropZoneStyle}
+    <Box>
+      <Box
+        position="relative"
+        border="2px dashed"
+        borderColor={dragOver ? 'accent.400' : 'brand.200'}
+        borderRadius="xl"
+        p={preview ? 2 : 6}
+        textAlign="center"
+        cursor={uploading ? 'default' : 'pointer'}
+        bg={dragOver ? 'accent.50' : 'warmGray.50'}
+        transition="all 0.2s"
+        onClick={uploading ? undefined : handleClick}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onClick={uploading ? undefined : handleClick}
+        opacity={uploading ? 0.7 : 1}
       >
         <input
           ref={fileInputRef}
@@ -167,115 +116,111 @@ function ImageUploader({
         />
 
         {uploading && (
-          <div style={{
-            position: 'absolute', inset: 0,
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(255,255,255,0.85)',
-            borderRadius: '12px', zIndex: 2,
-          }}>
-            <div style={{
-              width: '80%', maxWidth: '240px', height: '8px',
-              background: colors.grayBg, borderRadius: '99px',
-              overflow: 'hidden', marginBottom: '8px',
-            }}>
-              <div style={{
-                width: `${progress}%`, height: '100%',
-                background: colors.accent,
-                borderRadius: '99px',
-                transition: 'width 0.3s ease',
-              }} />
-            </div>
-            <span style={{
-              fontSize: '12px', color: colors.textSecondary,
-              fontFamily: font.body, fontWeight: 500,
-            }}>
+          <Flex
+            position="absolute"
+            inset={0}
+            direction="column"
+            align="center"
+            justify="center"
+            bg="rgba(255,255,255,0.85)"
+            borderRadius="xl"
+            zIndex={2}
+          >
+            <Progress
+              value={progress}
+              w="80%"
+              maxW="240px"
+              mb={2}
+              borderRadius="full"
+              size="sm"
+              variant="brand"
+            />
+            <Text fontSize="xs" color="warmGray.600" fontWeight={500}>
               Subiendo {progress}%
-            </span>
-          </div>
+            </Text>
+          </Flex>
         )}
 
         {preview ? (
-          <div style={previewContainerStyle}>
-            <img
+          <Box
+            position="relative"
+            w="full"
+            maxW={aspectRatio ? '100%' : '200px'}
+            mx="auto"
+            {...(aspectRatio ? { aspectRatio: String(aspectRatio) } : {})}
+          >
+            <Box
+              as="img"
               src={preview}
               alt="Vista previa"
-              style={{
-                width: '100%',
-                height: aspectRatio ? '100%' : '180px',
-                objectFit: 'cover',
-                borderRadius: '8px',
-                display: 'block',
-              }}
-              onError={(e) => { e.target.style.display = 'none'; }}
+              w="full"
+              h={aspectRatio ? '100%' : '180px'}
+              objectFit="cover"
+              borderRadius="lg"
+              display="block"
+              fallback={<Box display="none" />}
             />
             {!uploading && (
-              <div style={overlayStyle}>
-                <button
-                  type="button"
+              <Flex position="absolute" bottom={2} right={2} gap={1.5}>
+                <IconButton
+                  icon={<Text fontSize="sm">↻</Text>}
+                  size="sm"
+                  borderRadius="full"
+                  bg="brand.900"
+                  color="white"
+                  _hover={{ bg: 'brand.700' }}
                   onClick={(e) => { e.stopPropagation(); handleClick(); }}
-                  style={{
-                    ...iconBtnStyle,
-                    background: colors.primary,
-                    color: '#fff',
-                  }}
-                  title="Cambiar imagen"
-                >
-                  ↻
-                </button>
-                <button
-                  type="button"
+                  aria-label="Cambiar imagen"
+                  boxShadow="0 2px 6px rgba(0,0,0,0.15)"
+                />
+                <IconButton
+                  icon={<Text fontSize="sm">✕</Text>}
+                  size="sm"
+                  borderRadius="full"
+                  bg="rose.500"
+                  color="white"
+                  _hover={{ bg: 'rose.600' }}
                   onClick={(e) => { e.stopPropagation(); handleRemove(); }}
-                  style={{
-                    ...iconBtnStyle,
-                    background: colors.error,
-                    color: '#fff',
-                  }}
-                  title="Eliminar imagen"
-                >
-                  ✕
-                </button>
-              </div>
+                  aria-label="Eliminar imagen"
+                  boxShadow="0 2px 6px rgba(0,0,0,0.15)"
+                />
+              </Flex>
             )}
-          </div>
+          </Box>
         ) : (
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', gap: '6px',
-          }}>
-            <span style={{
-              fontSize: '24px', lineHeight: 1,
-              color: colors.textSecondary,
-            }}>
+          <Flex direction="column" align="center" gap={1.5}>
+            <Text fontSize="2xl" lineHeight="1" color="warmGray.400">
               📁
-            </span>
-            <span style={{
-              fontSize: '13px', color: colors.textSecondary,
-              fontFamily: font.body, fontWeight: 500,
-            }}>
+            </Text>
+            <Text fontSize="sm" color="warmGray.500" fontWeight={500}>
               {dragOver ? 'Suelta la imagen aquí' : `Haz clic o arrastra ${label.toLowerCase()}`}
-            </span>
-            <span style={{
-              fontSize: '11px', color: colors.textMuted,
-              fontFamily: font.body,
-            }}>
+            </Text>
+            <Text fontSize="xs" color="warmGray.400">
               JPG, PNG o WebP · Máx 5MB
-            </span>
-          </div>
+            </Text>
+          </Flex>
         )}
-      </div>
+      </Box>
 
       {error && (
-        <div style={{
-          padding: '8px 12px', background: colors.errorBg,
-          color: colors.error, borderRadius: '8px',
-          fontSize: '12px', fontFamily: font.body,
-          borderLeft: `3px solid ${colors.error}`,
-        }}>
-          {error}
-        </div>
+        <Flex
+          mt={2}
+          p={2.5}
+          px={3}
+          bg="rose.50"
+          color="rose.600"
+          borderRadius="lg"
+          borderLeft="3px solid"
+          borderLeftColor="rose.400"
+          fontSize="xs"
+          align="center"
+          gap={2}
+        >
+          <Text>⚠️</Text>
+          <Text>{error}</Text>
+        </Flex>
       )}
-    </div>
+    </Box>
   );
 }
 

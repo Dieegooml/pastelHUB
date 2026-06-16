@@ -1,17 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { colors, font } from '../styles/theme';
-
-const linkStyle = {
-  fontFamily: font.body,
-  fontSize: '13px',
-  color: colors.textSecondary,
-  cursor: 'pointer',
-  background: 'none',
-  border: 'none',
-  padding: '3px 0',
-  textAlign: 'left',
-};
+import { Box, Text, VStack, Divider, Stack } from '@chakra-ui/react';
 
 export default function Footer() {
   const navigate = useNavigate();
@@ -20,78 +9,84 @@ export default function Footer() {
 
   if (['/login', '/register'].includes(location.pathname)) return null;
 
+  const linkProps = {
+    fontSize: 'sm',
+    color: 'warmGray.300',
+    cursor: 'pointer',
+    _hover: { color: 'white' },
+    transition: 'color 0.2s',
+    bg: 'none',
+    border: 'none',
+    p: 0,
+    textAlign: 'left',
+    lineHeight: 2,
+  };
+
   return (
-    <div style={{
-      background: colors.primary,
-      padding: '40px 24px 20px',
-      marginTop: '40px',
-    }}>
-      <div style={{
-        maxWidth: '960px', margin: '0 auto',
-        display: 'flex', flexWrap: 'wrap', gap: '40px',
-      }}>
-        <div style={{ flex: '1 1 200px' }}>
-          <div style={{
-            fontFamily: font.heading, fontSize: '22px',
-            fontWeight: 700, color: colors.white, marginBottom: '8px',
-          }}>PastelHub</div>
-          <p style={{
-            fontFamily: font.body, fontSize: '12px',
-            color: '#aaa', lineHeight: 1.6, margin: 0,
-          }}>
-            Las mejores pastelerías locales en un solo lugar.
-            <br />Disfruta de postres artesanales hechos con amor.
-          </p>
-        </div>
+    <Box
+      as="footer"
+      bg="brand.900"
+      px={{ base: 6, md: 12 }}
+      py={{ base: 8, md: 12 }}
+      mt="auto"
+    >
+      <Box maxW="1200px" mx="auto">
+        <Stack
+          direction={{ base: 'column', md: 'row' }}
+          spacing={{ base: 8, md: 12 }}
+          justify="space-between"
+        >
+          <Box flex="1 1 280px">
+            <Text fontFamily="heading" fontSize="2xl" fontWeight={700} color="white" mb={2}>
+              PastelHub
+            </Text>
+            <Text fontSize="sm" color="warmGray.500" lineHeight={1.7}>
+              Las mejores pastelerías locales en un solo lugar.
+              <br />Disfruta de postres artesanales hechos con amor.
+            </Text>
+          </Box>
 
-        <div style={{ flex: '1 1 150px' }}>
-          <h4 style={{
-            fontFamily: font.heading, fontSize: '15px',
-            fontWeight: 600, color: colors.white, margin: '0 0 10px',
-          }}>Navegación</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <button onClick={() => navigate('/')} style={linkStyle}>Inicio</button>
-            <button onClick={() => navigate('/cart')} style={linkStyle}>Carrito</button>
-            {user && (
-              <button onClick={() => navigate('/my-orders')} style={linkStyle}>Mis Órdenes</button>
-            )}
-          </div>
-        </div>
+          <Box>
+            <Text fontFamily="heading" fontSize="md" fontWeight={600} color="white" mb={3}>
+              Navegación
+            </Text>
+            <VStack align="flex-start" spacing={0}>
+              <Box as="button" onClick={() => navigate('/')} {...linkProps}>Inicio</Box>
+              <Box as="button" onClick={() => navigate('/cart')} {...linkProps}>Carrito</Box>
+              {user && (
+                <Box as="button" onClick={() => navigate('/my-orders')} {...linkProps}>Mis Órdenes</Box>
+              )}
+            </VStack>
+          </Box>
 
-        <div style={{ flex: '1 1 150px' }}>
-          <h4 style={{
-            fontFamily: font.heading, fontSize: '15px',
-            fontWeight: 600, color: colors.white, margin: '0 0 10px',
-          }}>Soporte</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {user ? (
-              <>
-                <button onClick={() => navigate('/support')} style={linkStyle}>Mis Tickets</button>
-                <button onClick={() => navigate('/support/new')} style={linkStyle}>Crear Ticket</button>
-              </>
-            ) : (
-              <button onClick={() => navigate('/login')} style={linkStyle}>Iniciar Sesión</button>
-            )}
-            <span style={{ ...linkStyle, cursor: 'default', color: '#777' }}>
-              {user ? `Hola, ${user.full_name || user.email?.split('@')[0] || ''}` : ''}
-            </span>
-          </div>
-        </div>
-      </div>
+          <Box>
+            <Text fontFamily="heading" fontSize="md" fontWeight={600} color="white" mb={3}>
+              Soporte
+            </Text>
+            <VStack align="flex-start" spacing={0}>
+              {user ? (
+                <>
+                  <Box as="button" onClick={() => navigate('/support')} {...linkProps}>Mis Tickets</Box>
+                  <Box as="button" onClick={() => navigate('/support/new')} {...linkProps}>Crear Ticket</Box>
+                </>
+              ) : (
+                <Box as="button" onClick={() => navigate('/login')} {...linkProps}>Iniciar Sesión</Box>
+              )}
+              {user && (
+                <Text fontSize="sm" color="warmGray.600" cursor="default">
+                  Hola, {user.full_name || user.email?.split('@')[0] || ''}
+                </Text>
+              )}
+            </VStack>
+          </Box>
+        </Stack>
 
-      <div style={{
-        maxWidth: '960px', margin: '24px auto 0',
-        borderTop: '1px solid rgba(255,255,255,0.1)',
-        paddingTop: '16px',
-        display: 'flex', justifyContent: 'center',
-      }}>
-        <span style={{
-          fontFamily: font.body, fontSize: '11px',
-          color: '#777',
-        }}>
+        <Divider borderColor="rgba(255,255,255,0.08)" my={6} />
+
+        <Text fontSize="xs" color="warmGray.600" textAlign="center">
           &copy; {new Date().getFullYear()} PastelHub. Todos los derechos reservados.
-        </span>
-      </div>
-    </div>
+        </Text>
+      </Box>
+    </Box>
   );
 }

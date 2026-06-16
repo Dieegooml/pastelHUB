@@ -1,16 +1,38 @@
+import { useState, useEffect } from 'react';
 import { Box, Flex, Text, VStack, Heading, useMediaQuery } from '@chakra-ui/react';
 import PropTypes from 'prop-types';
 import { PastelFadeIn, PastelSlideIn } from './UI';
 
-const bullets = [
-  { text: 'Múltiples pastelerías locales', icon: 'shop' },
-  { text: 'Productos personalizables', icon: 'cake' },
-  { text: 'Reseñas verificadas', icon: 'star' },
-  { text: 'Entrega rápida y segura', icon: 'truck' },
-  { text: 'Pagos 100% protegidos', icon: 'lock' },
+const testimonials = [
+  {
+    text: 'Los mejores postres artesanales los encuentro aquí. Siempre fresco y delicioso.',
+    name: 'María G.',
+    role: 'Cliente frecuente',
+  },
+  {
+    text: 'Descubrí pastelerías locales increíbles que no conocía. Todo en un solo lugar.',
+    name: 'Carlos L.',
+    role: 'Cliente verificada',
+  },
+  {
+    text: 'Pido para cada ocasión especial. Servicio puntual y calidad excepcional.',
+    name: 'Ana R.',
+    role: 'Usuario Premium',
+  },
 ];
 
-const GRADIENT_BG = 'linear-gradient(145deg, #2D1F1F 0%, #1D9E75 100%)';
+const GRADIENT_BG = 'linear-gradient(135deg, #2D1810 0%, #6B4226 50%, #2D1810 100%)';
+
+function DecorativeBackground() {
+  return (
+    <Box position="absolute" inset={0} overflow="hidden">
+      <Box position="absolute" top="-80px" right="-80px" w="400px" h="400px" borderRadius="50%" bg="radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%)" />
+      <Box position="absolute" bottom="-100px" left="-100px" w="300px" h="300px" borderRadius="50%" bg="radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%)" />
+      <Box position="absolute" top="20%" left="-60px" w="200px" h="200px" borderRadius="50%" bg="radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%)" />
+      <Box position="absolute" bottom="30%" right="-40px" w="150px" h="150px" borderRadius="50%" bg="radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)" />
+    </Box>
+  );
+}
 
 function RenderIcon({ icon }) {
   const svg = {
@@ -62,61 +84,113 @@ function RenderIcon({ icon }) {
   );
 }
 
+function TestimonialCarousel() {
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIdx((prev) => (prev + 1) % testimonials.length);
+    }, 5500);
+    return () => clearInterval(timer);
+  }, []);
+
+  const t = testimonials[idx];
+
+  return (
+    <Box
+      w="full"
+      maxW="350px"
+      bg="rgba(255,255,255,0.06)"
+      borderRadius="xl"
+      p={5}
+      backdropFilter="blur(8px)"
+      border="1px solid"
+      borderColor="rgba(255,255,255,0.08)"
+    >
+      <Text fontSize="sm" color="whiteAlpha.800" fontStyle="italic" lineHeight={1.6}>
+        &ldquo;{t.text}&rdquo;
+      </Text>
+      <Flex mt={3} align="center" gap={2}>
+        <Box w="6px" h="6px" borderRadius="full" bg="accent.400" />
+        <Text fontSize="12px" color="whiteAlpha.700" fontWeight={600}>{t.name}</Text>
+        <Text fontSize="11px" color="whiteAlpha.500">&mdash; {t.role}</Text>
+      </Flex>
+      <Flex mt={3} gap={1.5} justify="center">
+        {testimonials.map((_, i) => (
+          <Box
+            key={i}
+            w={i === idx ? '20px' : '6px'}
+            h="6px"
+            borderRadius="full"
+            bg={i === idx ? 'accent.400' : 'rgba(255,255,255,0.2)'}
+            transition="all 0.4s ease"
+            cursor="pointer"
+            onClick={() => setIdx(i)}
+          />
+        ))}
+      </Flex>
+    </Box>
+  );
+}
+
 function BrandContent({ compact }) {
   return (
     <Flex
       direction="column"
       align="center"
       justify="center"
-      p={{ base: compact ? 5 : 10, md: 12 }}
+      p={{ base: compact ? 6 : 10, md: 12 }}
       position="relative"
       overflow="hidden"
       minH={compact ? 'auto' : '100%'}
     >
-      <Box position="absolute" bottom="-40px" right="-40px" w="280px" h="280px" borderRadius="50%" bg="rgba(255,255,255,0.05)" />
-      <Box position="absolute" top="-60px" left="-60px" w="200px" h="200px" borderRadius="50%" bg="rgba(255,255,255,0.04)" />
-      <Box position="absolute" top="30%" right="-80px" w="160px" h="160px" borderRadius="50%" bg="rgba(255,255,255,0.03)" />
+      <DecorativeBackground />
 
       <Box
         as="img"
         src="/pastelHUBlogo.png"
         alt="PastelHub"
-        h={{ base: '80px', md: '120px' }}
-        mb={3}
+        h={{ base: '90px', md: '130px' }}
+        mb={4}
         fallback={
           <Box w="80px" h="80px" borderRadius="xl" bg="white" color="#2D1F1F" display="flex" alignItems="center" justifyContent="center" fontSize="40px" fontWeight={900} fontFamily="heading" mb={3}>
             P
           </Box>
         }
       />
-      <Heading fontFamily="heading" fontSize={{ base: '24px', md: '38px' }} fontWeight={700} color="white" textAlign="center" lineHeight="1.2">
+      <Heading fontFamily="heading" fontSize={{ base: '28px', md: '40px' }} fontWeight={700} color="white" textAlign="center" lineHeight="1.15">
         PastelHub
       </Heading>
-      <Text fontSize={{ base: '12px', md: '15px' }} color="rgba(255,255,255,0.6)" textAlign="center" maxW="260px" mt={2} mb={compact ? 3 : 6}>
+      <Text fontSize={{ base: '13px', md: '15px' }} color="whiteAlpha.500" textAlign="center" maxW="280px" mt={1.5} mb={compact ? 4 : 6}>
         Descubre las mejores pastelerías artesanales
       </Text>
-      <Box w="50px" h="2px" bg="rgba(255,255,255,0.3)" mb={compact ? 3 : 6} />
+
+      <Box w="50px" h="2px" bg="linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)" mb={6} />
+
+      <VStack spacing={2.5} w="full" maxW="350px">
+        {['shop', 'cake', 'star', 'truck', 'lock'].slice(0, compact ? 3 : 5).map((icon, i) => (
+          <Flex
+            key={i}
+            align="center"
+            gap={3}
+            bg="rgba(255,255,255,0.08)"
+            p="10px 16px"
+            borderRadius="lg"
+            w="full"
+            backdropFilter="blur(4px)"
+          >
+            <RenderIcon icon={icon} />
+            <Text fontSize={{ base: '12px', md: 'sm' }} color="whiteAlpha.800" fontWeight={500}>
+              {['Múltiples pastelerías locales', 'Productos personalizables', 'Reseñas verificadas', 'Entrega rápida y segura', 'Pagos 100% protegidos'][i]}
+            </Text>
+          </Flex>
+        ))}
+      </VStack>
 
       {!compact && (
-        <VStack spacing={2.5} w="full" maxW="320px">
-          {bullets.map((b, i) => (
-            <Flex
-              key={i}
-              align="center"
-              gap={3}
-              bg="rgba(255,255,255,0.08)"
-              p="10px 16px"
-              borderRadius="lg"
-              backdropFilter="blur(4px)"
-              w="full"
-            >
-              <RenderIcon icon={b.icon} />
-              <Text fontSize={{ base: '12px', md: '14px' }} color="rgba(255,255,255,0.8)" fontWeight={500}>
-                {b.text}
-              </Text>
-            </Flex>
-          ))}
-        </VStack>
+        <Box mt={6} w="full" maxW="350px">
+          <TestimonialCarousel />
+        </Box>
       )}
     </Flex>
   );
@@ -159,7 +233,7 @@ function AuthLayout({ children }) {
   return (
     <Flex minH="100vh">
       <PastelFadeIn duration={0.6}>
-        <Flex w="480px" minW="420px" bg={GRADIENT_BG} direction="column" align="center" justify="center">
+        <Flex w="45%" bg={GRADIENT_BG} direction="column" align="center" justify="center" position="relative">
           <BrandContent />
         </Flex>
       </PastelFadeIn>

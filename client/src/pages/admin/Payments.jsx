@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react';
-import Navbar from '../../components/Navbar';
+import {
+  Box, Heading, Text, Button, Select, Table, Thead, Tbody, Tr, Th, Td,
+  Tag, Alert, AlertIcon, useToast, HStack
+} from '@chakra-ui/react';
 import AdminNav from './AdminNav';
-import { colors, font, selectStyle, tableHeaderStyle, btnSmallPrimary, badge as badgeStyle, animFadeIn, animStagger } from '../../styles/theme';
+import { PastelPageHeader, PastelCard, PastelStatusBadge, PastelEmptyState, PastelSkeletonTable } from '../../components/UI';
 import { paymentsService } from '../../services/paymentsService';
 
 const STATUS_TRANSLATIONS = { pending: 'Pendiente', paid: 'Pagado', refunded: 'Reembolsado', failed: 'Fallido' };
-const STATUS_COLORS = {
-  pending: { bg: '#fff8e1', color: '#f59e0b' },
-  paid: { bg: '#e8f5e9', color: '#2e7d32' },
-  refunded: { bg: '#e3f2fd', color: '#2196f3' },
-  failed: { bg: '#fee2e2', color: '#ef4444' },
-};
 
 const formatDate = (ts) => {
   if (!ts) return '—';
@@ -21,6 +18,7 @@ const formatDate = (ts) => {
 };
 
 export default function Payments() {
+  const toast = useToast();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -28,11 +26,8 @@ export default function Payments() {
   const [statusUpdate, setStatusUpdate] = useState({});
 
   const load = async () => {
-    try {
-      setLoading(true);
-      const data = await paymentsService.getAll();
-      setPayments(data?.data || []);
-    } catch (e) { console.error(e); setError('Error al cargar pagos'); } finally { setLoading(false); }
+    try { setLoading(true); const data = await paymentsService.getAll(); setPayments(data?.data || []); }
+    catch (e) { console.error(e); setError('Error al cargar pagos'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -47,78 +42,54 @@ export default function Payments() {
     } catch (e) { console.error(e); setError('Error al actualizar'); }
   };
 
-  const badge = (statusKey) => {
-    const c = STATUS_COLORS[statusKey] || STATUS_COLORS.pending;
-    return <span style={badgeStyle(c.bg, c.color)}>{STATUS_TRANSLATIONS[statusKey] || statusKey}</span>;
-  };
-
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
-        <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '24px' }}>Pagos</h2>
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.2rem' }} />
-        <div style={{ marginBottom: '16px' }}><AdminNav /></div>
+    <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <PastelPageHeader title="Pagos" />
+      <Box mb={4}><AdminNav /></Box>
 
-        {success && <div style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
-        {error && <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
+      {success && <Alert status="success" mb={4} borderRadius="lg">{success}</Alert>}
+      {error && <Alert status="error" mb={4} borderRadius="lg">{error}</Alert>}
 
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {[1, 2, 3].map((i) => <div key={i} style={{ height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '8px', animation: 'shimmer 1.5s infinite' }} />)}
-          </div>
-        ) : (
-          <div style={{ background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
-            {payments.length === 0 ? (
-              <div style={{ padding: '60px 20px', textAlign: 'center', color: '#999', fontFamily: font.body, fontSize: '15px' }}>No hay pagos registrados</div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-                      <th style={tableHeaderStyle}>ID</th>
-                      <th style={tableHeaderStyle}>Orden</th>
-                      <th style={tableHeaderStyle}>Monto</th>
-                      <th style={tableHeaderStyle}>Método</th>
-                      <th style={tableHeaderStyle}>Estado</th>
-                      <th style={tableHeaderStyle}>Fecha</th>
-                      <th style={tableHeaderStyle}>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payments.map((p, i) => (
-                      <tr
-                        key={p.id}
-                        style={{ borderTop: `1px solid ${colors.tableBorder}`, background: i % 2 === 0 ? colors.white : colors.tableStripe, transition: 'background 0.15s ease', ...animStagger(i * 0.03) }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
-                      >
-                        <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{p.id?.slice(0, 8)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: 'monospace', color: colors.textSecondary }}>{p.orderId?.slice(0, 8) || '—'}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: 600, fontFamily: font.body, color: colors.primary }}>S/ {(p.amount || 0).toFixed(2)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: font.body, color: colors.textSecondary }}>{p.paymentMethod || '—'}</td>
-                        <td style={{ padding: '12px 16px' }}>{badge(p.paymentStatus)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '12px', fontFamily: font.body, color: colors.textSecondary }}>{formatDate(p.createdAt)}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            <select style={{ ...selectStyle, height: '32px', padding: '0 8px', fontSize: '11px', width: '100px' }} value={statusUpdate[p.id] || ''} onChange={(e) => setStatusUpdate((s) => ({ ...s, [p.id]: e.target.value }))}>
-                              <option value="">—</option>
-                              {Object.keys(STATUS_TRANSLATIONS).map((s) => (
-                                <option key={s} value={s}>{STATUS_TRANSLATIONS[s]}</option>
-                              ))}
-                            </select>
-                            <button onClick={() => handleStatus(p.id)} style={btnSmallPrimary}>OK</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+      {loading ? (
+        <PastelSkeletonTable rows={5} cols={7} />
+      ) : (
+        <PastelCard p={0} overflow="hidden">
+          {payments.length === 0 ? (
+            <PastelEmptyState icon="💳" title="No hay pagos registrados" />
+          ) : (
+            <Box overflowX="auto">
+              <Table variant="pastel">
+                <Thead>
+                  <Tr><Th>ID</Th><Th>Orden</Th><Th>Monto</Th><Th>Método</Th><Th>Estado</Th><Th>Fecha</Th><Th>Acciones</Th></Tr>
+                </Thead>
+                <Tbody>
+                  {payments.map((p) => (
+                    <Tr key={p.id} _hover={{ bg: 'warmGray.100' }}>
+                      <Td fontFamily="mono" fontSize="xs" color="warmGray.500">{p.id?.slice(0, 8)}</Td>
+                      <Td fontFamily="mono" fontSize="xs" color="warmGray.500">{p.orderId?.slice(0, 8) || '—'}</Td>
+                      <Td fontSize="sm" fontWeight={600} color="brand.700">S/ {(p.amount || 0).toFixed(2)}</Td>
+                      <Td fontSize="sm" color="warmGray.500">{p.paymentMethod || '—'}</Td>
+                      <Td><PastelStatusBadge status={p.paymentStatus} /></Td>
+                      <Td fontSize="sm" color="warmGray.500">{formatDate(p.createdAt)}</Td>
+                      <Td>
+                        <HStack spacing={2}>
+                          <Select size="sm" w="100px" value={statusUpdate[p.id] || ''} onChange={(e) => setStatusUpdate((s) => ({ ...s, [p.id]: e.target.value }))}>
+                            <option value="">—</option>
+                            {Object.keys(STATUS_TRANSLATIONS).map((s) => (
+                              <option key={s} value={s}>{STATUS_TRANSLATIONS[s]}</option>
+                            ))}
+                          </Select>
+                          <Button size="xs" colorScheme="brand" onClick={() => handleStatus(p.id)}>OK</Button>
+                        </HStack>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
+        </PastelCard>
+      )}
+    </Box>
   );
 }

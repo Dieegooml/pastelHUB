@@ -1,18 +1,30 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { updatePassword } from 'firebase/auth';
 import { auth } from '../../config/firebase';
-import Navbar from '../../components/Navbar';
+import {
+  Box, Flex, HStack, VStack, Text, Button, Input,
+  Avatar, Tag, Badge, Checkbox,
+} from '@chakra-ui/react';
 import { useAuth } from '../../context/AuthContext';
-import { colors, font, inputStyle, btnPrimary, btnDanger, btnGhost, btnSmallPrimary, btnSmallSecondary, badge as badgeStyle, labelStyle, animFadeIn } from '../../styles/theme';
 import { usersService } from '../../services/usersService';
 import ImageUploader from '../../components/ImageUploader';
+import {
+  PastelPageHeader, PastelCard, PastelSkeletonPage,
+} from '../../components/UI';
 
 const ROLE_COLORS = {
-  admin: { bg: '#fee2e2', color: '#ef4444' },
-  moderator: { bg: '#e3f2fd', color: '#2196f3' },
-  owner: { bg: '#fff3e0', color: '#e65100' },
-  customer: { bg: '#e8f5e9', color: '#2e7d32' },
+  admin: { colorScheme: 'red' },
+  moderator: { colorScheme: 'blue' },
+  owner: { colorScheme: 'orange' },
+  customer: { colorScheme: 'green' },
+};
+
+const ROLE_LABELS = {
+  admin: 'Administrador',
+  moderator: 'Moderador',
+  owner: 'Dueño',
+  customer: 'Cliente',
 };
 
 function AddressForm({ initial, onSave, onCancel }) {
@@ -30,31 +42,21 @@ function AddressForm({ initial, onSave, onCancel }) {
   };
 
   return (
-    <div style={{ background: colors.grayLight, borderRadius: '10px', padding: '16px', marginTop: '8px' }}>
-      <label style={labelStyle}>Calle / Dirección</label>
-      <input style={{ ...inputStyle, height: '40px', fontSize: '13px', marginBottom: '10px' }} value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Av. Principal 123" />
-      <label style={labelStyle}>Ciudad</label>
-      <input style={{ ...inputStyle, height: '40px', fontSize: '13px', marginBottom: '10px' }} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lima" />
-      <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-        <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />
-        Dirección por defecto
-      </label>
-      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-        <button onClick={handleSubmit} disabled={saving || !street || !city} style={{ ...btnSmallPrimary, opacity: saving || !street || !city ? 0.6 : 1 }}>{saving ? '...' : 'Guardar'}</button>
-        <button onClick={onCancel} style={btnSmallSecondary}>Cancelar</button>
-      </div>
-    </div>
-  );
-}
-
-function SkeletonBlock({ height, width, mb }) {
-  return (
-    <div style={{
-      height: height || '16px', width: width || '100%',
-      background: '#e0e0e0', borderRadius: '6px', marginBottom: mb || '12px',
-      animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%',
-      backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-    }} />
+    <Box bg="warmGray.100" borderRadius="lg" p={4} mt={2}>
+      <Text fontSize="xs" fontWeight={600} color="warmGray.600" fontFamily="body" mb={1}>Calle / Dirección</Text>
+      <Input size="sm" fontSize="xs" mb={2.5} value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Av. Principal 123" />
+      <Text fontSize="xs" fontWeight={600} color="warmGray.600" fontFamily="body" mb={1}>Ciudad</Text>
+      <Input size="sm" fontSize="xs" mb={2.5} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lima" />
+      <Checkbox isChecked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} size="sm" colorScheme="brand" mb={2}>
+        <Text fontSize="xs">Dirección por defecto</Text>
+      </Checkbox>
+      <HStack spacing={2} mt={3}>
+        <Button size="sm" variant="primary" onClick={handleSubmit} isLoading={saving} isDisabled={!street || !city}>
+          Guardar
+        </Button>
+        <Button size="sm" variant="secondary" onClick={onCancel}>Cancelar</Button>
+      </HStack>
+    </Box>
   );
 }
 
@@ -186,187 +188,150 @@ export default function Profile() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div
-        style={{ ...animFadeIn, maxWidth: '600px', margin: '0 auto', padding: '40px 2rem 2rem' }}
-      >
-        <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '24px' }}>Mi Perfil</h2>
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.5rem' }} />
+    <Box maxW="600px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <PastelPageHeader title="Mi Perfil" icon="👤" />
 
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#e0e0e0', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <SkeletonBlock height="18px" width="50%" mb="8px" />
-                  <SkeletonBlock height="13px" width="35%" mb="0" />
-                </div>
-              </div>
-              <SkeletonBlock height="80px" mb="12px" />
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <SkeletonBlock height="22px" width="80px" mb="0" />
-                <SkeletonBlock height="22px" width="60px" mb="0" />
-              </div>
-            </div>
-            <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-              <SkeletonBlock height="16px" width="40%" mb="16px" />
-              <SkeletonBlock height="42px" mb="14px" />
-              <SkeletonBlock height="42px" mb="0" />
-            </div>
-            <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-              <SkeletonBlock height="16px" width="30%" mb="16px" />
-              <SkeletonBlock height="14px" width="80%" mb="0" />
-            </div>
-          </div>
-        ) : (
-          <>
-        {error && <div style={{ background: colors.errorBg, color: colors.error, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.error}` }}>{error}</div>}
-        {success && <div style={{ background: colors.successBg, color: colors.success, padding: '12px 16px', borderRadius: '10px', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body, borderLeft: `4px solid ${colors.success}` }}>{success}</div>}
-
-        {/* ── Avatar / Identidad ── */}
-        <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-            {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt="Foto de perfil"
-                style={{
-                  width: '56px', height: '56px', borderRadius: '50%',
-                  objectFit: 'cover', border: `2px solid ${colors.border}`,
-                }}
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
-            ) : (
-              <div style={{
-                width: '56px', height: '56px', borderRadius: '50%',
-                background: colors.primary, color: '#fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '24px', fontWeight: 700, fontFamily: font.heading,
-                flexShrink: 0,
-              }}>
-                {user?.email?.charAt(0).toUpperCase() || '?'}
-              </div>
-            )}
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '18px', fontWeight: 600, fontFamily: font.body, color: colors.text }}>{fullName || user?.displayName || 'Sin nombre'}</div>
-              <div style={{ fontSize: '13px', color: colors.textSecondary, fontFamily: font.body }}>{user?.email}</div>
-            </div>
-          </div>
-          <div style={{ marginBottom: '12px' }}>
-            <ImageUploader
-              folder="profiles"
-              currentImageUrl={photoUrl}
-              onUploadComplete={handlePhotoUpload}
-              label="Foto de perfil"
-              aspectRatio="1/1"
-            />
-          </div>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {user?.roles?.map((role) => {
-              const rc = ROLE_COLORS[role] || { bg: '#f0f0f0', color: '#666' };
-              return (
-                <span key={role} style={badgeStyle(rc.bg, rc.color)}>
-                  {role === 'admin' ? 'Administrador' : role === 'moderator' ? 'Moderador' : role === 'owner' ? 'Dueño' : 'Cliente'}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── Información personal ── */}
-        <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '16px' }}>
-          <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '16px' }}>Información personal</h3>
-
-          <div style={{ marginBottom: '14px' }}>
-            <label style={labelStyle}>Nombre completo</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input style={{ ...inputStyle, height: '42px', fontSize: '13px', flex: 1 }} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre" />
-              <button onClick={handleSaveName} disabled={saving.name || !fullName.trim()} style={{ ...btnPrimary, padding: '0 20px', fontSize: '13px', opacity: saving.name ? 0.7 : 1 }}>
-                {saving.name ? '...' : 'Guardar'}
-              </button>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '14px' }}>
-            <label style={labelStyle}>Teléfono</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input style={{ ...inputStyle, height: '42px', fontSize: '13px', flex: 1 }} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="999 999 999" />
-              <button onClick={handleSavePhone} disabled={saving.phone} style={{ ...btnPrimary, padding: '0 20px', fontSize: '13px', opacity: saving.phone ? 0.7 : 1 }}>
-                {saving.phone ? '...' : 'Guardar'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Mis Direcciones ── */}
-        <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0 }}>Mis Direcciones</h3>
-            {!showAddressForm && !editingAddress && (
-              <button onClick={() => setShowAddressForm(true)} style={btnSmallPrimary}>+ Agregar</button>
-            )}
-          </div>
-
-          {showAddressForm && (
-            <AddressForm onSave={handleAddAddress} onCancel={() => setShowAddressForm(false)} />
+      {loading ? (
+        <PastelSkeletonPage cards={3} />
+      ) : (
+        <>
+          {error && (
+            <Box bg="rose.50" color="rose.500" p={3} borderRadius="lg" mb={4} fontSize="sm" fontFamily="body" borderLeft="4px" borderLeftColor="rose.500">
+              {error}
+            </Box>
+          )}
+          {success && (
+            <Box bg="green.50" color="green.700" p={3} borderRadius="lg" mb={4} fontSize="sm" fontFamily="body" borderLeft="4px" borderLeftColor="green.500">
+              {success}
+            </Box>
           )}
 
-          {addresses.length === 0 && !showAddressForm && (
-            <p style={{ fontFamily: font.body, fontSize: '13px', color: colors.textSecondary, margin: 0 }}>No tienes direcciones registradas.</p>
-          )}
-
-          {addresses.map((addr) => (
-            <div key={addr.address_id} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-              padding: '12px 0', borderBottom: '1px solid #f0f0f0',
-            }}>
-              {editingAddress?.address_id === addr.address_id ? (
-                <div style={{ flex: 1 }}>
-                  <AddressForm initial={addr} onSave={handleUpdateAddress} onCancel={() => setEditingAddress(null)} />
-                </div>
+          <PastelCard variant="elevated">
+            <HStack spacing={4} mb={5}>
+              {photoUrl ? (
+                <Avatar src={photoUrl} name="Foto de perfil" w="56px" h="56px" border="2px" borderColor="warmGray.300" />
               ) : (
-                <>
-                  <div>
-                    <div style={{ fontFamily: font.body, fontSize: '14px', color: colors.text, fontWeight: 500 }}>{addr.street}</div>
-                    <div style={{ fontFamily: font.body, fontSize: '12px', color: colors.textSecondary }}>{addr.city}</div>
-                    {addr.is_default && (
-                      <span style={{ ...badgeStyle('#e8f5e9', '#2e7d32'), marginTop: '4px', display: 'inline-block' }}>Por defecto</span>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                    <button onClick={() => setEditingAddress(addr)} style={btnGhost}>Editar</button>
-                    <button onClick={() => handleDeleteAddress(addr.address_id)} style={btnDanger}>Eliminar</button>
-                  </div>
-                </>
+                <Flex
+                  w="56px" h="56px" borderRadius="full"
+                  bg="brand.700" color="#fff"
+                  align="center" justify="center"
+                  fontSize="2xl" fontWeight={700} fontFamily="heading"
+                  flexShrink={0}
+                >
+                  {user?.email?.charAt(0).toUpperCase() || '?'}
+                </Flex>
               )}
-            </div>
-          ))}
-        </div>
+              <Box flex={1}>
+                <Text fontSize="md" fontWeight={600} fontFamily="body" color="warmGray.800">
+                  {fullName || user?.displayName || 'Sin nombre'}
+                </Text>
+                <Text fontSize="xs" color="warmGray.500" fontFamily="body">{user?.email}</Text>
+              </Box>
+            </HStack>
+            <Box mb={3}>
+              <ImageUploader
+                folder="profiles"
+                currentImageUrl={photoUrl}
+                onUploadComplete={handlePhotoUpload}
+                label="Foto de perfil"
+                aspectRatio="1/1"
+              />
+            </Box>
+            <HStack spacing={2} flexWrap="wrap">
+              {user?.roles?.map((role) => {
+                const rc = ROLE_COLORS[role] || { colorScheme: 'gray' };
+                return (
+                  <Tag key={role} colorScheme={rc.colorScheme} variant="subtle" borderRadius="full" size="sm">
+                    {ROLE_LABELS[role] || role}
+                  </Tag>
+                );
+              })}
+            </HStack>
+          </PastelCard>
 
-        {/* ── Seguridad ── */}
-        <div style={{ background: colors.white, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef', marginBottom: '16px' }}>
-          <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '16px' }}>Seguridad</h3>
-          <div>
-            <label style={labelStyle}>Nueva contraseña</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input style={{ ...inputStyle, height: '42px', fontSize: '13px', flex: 1 }} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••" />
-              <button onClick={handleUpdatePassword} style={{ ...btnPrimary, padding: '0 20px', fontSize: '13px' }}>Actualizar</button>
-            </div>
-          </div>
-        </div>
+          <PastelCard title="Información personal" variant="elevated">
+            <Box mb={3.5}>
+              <Text fontSize="xs" fontWeight={600} color="warmGray.600" fontFamily="body" mb={1}>Nombre completo</Text>
+              <HStack spacing={2}>
+                <Input size="sm" fontSize="xs" flex={1} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre" />
+                <Button size="sm" variant="primary" onClick={handleSaveName} isLoading={saving.name} isDisabled={!fullName.trim()}>
+                  Guardar
+                </Button>
+              </HStack>
+            </Box>
+            <Box>
+              <Text fontSize="xs" fontWeight={600} color="warmGray.600" fontFamily="body" mb={1}>Teléfono</Text>
+              <HStack spacing={2}>
+                <Input size="sm" fontSize="xs" flex={1} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="999 999 999" />
+                <Button size="sm" variant="primary" onClick={handleSavePhone} isLoading={saving.phone}>
+                  Guardar
+                </Button>
+              </HStack>
+            </Box>
+          </PastelCard>
 
-        {user?.roles?.includes('owner') && (
-          <div style={{ background: colors.white, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #efefef' }}>
-            <h3 style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 600, color: colors.primary, margin: 0, marginBottom: '8px' }}>Dueño de pastelería</h3>
-            <p style={{ fontFamily: font.body, fontSize: '13px', color: colors.textSecondary, margin: '0 0 12px' }}>Administra tus pastelerías, productos y órdenes desde el panel de dueño.</p>
-            <button onClick={() => navigate('/owner')} style={btnPrimary}>Ir al panel de dueño</button>
-          </div>
-        )}
-          </>
-        )}
-      </div>
-    </div>
+          <PastelCard title="Mis Direcciones" variant="elevated"
+            action={!showAddressForm && !editingAddress && (
+              <Button size="sm" variant="primary" onClick={() => setShowAddressForm(true)}>+ Agregar</Button>
+            )}
+          >
+            {showAddressForm && (
+              <AddressForm onSave={handleAddAddress} onCancel={() => setShowAddressForm(false)} />
+            )}
+
+            {addresses.length === 0 && !showAddressForm && (
+              <Text fontFamily="body" fontSize="xs" color="warmGray.500">No tienes direcciones registradas.</Text>
+            )}
+
+            {addresses.map((addr) => (
+              <Box key={addr.address_id}>
+                <Flex justify="space-between" align="flex-start" py={3} borderBottom="1px" borderColor="warmGray.100">
+                  {editingAddress?.address_id === addr.address_id ? (
+                    <Box flex={1}>
+                      <AddressForm initial={addr} onSave={handleUpdateAddress} onCancel={() => setEditingAddress(null)} />
+                    </Box>
+                  ) : (
+                    <>
+                      <Box>
+                        <Text fontSize="sm" fontFamily="body" color="warmGray.800" fontWeight={500}>{addr.street}</Text>
+                        <Text fontSize="xs" fontFamily="body" color="warmGray.500">{addr.city}</Text>
+                        {addr.is_default && (
+                          <Badge colorScheme="green" variant="subtle" borderRadius="full" size="sm" mt={1}>
+                            Por defecto
+                          </Badge>
+                        )}
+                      </Box>
+                      <HStack spacing={2} flexShrink={0}>
+                        <Button size="xs" variant="ghost" onClick={() => setEditingAddress(addr)}>Editar</Button>
+                        <Button size="xs" variant="danger" onClick={() => handleDeleteAddress(addr.address_id)}>Eliminar</Button>
+                      </HStack>
+                    </>
+                  )}
+                </Flex>
+              </Box>
+            ))}
+          </PastelCard>
+
+          <PastelCard title="Seguridad" variant="elevated">
+            <Box>
+              <Text fontSize="xs" fontWeight={600} color="warmGray.600" fontFamily="body" mb={1}>Nueva contraseña</Text>
+              <HStack spacing={2}>
+                <Input size="sm" fontSize="xs" flex={1} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••" />
+                <Button size="sm" variant="primary" onClick={handleUpdatePassword}>Actualizar</Button>
+              </HStack>
+            </Box>
+          </PastelCard>
+
+          {user?.roles?.includes('owner') && (
+            <PastelCard title="Dueño de pastelería" variant="elevated">
+              <Text fontFamily="body" fontSize="xs" color="warmGray.500" mb={3}>
+                Administra tus pastelerías, productos y órdenes desde el panel de dueño.
+              </Text>
+              <Button variant="primary" onClick={() => navigate('/owner')}>Ir al panel de dueño</Button>
+            </PastelCard>
+          )}
+        </>
+      )}
+    </Box>
   );
 }

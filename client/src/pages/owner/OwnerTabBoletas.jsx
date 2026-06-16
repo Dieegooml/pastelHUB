@@ -1,119 +1,121 @@
-import { useEffect, useState, useMemo } from 'react';
-import { colors, font, badge as badgeStyle, animStagger, animFadeIn } from '../../styles/theme';
+import { useEffect, useState } from 'react';
+import {
+  Box, Flex, Text, Button, Select, Card, HStack, Tag, Table, Thead, Tbody, Tr, Th, Td, useToast
+} from '@chakra-ui/react';
+import { ordersService } from '../../services/ordersService';
 import { invoicesService } from '../../services/invoicesService';
+import { formatDate, STATUS_TRANSLATIONS } from './ownerConstants';
 import PropTypes from 'prop-types';
 
-const STATUS_COLORS = { issued: { bg: '#e8f5e9', color: '#2e7d32' }, cancelled: { bg: '#fee2e2', color: '#ef4444' } };
-const STATUS_TRANS = { issued: 'Emitida', cancelled: 'Anulada' };
-
-const formatDate = (ts) => {
-  if (!ts) return '—';
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) return '—';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-};
-
 export default function OwnerTabBoletas({ selectedShop, setError, setSuccess }) {
+  const toast = useToast();
   const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
-  const [downloading, setDownloading] = useState(null);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
     if (!selectedShop?.id) return;
-    const load = async () => {
-      try {
-        const res = await invoicesService.getByShop(selectedShop.id);
-        setInvoices(Array.isArray(res) ? res : res?.data || []);
-      } catch (e) {
-        setError(e.response?.data?.error || 'Error al cargar boletas');
-      } finally { setLoading(false); }
-    };
-    load();
-  }, [selectedShop?.id]);
+    setInvoicesLoading(true);
+    invoicesService.getByShop(selectedShop.id)
+      .then((res) => setInvoices(Array.isArray(res) ? res : res?.data || []))
+      .catch((e) => console.error(e))
+      .finally(() => setInvoicesLoading(false));
+  }, [selectedShop]);
 
-  const filtered = useMemo(() => {
-    if (filter === 'all') return invoices;
-    return invoices.filter((i) => i.status === filter);
-  }, [invoices, filter]);
+  const filteredInvoices = statusFilter ? invoices.filter((inv) => inv.status === statusFilter) : invoices;
 
-  const handleDownload = async (id) => {
-    setDownloading(id);
+  const handleDownload = async (invoice) => {
     try {
-      await invoicesService.downloadPdf(id);
-    } catch (err) {
-      setError(err.message || 'Error al descargar PDF');
-    } finally {
-      setDownloading(null);
+      const blob = await invoicesService.download(invoice.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `boleta-${invoice.invoice_number || invoice.id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      setError('Error al descargar boleta');
     }
   };
 
-  const badge = (status) => {
-    const c = STATUS_COLORS[status] || STATUS_COLORS.issued;
-    return <span style={badgeStyle(c.bg, c.color)}>{STATUS_TRANS[status] || status}</span>;
+  const handleRegenerate = async (invoice) => {
+    try {
+      await invoicesService.regenerate(invoice.id);
+      const res = await invoicesService.getByShop(selectedShop.id);
+      setInvoices(Array.isArray(res) ? res : res?.data || []);
+      setSuccess('Boleta regenerada');
+    } catch (e) {
+      console.error(e);
+      setError('Error al regenerar boleta');
+    }
   };
 
-  if (loading) {
-    return <div style={{ padding: '20px', textAlign: 'center', color: colors.textMuted, fontFamily: font.body }}>Cargando boletas...</div>;
-  }
-
   return (
-    <div style={{ ...animFadeIn }}>
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
-        {['all', 'issued', 'cancelled'].map((s) => (
-          <button key={s} onClick={() => setFilter(s)} style={{
-            padding: '5px 14px', borderRadius: '99px', border: 'none', cursor: 'pointer',
-            fontSize: '12px', fontWeight: 500, fontFamily: font.body,
-            background: filter === s ? colors.primary : colors.white,
-            color: filter === s ? '#fff' : colors.textSecondary,
-            border: filter === s ? 'none' : `1px solid ${colors.border}`,
-            transition: 'all 0.2s ease',
-          }}>{s === 'all' ? 'Todas' : STATUS_TRANS[s]}</button>
-        ))}
-      </div>
+    <Box>
+      <Flex justify="space-between" align="center" mb={4}>
+        <Text fontSize="sm" color="warmGray.400">{filteredInvoices.length} boletas</Text>
+        <Select size="sm" w="200px" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="">Todas</option>
+          <option value="paid">Pagadas</option>
+          <option value="pending">Pendientes</option>
+          <option value="cancelled">Anuladas</option>
+        </Select>
+      </Flex>
 
-      {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#999', fontFamily: font.body, fontSize: '14px' }}>
-          No hay boletas para esta pastelería
-        </div>
+      {invoicesLoading ? (
+        <Card p={10}><Text textAlign="center" color="warmGray.400">Cargando boletas...</Text></Card>
+      ) : filteredInvoices.length === 0 ? (
+        <Card p={10}>
+          <Text textAlign="center" color="warmGray.400" fontSize="sm">
+            {statusFilter ? 'No hay boletas con ese estado.' : 'No hay boletas generadas todavía.'}
+          </Text>
+        </Card>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {filtered.map((inv, i) => (
-            <div key={inv.id} style={{
-                ...animStagger(i * 0.03),
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '14px 18px', background: colors.white, borderRadius: '10px',
-                border: `1px solid ${colors.border}`, transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = colors.accent; }}
-              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = colors.border; }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ fontFamily: 'monospace', fontSize: '13px', fontWeight: 700, color: colors.accent }}>{inv.invoiceNumber}</span>
-                  <span style={{ fontFamily: font.body, fontSize: '13px', color: colors.text, fontWeight: 500 }}>{inv.customerName}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontFamily: font.body, fontSize: '12px', color: colors.textMuted }}>{formatDate(inv.issueDate)}</span>
-                  <span style={{ fontFamily: font.heading, fontSize: '15px', fontWeight: 700, color: colors.primary }}>S/ {(inv.total || 0).toFixed(2)}</span>
-                  {badge(inv.status)}
-                </div>
-              </div>
-              {inv.status === 'issued' && (
-                <button onClick={() => handleDownload(inv.id)} disabled={downloading === inv.id} style={{
-                  padding: '6px 14px', background: colors.accent, color: '#fff', border: 'none',
-                  borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: font.body,
-                  opacity: downloading === inv.id ? 0.6 : 1,
-                }}>
-                  {downloading === inv.id ? '...' : 'PDF'}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+        <Card p={0} overflow="hidden">
+          <Box overflowX="auto">
+            <Table variant="pastel">
+              <Thead>
+                <Tr>
+                  <Th># Boleta</Th>
+                  <Th>Orden</Th>
+                  <Th>Cliente</Th>
+                  <Th>Total</Th>
+                  <Th>Estado</Th>
+                  <Th>Fecha</Th>
+                  <Th>Acciones</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {filteredInvoices.map((inv) => (
+                  <Tr key={inv.id} _hover={{ bg: 'warmGray.100' }}>
+                    <Td fontSize="sm" fontWeight={600} fontFamily="heading" color="brand.700">
+                      {inv.invoice_number || inv.id.slice(0, 8)}
+                    </Td>
+                    <Td fontSize="sm">{inv.order_id?.slice(0, 8) || `#${inv.order_number || '—'}`}</Td>
+                    <Td fontSize="sm">{inv.customer_name || '—'}</Td>
+                    <Td fontSize="sm" fontWeight={600} color="accent.500">S/ {(inv.total || 0).toFixed(2)}</Td>
+                    <Td fontSize="sm">
+                      <Tag bg={inv.status === 'paid' ? '#d1fae5' : inv.status === 'pending' ? '#fef3c7' : '#fee2e2'}
+                        color={inv.status === 'paid' ? '#1D9E75' : inv.status === 'pending' ? '#d97706' : '#ef4444'} borderRadius="full" fontSize="xs" fontWeight={500}>
+                        {STATUS_TRANSLATIONS[inv.status] || inv.status}
+                      </Tag>
+                    </Td>
+                    <Td fontSize="sm" color="warmGray.500">{inv.date ? formatDate(inv.date) : formatDate(inv.created_at)}</Td>
+                    <Td>
+                      <HStack spacing={2}>
+                        <Button size="xs" variant="ghost" onClick={() => handleDownload(inv)}>Descargar</Button>
+                        <Button size="xs" variant="ghost" onClick={() => handleRegenerate(inv)}>Regenerar</Button>
+                      </HStack>
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </Box>
+        </Card>
       )}
-    </div>
+    </Box>
   );
 }
 

@@ -1,63 +1,20 @@
 import { useEffect, useState, Fragment } from 'react';
+import {
+  Box, Flex, Heading, Text, Button, Select, Table, Thead, Tbody, Tr, Th, Td,
+  Tag, Alert, AlertIcon, useToast, Input, HStack, SimpleGrid
+} from '@chakra-ui/react';
+import AdminNav from './AdminNav';
+import { PastelPageHeader, PastelCard, PastelStatusBadge, PastelEmptyState, PastelFilterBar, PastelSkeletonTable } from '../../components/UI';
 import { ordersService } from '../../services/ordersService';
 import { reviewsService } from '../../services/reviewsService';
-import Navbar from '../../components/Navbar';
-import AdminNav from './AdminNav';
-import { colors, font, inputStyle, selectStyle, badge as themeBadge, tableHeaderStyle, btnSmallPrimary, btnDanger, animStagger, animFadeIn, animFadeInLeft } from '../../styles/theme';
-import { useIsMobile } from '../../styles/useIsMobile';
 
 const STATUSES = ['all', 'pending', 'confirmed', 'preparing', 'on_the_way', 'delivered', 'cancelled'];
 const PAYMENT_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
 
 const STATUS_TRANSLATIONS = {
-  pending: 'Pendiente',
-  confirmed: 'Confirmado',
-  preparing: 'Preparando',
-  on_the_way: 'En camino',
-  delivered: 'Entregado',
-  cancelled: 'Cancelado',
+  pending: 'Pendiente', confirmed: 'Confirmado', preparing: 'Preparando',
+  on_the_way: 'En camino', delivered: 'Entregado', cancelled: 'Cancelado',
 };
-
-const STATUS_COLORS = {
-  pending:    { bg: '#fff8e1', color: '#f59e0b' },
-  confirmed:  { bg: '#e1f5ee', color: '#1D9E75' },
-  preparing:  { bg: '#e3f2fd', color: '#2196f3' },
-  on_the_way: { bg: '#e3f2fd', color: '#1565C0' },
-  delivered:  { bg: '#e8f5e9', color: '#2e7d32' },
-  cancelled:  { bg: '#fee2e2', color: '#ef4444' },
-};
-
-const STATUS_ICONS = {
-  pending:    '⏳', confirmed: '✅', preparing: '👨‍🍳',
-  on_the_way: '🚚', delivered: '📦', cancelled: '❌',
-};
-
-const FILTER_ACTIVE_STYLES = {
-  all:        { bg: colors.primary, text: '#fff', border: 'none' },
-  pending:    { bg: '#fff8e1', text: '#f57f17', border: '#f57f17' },
-  confirmed:  { bg: '#e8f5e9', text: '#2e7d32', border: '#2e7d32' },
-  preparing:  { bg: '#e3f2fd', text: '#1565c0', border: '#1565c0' },
-  on_the_way: { bg: '#fff3e0', text: '#e65100', border: '#e65100' },
-  delivered:  { bg: '#e8f5e9', text: '#1b5e20', border: '#1b5e20' },
-  cancelled:  { bg: '#fce4ec', text: '#c62828', border: '#c62828' },
-};
-
-const filterTabStyle = (statusKey, active) => {
-  const base = {
-    padding: '6px 14px', borderRadius: '20px', cursor: 'pointer',
-    fontSize: '13px', fontWeight: 500, fontFamily: font.body,
-    border: '1px solid #ddd', color: '#666', background: 'transparent',
-    transition: 'all 0.2s ease',
-  };
-  if (active) {
-    const s = FILTER_ACTIVE_STYLES[statusKey] || FILTER_ACTIVE_STYLES.all;
-    return { ...base, background: s.bg, color: s.text, border: s.border !== 'none' ? `1px solid ${s.border}` : 'none' };
-  }
-  return base;
-};
-
-const smallInput = { ...inputStyle, height: '36px', padding: '0 12px', fontSize: '13px' };
-const smallSelect = { ...selectStyle, height: '36px', padding: '0 12px', fontSize: '13px' };
 
 const formatDate = (ts) => {
   if (!ts) return '—';
@@ -67,12 +24,8 @@ const formatDate = (ts) => {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-const cellStyle = { padding: '12px 16px' };
-const tdText = (size = '14px', extra = {}) => ({ ...cellStyle, fontSize: size, fontFamily: font.body, ...extra });
-const tdMono = (extra = {}) => ({ ...cellStyle, fontSize: '12px', color: colors.textSecondary, fontFamily: 'monospace', ...extra });
-
 export default function Orders() {
-  const isMobile = useIsMobile(768);
+  const toast = useToast();
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -80,9 +33,6 @@ export default function Orders() {
   const [success, setSuccess] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
-  const HEADERS = isMobile
-    ? ['ID', 'Cliente', 'Total', 'Estado', '']
-    : ['ID', 'Fecha', 'Cliente', 'Pastelería', 'Total', 'Estado', 'Pago', 'Acciones'];
 
   const [newStatus, setNewStatus] = useState({});
   const [newPaymentStatus, setNewPaymentStatus] = useState({});
@@ -149,10 +99,7 @@ export default function Orders() {
   const handleReplyReview = async (id) => {
     if (!replyForm[id]) return;
     const review = reviewMap[id];
-    if (!review?.id) {
-      setError('No se encontró la reseña para responder');
-      return;
-    }
+    if (!review?.id) { setError('No se encontró la reseña para responder'); return; }
     try {
       const updated = await reviewsService.reply(review.id, replyForm[id]);
       setReplyForm((p) => ({ ...p, [id]: '' }));
@@ -166,24 +113,16 @@ export default function Orders() {
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar esta orden?')) return;
-    try {
-      await ordersService.delete(id);
-      setSuccess('Orden eliminada');
-      loadOrders();
-    } catch (e) {
-      console.error(e);
-      setError('Error al eliminar la orden');
-    }
+    try { await ordersService.delete(id); setSuccess('Orden eliminada'); loadOrders(); }
+    catch (e) { console.error(e); setError('Error al eliminar la orden'); }
   };
 
   const toggleExpand = async (id) => {
     if (expandedId === id) { setExpandedId(null); return; }
     setExpandedId(id);
     if (!reviewMap[id]) {
-      try {
-        const review = await reviewsService.getByOrder(id);
-        setReviewMap((p) => ({ ...p, [id]: review }));
-      } catch (e) { console.error(e); } // no review yet
+      try { const review = await reviewsService.getByOrder(id); setReviewMap((p) => ({ ...p, [id]: review })); }
+      catch (e) { console.error(e); }
     }
   };
 
@@ -193,319 +132,204 @@ export default function Orders() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const statusBadge = (statusKey) => {
-    const c = STATUS_COLORS[statusKey] || STATUS_COLORS.pending;
-    return (
-      <span style={{ ...themeBadge(c.bg, c.color), padding: '3px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        {STATUS_ICONS[statusKey] && <span>{STATUS_ICONS[statusKey]}</span>}
-        {STATUS_TRANSLATIONS[statusKey] || statusKey}
-      </span>
-    );
-  };
+  const filterOptions = STATUSES.map((s) => ({
+    value: s,
+    label: s === 'all' ? 'Todas' : STATUS_TRANSLATIONS[s],
+  }));
 
   const paymentBadge = (ps) => {
-    const c = STATUS_COLORS[ps] || STATUS_COLORS.pending;
-    return (
-      <span style={{ ...themeBadge(c.bg, c.color), padding: '3px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        {ps === 'paid' ? '💳' : '⏳'}
-        {ps === 'paid' ? 'Pagado' : ps === 'refunded' ? 'Reembolsado' : ps === 'failed' ? 'Fallido' : 'Pendiente'}
-      </span>
-    );
-  };
-
-  const idLabel = (raw) => {
-    if (!raw) return <span style={{ color: '#999' }}>—</span>;
-    return <span title={raw}>{raw.slice(0, 8)}…</span>;
+    return <PastelStatusBadge status={ps} />;
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div style={{ ...animFadeIn, maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem 1rem 2rem' : '40px 2rem 2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '24px', flexWrap: 'wrap' }}>
-          <h2 style={{ fontFamily: font.heading, fontSize: isMobile ? '22px' : '28px', fontWeight: 700, color: colors.primary, margin: 0 }}>
-            Órdenes
-          </h2>
-          <span style={{
-            background: '#f0f0f0', color: orders.length > 0 ? colors.primary : '#666',
-            padding: '2px 10px', borderRadius: '12px', fontSize: '13px', fontWeight: 500,
-            fontFamily: font.body, marginLeft: '10px',
-          }}>
-            {orders.length}
-          </span>
-        </div>
+    <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <PastelPageHeader
+        title="Órdenes"
+        actions={
+          <Tag bg="warmGray.100" color={orders.length > 0 ? 'brand.700' : 'warmGray.500'} borderRadius="full" fontSize="sm" fontWeight={500}>{orders.length}</Tag>
+        }
+      />
+      <Box mb={4}><AdminNav /></Box>
 
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '24px' }} />
+      {success && <Alert status="success" mb={4} borderRadius="lg">{success}</Alert>}
+      {error && <Alert status="error" mb={4} borderRadius="lg">{error}</Alert>}
 
-        <div style={{ marginBottom: '16px' }}><AdminNav /></div>
+      <PastelFilterBar options={filterOptions} active={filter} onChange={setFilter} />
 
-        {success && (
-          <div style={{ ...animFadeInLeft, background: colors.successBg, color: colors.success, padding: '12px 16px',
-            borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
-            borderLeft: `4px solid ${colors.success}`,
-          }}>
-            {success}
-          </div>
-        )}
-        {error && (
-          <div style={{ ...animFadeInLeft, background: colors.errorBg, color: colors.error, padding: '12px 16px',
-            borderRadius: '10px', marginTop: '1rem', marginBottom: '1rem', fontSize: '14px', fontFamily: font.body,
-            borderLeft: `4px solid ${colors.error}`,
-          }}>
-            {error}
-          </div>
-        )}
-
-        <div style={{ ...animFadeIn, display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          {STATUSES.map((s) => (
-            <button
-              key={s}
-              onClick={() => setFilter(s)}
-              style={filterTabStyle(s, filter === s)}
-              onMouseEnter={(e) => { if (filter !== s) e.currentTarget.style.background = '#f5f5f5'; }}
-              onMouseLeave={(e) => { if (filter !== s) e.currentTarget.style.background = 'transparent'; }}
-            >
-              {s === 'all' ? 'Todas' : STATUS_TRANSLATIONS[s]}
-            </button>
-          ))}
-        </div>
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem' }}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} style={{
-                height: '48px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                backgroundSize: '200% 100%', borderRadius: '8px', marginBottom: '8px',
-                animation: 'shimmer 1.5s infinite',
-              }} />
-            ))}
-          </div>
-        ) : (
-          <div style={{ ...animStagger(0.04), background: colors.white, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #efefef' }}>
-            {orders.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', gap: '12px' }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-                  <rect x="9" y="3" width="6" height="4" rx="1"/>
-                  <path d="M9 14l2 2 4-4"/>
-                </svg>
-                <p style={{ color: '#999', fontSize: '15px', margin: 0, fontFamily: font.body }}>
-                  {filter === 'all' ? 'No hay órdenes que mostrar' : `No hay órdenes con estado "${STATUS_TRANSLATIONS[filter] || filter}"`}
-                </p>
-                <p style={{ color: '#bbb', fontSize: '13px', margin: 0, fontFamily: font.body }}>
-                  {filter === 'all' ? 'Aún no se han registrado órdenes en el sistema' : 'Intenta cambiar el filtro para ver más resultados'}
-                </p>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: colors.grayLight, textAlign: 'left' }}>
-                      {HEADERS.map((h) => (
-                        <th key={h} style={tableHeaderStyle}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.map((o, i) => {
-                      const sc = STATUS_COLORS[o.status] || STATUS_COLORS.pending;
-                      const ps = o.payment?.status || 'pending';
-                      const expanded = expandedId === o.id;
-                      return (
-                        <Fragment key={o.id}>
-                          <tr
-                            style={{
-                              ...animStagger(i * 0.03),
-                              borderTop: `1px solid ${colors.tableBorder}`,
-                              background: i % 2 === 0 ? colors.white : colors.tableStripe,
-                              cursor: 'pointer', transition: 'background 0.15s ease',
-                            }}
-                            onClick={() => toggleExpand(o.id)}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = '#f0ede8'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableStripe; }}
-                          >
-                            <td style={tdMono()}>
-                              {o.id.slice(0, 8)}…
-                              <span
-                                onClick={(e) => { e.stopPropagation(); handleCopy(o.id); }}
-                                style={{ cursor: 'pointer', marginLeft: '4px', position: 'relative', userSelect: 'none' }}
-                                title="Copiar ID"
-                              >
-                                📋
-                                {copiedId === o.id && (
-                                  <span style={{
-                                    position: 'absolute', left: '100%', top: '-2px', marginLeft: '4px',
-                                    background: colors.primary, color: '#fff', padding: '2px 6px',
-                                    borderRadius: '4px', fontSize: '10px', whiteSpace: 'nowrap', zIndex: 10,
-                                  }}>
-                                    Copiado!
-                                  </span>
-                                )}
-                              </span>
-                            </td>
-                            {!isMobile && (
-                              <td style={tdText('13px', { color: colors.textSecondary })} title={o.created_at ? formatDate(o.created_at) : undefined}>
-                                {formatDate(o.created_at)}
-                              </td>
+      {loading ? (
+        <PastelSkeletonTable rows={5} cols={8} />
+      ) : (
+        <PastelCard p={0} overflow="hidden">
+          {orders.length === 0 ? (
+            <PastelEmptyState
+              icon="📋"
+              title={filter === 'all' ? 'No hay órdenes que mostrar' : `No hay órdenes con estado "${STATUS_TRANSLATIONS[filter] || filter}"`}
+              description={filter === 'all' ? 'Aún no se han registrado órdenes en el sistema' : 'Intenta cambiar el filtro para ver más resultados'}
+            />
+          ) : (
+            <Box overflowX="auto">
+              <Table variant="pastel">
+                <Thead>
+                  <Tr>
+                    <Th>ID</Th>
+                    <Th display={{ base: 'none', md: 'table-cell' }}>Fecha</Th>
+                    <Th>Cliente</Th>
+                    <Th display={{ base: 'none', md: 'table-cell' }}>Pastelería</Th>
+                    <Th>Total</Th>
+                    <Th>Estado</Th>
+                    <Th display={{ base: 'none', md: 'table-cell' }}>Pago</Th>
+                    <Th>Acciones</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {orders.map((o) => (
+                    <Fragment key={o.id}>
+                      <Tr _hover={{ bg: 'warmGray.100' }} cursor="pointer" onClick={() => toggleExpand(o.id)}>
+                        <Td fontFamily="mono" fontSize="sm">
+                          {o.id?.slice(0, 8)}…
+                          <Text as="span" cursor="pointer" ms={1} onClick={(e) => { e.stopPropagation(); handleCopy(o.id); }} title="Copiar ID">
+                            📋
+                            {copiedId === o.id && (
+                              <Text as="span" bg="brand.700" color="white" px={1} py={0.5} borderRadius="sm" fontSize="2xs" ms={1} pos="absolute">
+                                Copiado!
+                              </Text>
                             )}
-                            <td style={tdText()}>
-                              {o.customer?.name || idLabel(o.customer?.user_id)}
-                            </td>
-                            {!isMobile && <td style={tdText()}>{o.shop?.name || idLabel(o.shop?.shop_id)}</td>}
-                            <td style={{ ...cellStyle, fontSize: '14px', fontWeight: 600, fontFamily: font.body, color: colors.primary }}>
-                              S/ {(o.totals?.total || 0).toFixed(2)}
-                            </td>
-                            <td style={cellStyle}>
-                              {statusBadge(o.status)}
-                            </td>
-                            {!isMobile && (
-                              <td style={cellStyle}>
-                                {paymentBadge(ps)}
-                              </td>
-                            )}
-                            <td style={cellStyle} onClick={(e) => e.stopPropagation()}>
-                              <button onClick={() => handleDelete(o.id)} style={btnDanger}>Eliminar</button>
-                            </td>
-                          </tr>
-                          {expanded && (
-                            <tr key={`${o.id}-detail`}>
-                              <td colSpan={HEADERS.length} style={{ padding: '0 16px 16px', background: colors.tableStripe }}>
-                                <div style={{ ...animFadeIn, borderTop: `1px solid ${colors.tableBorder}`, paddingTop: '16px' }}
-                                >
-                                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', fontSize: '13px', fontFamily: font.body }}>
-                                    <div style={{ lineHeight: 1.8 }}>
-                                      <strong>Cliente:</strong> {o.customer?.name || '—'}<br />
-                                      <strong>User ID:</strong> <code style={{ fontSize: '12px', color: colors.textSecondary }}>{o.customer?.user_id || '—'}</code><br />
-                                      <strong>Pastelería:</strong> {o.shop?.name || '—'}<br />
-                                      <strong>Shop ID:</strong> <code style={{ fontSize: '12px', color: colors.textSecondary }}>{o.shop?.shop_id || '—'}</code>
-                                    </div>
-                                    <div style={{ lineHeight: 1.8 }}>
-                                      <strong>Subtotal:</strong> S/ {(o.totals?.subtotal || 0).toFixed(2)}<br />
-                                      <strong>Delivery:</strong> S/ {(o.totals?.delivery_fee || 0).toFixed(2)}<br />
-                                      <strong>Total:</strong> <span style={{ fontWeight: 600, color: colors.primary }}>S/ {(o.totals?.total || 0).toFixed(2)}</span><br />
-                                      <strong>Método pago:</strong> {o.payment?.method || '—'}
-                                    </div>
-                                  </div>
+                          </Text>
+                        </Td>
+                        <Td display={{ base: 'none', md: 'table-cell' }} fontSize="sm" color="warmGray.500" title={o.created_at ? formatDate(o.created_at) : undefined}>
+                          {formatDate(o.created_at)}
+                        </Td>
+                        <Td fontSize="sm">{o.customer?.name || (o.customer?.user_id ? `${o.customer.user_id.slice(0, 8)}…` : '—')}</Td>
+                        <Td display={{ base: 'none', md: 'table-cell' }} fontSize="sm">{o.shop?.name || (o.shop?.shop_id ? `${o.shop.shop_id.slice(0, 8)}…` : '—')}</Td>
+                        <Td fontSize="sm" fontWeight={600} color="brand.700">S/ {(o.totals?.total || 0).toFixed(2)}</Td>
+                        <Td><PastelStatusBadge status={o.status} /></Td>
+                        <Td display={{ base: 'none', md: 'table-cell' }}>{paymentBadge(o.payment?.status || 'pending')}</Td>
+                        <Td onClick={(e) => e.stopPropagation()}>
+                          <Button size="xs" variant="ghost" colorScheme="red" onClick={() => handleDelete(o.id)}>Eliminar</Button>
+                        </Td>
+                      </Tr>
+                      {expandedId === o.id && (
+                        <Tr>
+                          <Td colSpan={8} bg="warmGray.50" p={4}>
+                            <Box borderTop="1px solid" borderColor="warmGray.200" pt={4}>
+                              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} fontSize="sm">
+                                <Box lineHeight={2}>
+                                  <Text><strong>Cliente:</strong> {o.customer?.name || '—'}</Text>
+                                  <Text><strong>User ID:</strong> <Text as="code" fontSize="xs" color="warmGray.500">{o.customer?.user_id || '—'}</Text></Text>
+                                  <Text><strong>Pastelería:</strong> {o.shop?.name || '—'}</Text>
+                                  <Text><strong>Shop ID:</strong> <Text as="code" fontSize="xs" color="warmGray.500">{o.shop?.shop_id || '—'}</Text></Text>
+                                </Box>
+                                <Box lineHeight={2}>
+                                  <Text><strong>Subtotal:</strong> S/ {(o.totals?.subtotal || 0).toFixed(2)}</Text>
+                                  <Text><strong>Delivery:</strong> S/ {(o.totals?.delivery_fee || 0).toFixed(2)}</Text>
+                                  <Text><strong>Total:</strong> <Text as="span" fontWeight={600} color="brand.700">S/ {(o.totals?.total || 0).toFixed(2)}</Text></Text>
+                                  <Text><strong>Método pago:</strong> {o.payment?.method || '—'}</Text>
+                                </Box>
+                              </SimpleGrid>
 
-                                  {o.items?.length > 0 && (
-                                    <div style={{ marginTop: '12px' }}>
-                                      <strong style={{ fontSize: '13px', fontFamily: font.body }}>Items:</strong>
-                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
-                                        {o.items.map((item, idx) => (
-                                          <span key={idx} style={{
-                                            background: colors.white, padding: '6px 12px', borderRadius: '8px',
-                                            fontSize: '12px', fontFamily: font.body, border: `1px solid ${colors.border}`,
-                                          }}>
-                                            <strong>{item.quantity}x</strong> {item.name} — S/ {(item.price_at_purchase || 0).toFixed(2)}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
+                              {o.items?.length > 0 && (
+                                <Box mt={3}>
+                                  <Text fontWeight={600} fontSize="sm">Items:</Text>
+                                  <HStack spacing={2} mt={1} flexWrap="wrap">
+                                    {o.items.map((item, idx) => (
+                                      <Tag key={idx} bg="white" borderRadius="lg" border="1px solid" borderColor="warmGray.200">
+                                        <strong>{item.quantity}x</strong> {item.name} — S/ {(item.price_at_purchase || 0).toFixed(2)}
+                                      </Tag>
+                                    ))}
+                                  </HStack>
+                                </Box>
+                              )}
 
-                                  {o.status_history?.length > 0 && (
-                                    <div style={{ marginTop: '12px' }}>
-                                      <strong style={{ fontSize: '13px', fontFamily: font.body }}>Historial:</strong>
-                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                                        {o.status_history.map((s, idx) => statusBadge(s))}
-                                      </div>
-                                    </div>
-                                  )}
+                              {o.status_history?.length > 0 && (
+                                <Box mt={3}>
+                                  <Text fontWeight={600} fontSize="sm">Historial:</Text>
+                                  <HStack spacing={1} mt={1} flexWrap="wrap">
+                                    {o.status_history.map((s, idx) => (
+                                      <Fragment key={idx}><PastelStatusBadge status={s} /></Fragment>
+                                    ))}
+                                  </HStack>
+                                </Box>
+                              )}
 
-                                  <div style={{ marginTop: '16px', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'end' }}>
-                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'end' }}>
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                        <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body }}>Estado</label>
-                                        <select style={smallSelect} value={newStatus[o.id] || ''} onChange={(e) => setNewStatus((p) => ({ ...p, [o.id]: e.target.value }))}>
-                                          <option value="">—</option>
-                                          {STATUSES.filter((s) => s !== 'all').map((s) => (
-                                            <option key={s} value={s}>{STATUS_TRANSLATIONS[s]}</option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                      <button onClick={() => handleUpdateStatus(o.id)} style={btnSmallPrimary}>Actualizar</button>
-                                    </div>
+                              <HStack spacing={4} mt={4} align="flex-end" flexWrap="wrap">
+                                <HStack spacing={2} align="flex-end">
+                                  <Box>
+                                    <Text fontSize="xs" color="warmGray.500">Estado</Text>
+                                    <Select size="sm" value={newStatus[o.id] || ''} onChange={(e) => setNewStatus((p) => ({ ...p, [o.id]: e.target.value }))}>
+                                      <option value="">—</option>
+                                      {STATUSES.filter((s) => s !== 'all').map((s) => (
+                                        <option key={s} value={s}>{STATUS_TRANSLATIONS[s]}</option>
+                                      ))}
+                                    </Select>
+                                  </Box>
+                                  <Button size="sm" colorScheme="brand" onClick={() => handleUpdateStatus(o.id)}>Actualizar</Button>
+                                </HStack>
+                                <HStack spacing={2} align="flex-end">
+                                  <Box>
+                                    <Text fontSize="xs" color="warmGray.500">Estado pago</Text>
+                                    <Select size="sm" value={newPaymentStatus[o.id] || ''} onChange={(e) => setNewPaymentStatus((p) => ({ ...p, [o.id]: e.target.value }))}>
+                                      <option value="">—</option>
+                                      {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                                    </Select>
+                                  </Box>
+                                  <Button size="sm" colorScheme="brand" onClick={() => handleUpdatePaymentStatus(o.id)}>Actualizar</Button>
+                                </HStack>
+                              </HStack>
 
-                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'end' }}>
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                        <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body }}>Estado pago</label>
-                                        <select style={smallSelect} value={newPaymentStatus[o.id] || ''} onChange={(e) => setNewPaymentStatus((p) => ({ ...p, [o.id]: e.target.value }))}>
-                                          <option value="">—</option>
-                                          {PAYMENT_STATUSES.map((s) => (
-                                            <option key={s} value={s}>{s}</option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                      <button onClick={() => handleUpdatePaymentStatus(o.id)} style={btnSmallPrimary}>Actualizar</button>
-                                    </div>
-                                  </div>
-
-                                  {(() => {
-                                    const r = reviewMap[o.id];
-                                    if (r?.rating || r?.comment) {
-                                      return (
-                                        <div style={{ marginTop: '16px', padding: '14px', background: colors.white, borderRadius: '10px', border: `1px solid ${colors.border}` }}>
-                                          <strong style={{ fontSize: '13px', fontFamily: font.body }}>Reseña:</strong>
-                                          <div style={{ fontSize: '13px', marginTop: '4px', fontFamily: font.body }}>
-                                            {'⭐'.repeat(r.rating)} {r.comment && `— ${r.comment}`}
-                                          </div>
-                                          {r.ownerReply && (
-                                            <div style={{ fontSize: '13px', marginTop: '6px', color: colors.textSecondary, fontFamily: font.body }}>
-                                              <strong>Respuesta:</strong> {r.ownerReply}
-                                            </div>
-                                          )}
-                                          {!r.ownerReply && (
-                                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px', alignItems: 'end' }}>
-                                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
-                                                <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body }}>Responder</label>
-                                                <input style={{ ...smallInput, minWidth: '200px' }} value={replyForm[o.id] || ''} onChange={(e) => setReplyForm((p) => ({ ...p, [o.id]: e.target.value }))} placeholder="Escribe una respuesta..." />
-                                              </div>
-                                              <button onClick={() => handleReplyReview(o.id)} style={{ padding: '6px 14px', background: colors.accent, color: '#fff', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: font.body }}>
-                                                Responder
-                                              </button>
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    }
-                                    if (!r && o.status === 'delivered') {
-                                      return (
-                                        <div style={{ marginTop: '16px', padding: '14px', background: colors.white, borderRadius: '10px', border: `1px solid ${colors.border}` }}>
-                                          <strong style={{ fontSize: '13px', fontFamily: font.body }}>Agregar reseña:</strong>
-                                          <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'end', flexWrap: 'wrap' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                              <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body }}>Rating</label>
-                                              <select style={smallSelect} value={reviewForm.rating} onChange={(e) => setReviewForm((p) => ({ ...p, rating: Number(e.target.value) }))}>
-                                                {[1, 2, 3, 4, 5].map((r) => <option key={r} value={r}>{'⭐'.repeat(r)}</option>)}
-                                              </select>
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: '150px' }}>
-                                              <label style={{ fontSize: '11px', color: colors.textSecondary, fontFamily: font.body }}>Comentario</label>
-                                              <input style={smallInput} value={reviewForm.comment} onChange={(e) => setReviewForm((p) => ({ ...p, comment: e.target.value }))} placeholder="Comentario..." />
-                                            </div>
-                                            <button onClick={() => handleAddReview(o.id)} style={{ padding: '6px 14px', background: colors.accent, color: '#fff', border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: font.body }}>
-                                              Agregar
-                                            </button>
-                                          </div>
-                                        </div>
-                                      );
-                                    }
-                                    return null;
-                                  })()}
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+                              {(() => {
+                                const r = reviewMap[o.id];
+                                if (r?.rating || r?.comment) {
+                                  return (
+                                    <Box mt={4} p={4} bg="white" borderRadius="lg" border="1px solid" borderColor="warmGray.200">
+                                      <Text fontWeight={600} fontSize="sm">Reseña:</Text>
+                                      <Text fontSize="sm" mt={1}>{'⭐'.repeat(r.rating)} {r.comment && `— ${r.comment}`}</Text>
+                                      {r.ownerReply && <Text fontSize="sm" mt={1} color="warmGray.500"><strong>Respuesta:</strong> {r.ownerReply}</Text>}
+                                      {!r.ownerReply && (
+                                        <HStack spacing={2} mt={2} align="flex-end">
+                                          <Box flex={1}>
+                                            <Text fontSize="xs" color="warmGray.500">Responder</Text>
+                                            <Input size="sm" value={replyForm[o.id] || ''} onChange={(e) => setReplyForm((p) => ({ ...p, [o.id]: e.target.value }))} placeholder="Escribe una respuesta..." />
+                                          </Box>
+                                          <Button size="sm" colorScheme="accent" onClick={() => handleReplyReview(o.id)}>Responder</Button>
+                                        </HStack>
+                                      )}
+                                    </Box>
+                                  );
+                                }
+                                if (!r && o.status === 'delivered') {
+                                  return (
+                                    <Box mt={4} p={4} bg="white" borderRadius="lg" border="1px solid" borderColor="warmGray.200">
+                                      <Text fontWeight={600} fontSize="sm">Agregar reseña:</Text>
+                                      <HStack spacing={3} mt={2} align="flex-end" flexWrap="wrap">
+                                        <Box>
+                                          <Text fontSize="xs" color="warmGray.500">Rating</Text>
+                                          <Select size="sm" value={reviewForm.rating} onChange={(e) => setReviewForm((p) => ({ ...p, rating: Number(e.target.value) }))}>
+                                            {[1, 2, 3, 4, 5].map((r) => <option key={r} value={r}>{'⭐'.repeat(r)}</option>)}
+                                          </Select>
+                                        </Box>
+                                        <Box flex={1} minW="150px">
+                                          <Text fontSize="xs" color="warmGray.500">Comentario</Text>
+                                          <Input size="sm" value={reviewForm.comment} onChange={(e) => setReviewForm((p) => ({ ...p, comment: e.target.value }))} placeholder="Comentario..." />
+                                        </Box>
+                                        <Button size="sm" colorScheme="accent" onClick={() => handleAddReview(o.id)}>Agregar</Button>
+                                      </HStack>
+                                    </Box>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </Box>
+                          </Td>
+                        </Tr>
+                      )}
+                    </Fragment>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
+        </PastelCard>
+      )}
+    </Box>
   );
 }

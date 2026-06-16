@@ -8,7 +8,6 @@ Seis tipos de pruebas implementadas en el proyecto:
 | **Unitarias (Frontend)** | Vitest + jsdom | Renderizado e interacciones de componentes React | `client/src/tests/*.test.jsx` (40 archivos, 391 tests) |
 | **Carga (Node.js)** | Node.js fetch | Simular 50-100 usuarios concurrentes | `tests/load/load-test-runner-*.js` |
 | **Carga (k6)** | k6 | Script alternativo de carga profesional | `tests/load/load-test.js` |
-| **Rate Limiting** | Node.js + fetch | Verificar limitadores | `tests/rate-limit/rate-limit-test.js` |
 | **E2E (Client)** | Playwright | Flujos críticos del frontend | `client/e2e/flows/*.spec.js` (7 archivos, 42 tests) |
 
 ---
@@ -39,7 +38,7 @@ Firebase Admin SDK está **mockeado** — no requiere `serviceAccountKey.json` n
 | `tests/unit/customers.test.js` | 21 | CRUD customers + direcciones subcollection + **addresses vacío retorna []** |
 | `tests/unit/promotions.test.js` | 14 | CRUD promociones + toggle |
 | `tests/unit/support.test.js` | 18 | CRUD tickets + mensajes + asignación |
-| `tests/unit/chat.test.js` | 20 | Sesiones + mensajes + rate limit + fallback AI |
+| `tests/unit/chat.test.js` | 20 | Sesiones + mensajes + fallback AI |
 | `tests/unit/backupRestore.test.js` | 12 | Validación + restauración de backups |
 | `tests/unit/aiHelper.test.js` | 18 | AI helper, prompts, respuestas |
 | `tests/unit/auditLog.test.js` | 10 | Auditoría de eventos |
@@ -52,7 +51,7 @@ Firebase Admin SDK está **mockeado** — no requiere `serviceAccountKey.json` n
 | `tests/unit/mercadopago.test.js` | 10 | MercadoPago SDK mock |
 | `tests/unit/paginate.test.js` | 8 | Paginación Firestore |
 | `tests/unit/paymentGateway.test.js` | 14 | Gateway simulado + procesos de pago |
-| `tests/unit/rateLimiter.test.js` | 16 | Rate limiting por rol |
+
 | `tests/unit/uploads.test.js` | 10 | Upload de imágenes, validación |
 | `tests/unit/validate.test.js` | 22 | Schemas Zod, errores de validación |
 | `tests/unit/websocket.test.js` | 12 | Conexión WebSocket, eventos, heartbeats |
@@ -141,7 +140,7 @@ Pruebas de componentes React con Vitest + jsdom. Cubren renderizado, interaccion
 | Pages | ShopsList, ShopDetail, ProductDetail, Cart, Checkout, Profile, NotFound | 96 | Renderizado, filtros, carrito, checkout |
 | Admin | AdminUsers, AdminOrders, AdminShops | 52 | CRUD, estados, tabla de datos |
 | Owner | OwnerDashboard | 28 | Tabs, productos, órdenes, promociones |
-| Components | Chatbot, ImageUploader, PaymentGateway, ErrorBoundary, RateLimitDemo | 106 | Upload, pagos, chat, errores, rate limit |
+| Components | Chatbot, ImageUploader, PaymentGateway, ErrorBoundary | 106 | Upload, pagos, chat, errores |
 
 ### Ejecutar
 
@@ -201,24 +200,12 @@ npm run load-test:k6:50000        # 50000 VUs completo
 
 ---
 
-## 6. PRUEBAS DE RATE LIMITING
-
-Verifica que los rate limiters bloqueen en el número esperado.
-
-```bash
-cd server
-npm run test:rate-limit           # Spawnea servidores, genera reporte HTML
-```
-
----
-
 ## Resumen de comandos
 
 ```bash
 # Backend
 cd server && npm test                              # ~480 tests unitarios (31 suites)
 cd server && npm run test:coverage                 # Con cobertura
-cd server && npm run test:rate-limit               # Rate limiting
 cd server && npm run load-test:k6:quick            # Carga k6 100 VUs
 
 # Frontend
@@ -237,5 +224,4 @@ cd client && npm run test:watch                    # Modo watch Vitest
 | Cobertura (server) | `npm run test:coverage` | `server/coverage/` |
 | Unit tests (client) | `npm test` | `client/vitest-report.html` |
 | Load test | `npm run load-test` | `server/load-test-report.html` |
-| Rate limit | `npm run test:rate-limit` | `server/rate-limit-test-report.html` |
 | E2E Playwright | `npm run test:e2e` | `client/playwright-report/` |

@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
-import Navbar from '../../components/Navbar';
-import { colors, font, badge as badgeStyle, cardStyle, animFadeIn, animStagger } from '../../styles/theme';
+import {
+  Box, Flex, HStack, VStack, Text, Heading, Button, Card, Badge, Spinner,
+} from '@chakra-ui/react';
 import { invoicesService } from '../../services/invoicesService';
 
 const STATUS_COLORS = {
-  issued: { bg: '#e8f5e9', color: '#2e7d32' },
-  cancelled: { bg: '#fee2e2', color: '#ef4444' },
+  issued: 'green',
+  cancelled: 'red',
 };
 
 const STATUS_TRANS = { issued: 'Emitida', cancelled: 'Anulada' };
@@ -39,11 +40,6 @@ export default function Invoices() {
     return invoices.filter((i) => i.status === filter);
   }, [invoices, filter]);
 
-  const badge = (status) => {
-    const c = STATUS_COLORS[status] || STATUS_COLORS.issued;
-    return <span style={badgeStyle(c.bg, c.color)}>{STATUS_TRANS[status] || status}</span>;
-  };
-
   const handleDownload = async (e, id) => {
     e.stopPropagation();
     setDownloading(id);
@@ -57,81 +53,94 @@ export default function Invoices() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bgBeige }}>
-      <Navbar />
-      <div style={{ ...animFadeIn, maxWidth: '800px', margin: '0 auto', padding: '40px 2rem 2rem' }}>
-        <h2 style={{ fontFamily: font.heading, fontSize: '28px', fontWeight: 700, color: colors.primary, margin: 0, marginBottom: '24px' }}>Mis Boletas</h2>
-        <div style={{ height: '3px', width: '60px', background: `linear-gradient(90deg, ${colors.accent}, ${colors.primary})`, borderRadius: '99px', marginBottom: '1.5rem' }} />
+    <Box maxW="800px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
+      <Heading as="h2" fontFamily="heading" fontSize={{ base: '2xl', md: '3xl' }} fontWeight={700} color="brand.700" mb={6}>
+        Mis Boletas
+      </Heading>
+      <Box h="3px" w="60px" bgGradient="linear(90deg, accent.500, brand.500)" borderRadius="full" mb={6} />
 
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px' }}>
-          {['all', 'issued', 'cancelled'].map((s) => (
-            <button key={s} onClick={() => setFilter(s)} style={{
-              padding: '6px 16px', borderRadius: '99px', border: 'none', cursor: 'pointer',
-              fontSize: '13px', fontWeight: 500, fontFamily: font.body,
-              background: filter === s ? colors.primary : colors.white,
-              color: filter === s ? '#fff' : colors.textSecondary,
-              border: filter === s ? 'none' : `1px solid ${colors.border}`,
-              transition: 'all 0.2s ease',
-            }}>
-              {s === 'all' ? 'Todas' : STATUS_TRANS[s]}
-            </button>
+      <HStack spacing={2} mb={5} flexWrap="wrap">
+        {['all', 'issued', 'cancelled'].map((s) => (
+          <Button
+            key={s}
+            size="sm"
+            variant={filter === s ? 'primary' : 'outline'}
+            borderColor={filter === s ? undefined : 'warmGray.300'}
+            onClick={() => setFilter(s)}
+          >
+            {s === 'all' ? 'Todas' : STATUS_TRANS[s]}
+          </Button>
+        ))}
+      </HStack>
+
+      {loading ? (
+        <VStack spacing={3}>
+          {[1, 2, 3].map((i) => (
+            <Box key={i} h="80px" w="full" bg="warmGray.200" borderRadius="xl" />
           ))}
-        </div>
-
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} style={{ height: '80px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: '12px', animation: 'shimmer 1.5s infinite' }} />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', gap: '12px' }}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-            </svg>
-            <p style={{ color: '#999', fontSize: '15px', margin: 0, fontFamily: font.body }}>
-              {filter === 'all' ? 'No tienes boletas aún' : `No hay boletas ${STATUS_TRANS[filter]?.toLowerCase()}`}
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {filtered.map((inv, i) => (
-              <div key={inv.id}
-                style={{ ...cardStyle, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.2s ease', marginBottom: 0, ...animStagger(i * 0.03) }}
-                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; e.currentTarget.style.borderColor = colors.accent; }}
-                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = colors.border; }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ fontFamily: 'monospace', fontSize: '13px', fontWeight: 700, color: colors.accent }}>{inv.invoiceNumber}</span>
-                    <span style={{ fontFamily: font.body, fontSize: '13px', color: colors.text, fontWeight: 500 }}>{inv.shopName}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontFamily: font.body, fontSize: '12px', color: colors.textMuted }}>{formatDate(inv.issueDate)}</span>
-                    <span style={{ fontFamily: font.heading, fontSize: '16px', fontWeight: 700, color: colors.primary }}>S/ {(inv.total || 0).toFixed(2)}</span>
-                    {badge(inv.status)}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        </VStack>
+      ) : filtered.length === 0 ? (
+        <VStack py={16} spacing={3}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+          <Text color="warmGray.400" fontSize="sm" fontFamily="body">
+            {filter === 'all' ? 'No tienes boletas aún' : `No hay boletas ${STATUS_TRANS[filter]?.toLowerCase()}`}
+          </Text>
+        </VStack>
+      ) : (
+        <VStack spacing={3}>
+          {filtered.map((inv) => (
+            <Card
+              key={inv.id}
+              variant="interactive"
+              p={4}
+              w="full"
+            >
+              <Flex justify="space-between" align="center" flexDir={{ base: 'column', md: 'row' }} gap={{ base: 2, md: 0 }}>
+                <Box flex={1} w={{ base: 'full', md: 'auto' }}>
+                  <HStack spacing={2} mb={1}>
+                    <Text fontFamily="monospace" fontSize="xs" fontWeight={700} color="accent.600">
+                      {inv.invoiceNumber}
+                    </Text>
+                    <Text fontSize="xs" color="warmGray.800" fontWeight={500}>
+                      {inv.shopName}
+                    </Text>
+                  </HStack>
+                  <HStack spacing={3}>
+                    <Text fontSize="xs" color="warmGray.400" fontFamily="body">
+                      {formatDate(inv.issueDate)}
+                    </Text>
+                    <Heading as="span" fontFamily="heading" fontSize="md" fontWeight={700} color="brand.700">
+                      S/ {(inv.total || 0).toFixed(2)}
+                    </Heading>
+                    <Badge colorScheme={STATUS_COLORS[inv.status] || 'gray'} variant="subtle" px={2} py={0.5} borderRadius="full" fontSize="xs">
+                      {STATUS_TRANS[inv.status] || inv.status}
+                    </Badge>
+                  </HStack>
+                </Box>
+                <HStack spacing={2} flexShrink={0}>
                   {inv.status === 'issued' && (
-                    <button onClick={(e) => handleDownload(e, inv.id)} disabled={downloading === inv.id} style={{
-                      padding: '6px 14px', background: colors.accent, color: '#fff', border: 'none',
-                      borderRadius: '99px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: font.body,
-                      opacity: downloading === inv.id ? 0.6 : 1,
-                    }}>
-                      {downloading === inv.id ? 'Descargando...' : 'Descargar PDF'}
-                    </button>
+                    <Button
+                      size="xs"
+                      variant="accent"
+                      onClick={(e) => handleDownload(e, inv.id)}
+                      isLoading={downloading === inv.id}
+                      loadingText="Descargando..."
+                    >
+                      Descargar PDF
+                    </Button>
                   )}
-                  <span style={{ color: colors.textMuted, fontSize: '18px' }}>→</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+                  <Text color="warmGray.400" fontSize="lg">→</Text>
+                </HStack>
+              </Flex>
+            </Card>
+          ))}
+        </VStack>
+      )}
+    </Box>
   );
 }
