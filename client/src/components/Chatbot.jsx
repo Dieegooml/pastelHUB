@@ -6,6 +6,158 @@ import Tooltip from './Tooltip';
 import { colors, font } from '../styles/theme';
 import { renderMarkdown } from '../utils/markdown';
 
+const styles = {
+  bubble: {
+    position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999,
+    width: '56px', height: '56px', borderRadius: '50%',
+    background: `linear-gradient(135deg, ${colors.accent}, #15805d)`,
+    color: '#fff', border: 'none', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    boxShadow: '0 4px 20px rgba(29,158,117,0.4)',
+    transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+    animation: 'chatbotPulse 2.5s ease-in-out infinite',
+  },
+  panel: {
+    position: 'fixed', bottom: '92px', right: '24px', zIndex: 9999,
+    width: '380px', height: '540px',
+    background: colors.white, borderRadius: '16px',
+    boxShadow: '0 12px 48px rgba(0,0,0,0.18)',
+    border: `1px solid ${colors.border}`,
+    display: 'flex', flexDirection: 'column',
+    overflow: 'hidden', fontFamily: font.body,
+    animation: 'chatPanelIn 0.3s ease both',
+    transformOrigin: 'bottom right',
+  },
+  header: {
+    padding: '14px 16px',
+    background: `linear-gradient(135deg, ${colors.accent}, #15805d)`,
+    color: '#fff', flexShrink: 0,
+  },
+  headerTop: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  },
+  headerInfo: {
+    display: 'flex', alignItems: 'center', gap: '10px',
+  },
+  aiAvatar: {
+    width: '36px', height: '36px', borderRadius: '50%',
+    background: 'rgba(255,255,255,0.2)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '16px', fontWeight: 700, fontFamily: font.heading,
+    color: '#fff', flexShrink: 0,
+  },
+  statusDot: {
+    width: '8px', height: '8px', borderRadius: '50%',
+    background: '#4ade80', display: 'inline-block',
+    boxShadow: '0 0 6px rgba(74,222,128,0.6)',
+    marginLeft: '6px',
+  },
+  headerActions: {
+    display: 'flex', gap: '4px',
+  },
+  headerBtn: {
+    padding: '5px 10px', borderRadius: '8px', border: 'none',
+    background: 'rgba(255,255,255,0.15)',
+    color: '#fff', fontSize: '12px', cursor: 'pointer',
+    fontWeight: 500, fontFamily: font.body,
+    transition: 'background 0.2s ease',
+    display: 'flex', alignItems: 'center', gap: '4px',
+  },
+  messagesArea: {
+    flex: 1, overflowY: 'auto', padding: '12px 12px 4px',
+    display: 'flex', flexDirection: 'column', gap: '8px',
+    scrollbarWidth: 'thin',
+    scrollbarColor: `${colors.border} transparent`,
+  },
+  msgRow: (isUser) => ({
+    display: 'flex',
+    justifyContent: isUser ? 'flex-end' : 'flex-start',
+    alignItems: 'flex-end',
+    gap: '6px',
+    animation: 'fadeInUp 0.25s ease both',
+  }),
+  msgAvatar: {
+    width: '26px', height: '26px', borderRadius: '50%',
+    background: colors.grayBg, color: colors.textSecondary,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '11px', fontWeight: 600, fontFamily: font.body,
+    flexShrink: 0,
+  },
+  msgBubble: (isUser, failed) => ({
+    maxWidth: '78%',
+    padding: '10px 14px',
+    borderRadius: '14px',
+    background: isUser ? colors.accent : colors.white,
+    color: isUser ? '#fff' : colors.text,
+    fontSize: '13px', lineHeight: '1.55',
+    borderBottomRightRadius: isUser ? '4px' : '14px',
+    borderBottomLeftRadius: isUser ? '14px' : '4px',
+    opacity: failed ? 0.6 : 1,
+    boxShadow: isUser ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
+    border: isUser ? 'none' : `1px solid ${colors.border}`,
+  }),
+  msgTime: {
+    fontSize: '10px', color: colors.textMuted,
+    marginTop: '4px', textAlign: 'right',
+  },
+  inputArea: {
+    padding: '12px 12px', borderTop: `1px solid ${colors.border}`,
+    display: 'flex', gap: '8px', background: colors.white,
+    flexShrink: 0,
+  },
+  input: {
+    flex: 1, height: '42px', padding: '0 14px', borderRadius: '99px',
+    border: `1.5px solid ${colors.border}`, outline: 'none',
+    fontSize: '13px', fontFamily: font.body, color: colors.text,
+    background: colors.grayLight,
+    transition: 'border-color 0.2s ease, background 0.2s ease',
+  },
+  sendBtn: (disabled) => ({
+    width: '42px', height: '42px', borderRadius: '50%', border: 'none',
+    background: disabled ? colors.grayBg : colors.accent,
+    color: disabled ? colors.textMuted : '#fff',
+    fontSize: '16px', cursor: disabled ? 'default' : 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'all 0.2s ease', flexShrink: 0,
+  }),
+  emptyState: {
+    textAlign: 'center', padding: '48px 20px',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', gap: '12px',
+  },
+  emptyIcon: {
+    width: '64px', height: '64px', borderRadius: '50%',
+    background: `linear-gradient(135deg, ${colors.accent}15, ${colors.accent}08)`,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '28px', marginBottom: '4px',
+  },
+  historyItem: (active) => ({
+    padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
+    background: active ? `${colors.accent}08` : 'transparent',
+    border: `1px solid ${active ? colors.accent : 'transparent'}`,
+    marginBottom: '6px', display: 'flex', justifyContent: 'space-between',
+    alignItems: 'center', transition: 'all 0.15s ease',
+  }),
+  errorBar: {
+    padding: '8px 12px', borderRadius: '8px',
+    background: colors.errorBg, color: colors.error,
+    fontSize: '12px', textAlign: 'center',
+  },
+};
+
+function formatTime(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  } catch { return ''; }
+}
+
+function userInitial(email) {
+  if (!email) return '?';
+  return email[0].toUpperCase();
+}
+
 export default function Chatbot() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -18,11 +170,11 @@ export default function Chatbot() {
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState('');
   const [aiTyping, setAiTyping] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const wsCleanups = useRef([]);
-
-  const activeSession = sessions.find(s => s.id === activeSessionId);
+  const panelRef = useRef(null);
 
   useEffect(() => {
     if (isOpen && user) loadSessions();
@@ -34,9 +186,22 @@ export default function Chatbot() {
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 300);
+      setTimeout(() => inputRef.current?.focus(), 350);
     }
   }, [isOpen, activeSessionId]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (panelRef.current && !panelRef.current.contains(e.target) && isOpen) {
+        const bubble = document.getElementById('chatbot-bubble');
+        if (bubble && !bubble.contains(e.target)) {
+          setIsOpen(false);
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
 
   useEffect(() => {
     wsCleanups.current.forEach(fn => fn());
@@ -196,94 +361,104 @@ export default function Chatbot() {
 
   if (!user) return null;
 
-  const bubbleStyle = {
-    position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999,
-    width: '56px', height: '56px', borderRadius: '50%',
-    background: colors.accent, color: '#fff', border: 'none',
-    fontSize: '24px', cursor: 'pointer',
-    boxShadow: '0 4px 16px rgba(29,158,117,0.35)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    transition: 'all 0.2s ease',
-  };
-
-  const panelStyle = {
-    position: 'fixed', bottom: '92px', right: '24px', zIndex: 9999,
-    width: '360px', height: '520px',
-    background: colors.white, borderRadius: '16px',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-    border: `1px solid ${colors.border}`,
-    display: 'flex', flexDirection: 'column',
-    overflow: 'hidden', fontFamily: font.body,
-  };
-
   return (
     <>
-      <Tooltip text={isOpen ? 'Cerrar chat' : 'Abrir chat'} position="left">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          style={bubbleStyle}
-          onMouseEnter={e => e.target.style.transform = 'scale(1.08)'}
-          onMouseLeave={e => e.target.style.transform = 'scale(1)'}
-          aria-label="Chatbot"
-        >
-          {isOpen ? '✕' : '💬'}
-        </button>
-      </Tooltip>
+      <button
+        id="chatbot-bubble"
+        onClick={() => setIsOpen(!isOpen)}
+        style={styles.bubble}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(29,158,117,0.5)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(29,158,117,0.4)'; }}
+        aria-label={isOpen ? 'Cerrar chat' : 'Abrir chat'}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {isOpen ? (
+            <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
+          ) : (
+            <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>
+          )}
+        </svg>
+      </button>
 
       {isOpen && (
-        <div style={panelStyle}>
-          <div style={{
-            padding: '16px', borderBottom: `1px solid ${colors.border}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            background: colors.accent, color: '#fff',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '20px' }}>🤖</span>
-              <span style={{ fontSize: '15px', fontWeight: 600 }}>Asistente PastelHub</span>
-            </div>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button onClick={() => setShowHistory(!showHistory)} style={{
-                padding: '4px 8px', borderRadius: '6px', border: 'none',
-                background: 'rgba(255,255,255,0.2)', color: '#fff',
-                fontSize: '12px', cursor: 'pointer',
-              }}>
-                {showHistory ? 'Chat' : 'Historial'}
-              </button>
-              <Tooltip text="Nueva conversación">
-                <button onClick={handleNewSession} disabled={creating} style={{
-                  padding: '4px 8px', borderRadius: '6px', border: 'none',
-                  background: 'rgba(255,255,255,0.2)', color: '#fff',
-                  fontSize: '16px', cursor: 'pointer', lineHeight: '1',
-                }}>
-                  +
-                </button>
-              </Tooltip>
+        <div ref={panelRef} style={styles.panel}>
+          <div style={styles.header}>
+            <div style={styles.headerTop}>
+              <div style={styles.headerInfo}>
+                <div style={styles.aiAvatar}>P</div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, lineHeight: 1.3 }}>
+                    Asistente PastelHub
+                    <span style={styles.statusDot} />
+                  </div>
+                  <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '1px' }}>En línea</div>
+                </div>
+              </div>
+              <div style={styles.headerActions}>
+                <Tooltip text={showHistory ? 'Volver al chat' : 'Historial'}>
+                  <button
+                    onClick={() => setShowHistory(!showHistory)}
+                    style={styles.headerBtn}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    {showHistory ? 'Chat' : 'Historial'}
+                  </button>
+                </Tooltip>
+                <Tooltip text="Nueva conversación">
+                  <button
+                    onClick={handleNewSession}
+                    disabled={creating}
+                    style={styles.headerBtn}
+                    onMouseEnter={e => { if (!creating) e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; }}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Nuevo
+                  </button>
+                </Tooltip>
+              </div>
             </div>
           </div>
 
           {showHistory ? (
-            <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+            <div style={{ ...styles.messagesArea, padding: '12px' }}>
               {sessions.length === 0 ? (
-                <div style={{ textAlign: 'center', color: colors.textMuted, fontSize: '13px', padding: '24px 0' }}>
-                  No hay sesiones anteriores
+                <div style={styles.emptyState}>
+                  <div style={{ fontSize: '36px', opacity: 0.5 }}>📋</div>
+                  <div style={{ fontSize: '13px', color: colors.textMuted }}>No hay sesiones anteriores</div>
                 </div>
               ) : (
                 sessions.map(s => (
-                  <div key={s.id} onClick={() => handleSelectSession(s.id)} style={{
-                    padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
-                    background: s.id === activeSessionId ? colors.grayLight : 'transparent',
-                    border: `1px solid ${s.id === activeSessionId ? colors.accent : 'transparent'}`,
-                    marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  }}>
-                    <div style={{ fontSize: '13px', color: colors.text, flex: 1 }}>
-                      <div style={{ fontWeight: 500 }}>{s.context || 'Chat ' + s.createdAt?.slice(0, 10)}</div>
-                      <div style={{ fontSize: '11px', color: colors.textMuted }}>{s.createdAt ? new Date(s.createdAt).toLocaleDateString() : ''}</div>
+                  <div key={s.id} style={styles.historyItem(s.id === activeSessionId)}
+                    onMouseEnter={e => { if (s.id !== activeSessionId) e.currentTarget.style.background = colors.grayLight; }}
+                    onMouseLeave={e => { if (s.id !== activeSessionId) e.currentTarget.style.background = 'transparent'; }}
+                    onClick={() => handleSelectSession(s.id)}
+                  >
+                    <div style={{ fontSize: '13px', color: colors.text, flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {s.context || 'Chat ' + (s.createdAt?.slice(0, 10) || '')}
+                      </div>
+                      <div style={{ fontSize: '11px', color: colors.textMuted, marginTop: '2px' }}>
+                        {s.createdAt ? new Date(s.createdAt).toLocaleDateString('es-PE') : ''}
+                      </div>
                     </div>
-                    <Tooltip text="Eliminar chat">
+                    <Tooltip text="Eliminar">
                       <button onClick={e => { e.stopPropagation(); handleDeleteSession(s.id); }} style={{
-                        padding: '2px 6px', borderRadius: '4px', border: 'none',
+                        padding: '4px 6px', borderRadius: '6px', border: 'none',
                         background: 'transparent', color: colors.textMuted, cursor: 'pointer', fontSize: '14px',
-                      }}>🗑️</button>
+                        transition: 'all 0.15s ease', lineHeight: '1',
+                      }}
+                        onMouseEnter={e => { e.currentTarget.style.background = colors.errorBg; e.currentTarget.style.color = colors.error; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = colors.textMuted; }}
+                      >
+                        🗑️
+                      </button>
                     </Tooltip>
                   </div>
                 ))
@@ -291,51 +466,55 @@ export default function Chatbot() {
             </div>
           ) : (
             <>
-              <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={styles.messagesArea}>
                 {!activeSessionId ? (
-                  <div style={{ textAlign: 'center', padding: '40px 16px' }}>
-                    <div style={{ fontSize: '40px', marginBottom: '12px' }}>🤖</div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: colors.text, marginBottom: '8px' }}>
+                  <div style={styles.emptyState}>
+                    <div style={styles.emptyIcon}>🤖</div>
+                    <div style={{ fontSize: '15px', fontWeight: 600, color: colors.text }}>
                       ¿Necesitas ayuda?
                     </div>
-                    <div style={{ fontSize: '13px', color: colors.textMuted, marginBottom: '16px' }}>
-                      Inicia una conversación con nuestro asistente virtual
+                    <div style={{ fontSize: '13px', color: colors.textMuted, maxWidth: '260px', lineHeight: 1.5 }}>
+                      Inicia una conversación con nuestro asistente virtual especializado en pastelería
                     </div>
                     <button onClick={handleNewSession} disabled={creating} style={{
-                      padding: '10px 24px', borderRadius: '99px', border: 'none',
-                      background: colors.accent, color: '#fff', cursor: 'pointer',
-                      fontSize: '14px', fontWeight: 600, fontFamily: font.body,
-                    }}>
+                      marginTop: '8px', padding: '10px 28px', borderRadius: '99px', border: 'none',
+                      background: `linear-gradient(135deg, ${colors.accent}, #15805d)`,
+                      color: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: 600,
+                      fontFamily: font.body, transition: 'all 0.2s ease',
+                      boxShadow: '0 4px 12px rgba(29,158,117,0.3)',
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                      onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    >
                       {creating ? 'Creando...' : 'Nueva conversación'}
                     </button>
                   </div>
                 ) : messages.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: colors.textMuted, fontSize: '13px' }}>
-                    Cargando mensajes...
+                  <div style={styles.emptyState}>
+                    <div style={{ fontSize: '32px', opacity: 0.5 }}>⏳</div>
+                    <div style={{ fontSize: '13px', color: colors.textMuted }}>Cargando mensajes...</div>
                   </div>
                 ) : (
                   messages.map((msg) => (
-                    <div key={msg.id} style={{
-                      display: 'flex', justifyContent: msg.senderRole === 'user' ? 'flex-end' : 'flex-start',
-                    }}>
-                      <div style={{
-                        maxWidth: '80%', padding: '10px 14px', borderRadius: '14px',
-                        background: msg.senderRole === 'user' ? colors.accent : colors.grayBg,
-                        color: msg.senderRole === 'user' ? '#fff' : colors.text,
-                        fontSize: '13px', lineHeight: '1.5',
-                        borderBottomRightRadius: msg.senderRole === 'user' ? '4px' : '14px',
-                        borderBottomLeftRadius: msg.senderRole === 'user' ? '14px' : '4px',
-                        opacity: msg.failed ? 0.6 : 1,
-                      }}>
-                        {msg.senderRole === 'ai' ? (
-                          <div dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.message) }} />
-                        ) : (
-                          <span>{msg.message}</span>
-                        )}
-                        {msg.failed && (
-                          <div style={{ fontSize: '11px', color: colors.error, marginTop: '4px' }}>
-                            Error al enviar. Intenta de nuevo.
-                          </div>
+                    <div key={msg.id} style={styles.msgRow(msg.senderRole === 'user')}>
+                      {msg.senderRole === 'ai' && (
+                        <div style={styles.msgAvatar}>P</div>
+                      )}
+                      <div>
+                        <div style={styles.msgBubble(msg.senderRole === 'user', msg.failed)}>
+                          {msg.senderRole === 'ai' ? (
+                            <div dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.message) }} />
+                          ) : (
+                            <span>{msg.message}</span>
+                          )}
+                          {msg.failed && (
+                            <div style={{ fontSize: '11px', color: colors.error, marginTop: '4px' }}>
+                              Error al enviar. Intenta de nuevo.
+                            </div>
+                          )}
+                        </div>
+                        {msg.createdAt && (
+                          <div style={styles.msgTime}>{formatTime(msg.createdAt)}</div>
                         )}
                       </div>
                     </div>
@@ -343,75 +522,74 @@ export default function Chatbot() {
                 )}
 
                 {aiTyping && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div style={styles.msgRow(false)}>
+                    <div style={styles.msgAvatar}>P</div>
                     <div style={{
-                      maxWidth: '80%', padding: '10px 14px', borderRadius: '14px',
-                      background: colors.grayBg, color: colors.text, fontSize: '13px',
-                      borderBottomLeftRadius: '4px',
+                      ...styles.msgBubble(false, false),
+                      padding: '14px 18px',
                     }}>
-                      <span style={{ opacity: 0.6 }}>Escribiendo</span>
-                      <span style={{ animation: 'dots 1.5s infinite', marginLeft: '4px' }}>
-                        <span style={{ animationDelay: '0s' }}>.</span>
-                        <span style={{ animationDelay: '0.3s' }}>.</span>
-                        <span style={{ animationDelay: '0.6s' }}>.</span>
+                      <span style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: colors.accent, animation: 'chatbotDot 1.2s ease-in-out infinite', animationDelay: '0s' }} />
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: colors.accent, animation: 'chatbotDot 1.2s ease-in-out infinite', animationDelay: '0.2s' }} />
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: colors.accent, animation: 'chatbotDot 1.2s ease-in-out infinite', animationDelay: '0.4s' }} />
                       </span>
                     </div>
                   </div>
                 )}
 
                 {loading && !aiTyping && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div style={styles.msgRow(false)}>
+                    <div style={styles.msgAvatar}>P</div>
                     <div style={{
-                      maxWidth: '80%', padding: '10px 14px', borderRadius: '14px',
-                      background: colors.grayBg, color: colors.text, fontSize: '13px',
-                      borderBottomLeftRadius: '4px',
+                      ...styles.msgBubble(false, false),
+                      padding: '12px 18px', color: colors.textMuted, fontSize: '12px',
                     }}>
-                      <span style={{ opacity: 0.6 }}>Enviando...</span>
+                      Enviando...
                     </div>
                   </div>
                 )}
 
-                {error && (
-                  <div style={{
-                    padding: '8px 12px', borderRadius: '8px', background: colors.errorBg,
-                    color: colors.error, fontSize: '12px', textAlign: 'center',
-                  }}>
-                    {error}
-                  </div>
-                )}
+                {error && <div style={styles.errorBar}>{error}</div>}
 
                 <div ref={messagesEndRef} />
               </div>
 
               {activeSessionId && (
-                <div style={{
-                  padding: '12px', borderTop: `1px solid ${colors.border}`,
-                  display: 'flex', gap: '8px',
-                }}>
+                <div style={styles.inputArea}>
                   <input
                     ref={inputRef}
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
+                    onFocus={() => setInputFocused(true)}
+                    onBlur={() => setInputFocused(false)}
                     placeholder="Escribe un mensaje..."
                     disabled={loading || aiTyping}
                     style={{
-                      flex: 1, height: '40px', padding: '0 12px', borderRadius: '99px',
-                      border: `1.5px solid ${colors.border}`, outline: 'none',
-                      fontSize: '13px', fontFamily: font.body, color: colors.text,
-                      background: colors.white,
+                      ...styles.input,
+                      borderColor: inputFocused ? colors.accent : colors.border,
+                      background: inputFocused ? colors.white : colors.grayLight,
                     }}
                   />
                   <Tooltip text="Enviar mensaje">
-                    <button onClick={handleSend} disabled={loading || aiTyping || !input.trim()} style={{
-                      width: '40px', height: '40px', borderRadius: '50%', border: 'none',
-                      background: loading || aiTyping || !input.trim() ? colors.grayBg : colors.accent,
-                      color: loading || aiTyping || !input.trim() ? colors.textMuted : '#fff',
-                      fontSize: '16px', cursor: loading || aiTyping || !input.trim() ? 'default' : 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s ease',
-                    }}>
-                      ➤
+                    <button
+                      onClick={handleSend}
+                      disabled={loading || aiTyping || !input.trim()}
+                      style={styles.sendBtn(loading || aiTyping || !input.trim())}
+                      onMouseEnter={e => {
+                        if (!loading && !aiTyping && input.trim()) {
+                          e.currentTarget.style.background = '#15805d';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = loading || aiTyping || !input.trim() ? colors.grayBg : colors.accent;
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                      </svg>
                     </button>
                   </Tooltip>
                 </div>

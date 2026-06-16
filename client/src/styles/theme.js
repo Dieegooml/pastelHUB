@@ -181,6 +181,9 @@ export const animationStyles = `
 @keyframes fadeInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes chatbotPulse { 0%, 100% { box-shadow: 0 4px 20px rgba(29,158,117,0.4); } 50% { box-shadow: 0 4px 28px rgba(29,158,117,0.55); } }
+@keyframes chatPanelIn { from { opacity: 0; transform: scale(0.9) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes chatbotDot { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
 `;
 
 export const animFadeIn = { animation: 'fadeIn 0.3s ease both' };
