@@ -45,7 +45,7 @@ function RenderIcon({ icon }) {
   };
 
   return (
-    <Flex w="22px" h="22px" color="accent.300" align="center" justify="center">
+    <Flex w="22px" h="22px" color="#4ADE80" align="center" justify="center">
       <svg
         viewBox="0 0 24 24"
         fill={icon === 'star' ? 'currentColor' : 'none'}
@@ -68,7 +68,7 @@ function BrandContent({ compact }) {
       direction="column"
       align="center"
       justify="center"
-      p={{ base: compact ? 6 : 12, md: 12 }}
+      p={{ base: compact ? 5 : 10, md: 12 }}
       position="relative"
       overflow="hidden"
       minH={compact ? 'auto' : '100%'}
@@ -81,56 +81,74 @@ function BrandContent({ compact }) {
         as="img"
         src="/pastelHUBlogo.png"
         alt="PastelHub"
-        h={{ base: '90px', md: '140px' }}
-        mb={4}
+        h={{ base: '80px', md: '120px' }}
+        mb={3}
         fallback={
-          <Box w="100px" h="100px" borderRadius="xl" bg="white" color="brand.900" display="flex" alignItems="center" justifyContent="center" fontSize="48px" fontWeight={900} fontFamily="heading" mb={4}>
+          <Box w="80px" h="80px" borderRadius="xl" bg="white" color="#2D1F1F" display="flex" alignItems="center" justifyContent="center" fontSize="40px" fontWeight={900} fontFamily="heading" mb={3}>
             P
           </Box>
         }
       />
-      <Heading fontFamily="heading" fontSize={{ base: '28px', md: '42px' }} fontWeight={700} color="white" textAlign="center" lineHeight="1.2">
+      <Heading fontFamily="heading" fontSize={{ base: '24px', md: '38px' }} fontWeight={700} color="white" textAlign="center" lineHeight="1.2">
         PastelHub
       </Heading>
-      <Text fontSize={{ base: '13px', md: 'md' }} color="whiteAlpha.600" textAlign="center" maxW="280px" mt={2} mb={compact ? 4 : 6}>
+      <Text fontSize={{ base: '12px', md: '15px' }} color="rgba(255,255,255,0.6)" textAlign="center" maxW="260px" mt={2} mb={compact ? 3 : 6}>
         Descubre las mejores pastelerías artesanales
       </Text>
-      <Box w="60px" h="2px" bg="whiteAlpha.300" mb={compact ? 4 : 8} />
+      <Box w="50px" h="2px" bg="rgba(255,255,255,0.3)" mb={compact ? 3 : 6} />
 
-      <VStack spacing={2.5} w="full" maxW="350px">
-        {bullets.map((b, i) => (
-          <Flex
-            key={i}
-            align="center"
-            gap={3}
-            bg="rgba(255,255,255,0.08)"
-            p="10px 16px"
-            borderRadius="lg"
-            backdropFilter="blur(4px)"
-            w="full"
-          >
-            <RenderIcon icon={b.icon} />
-            <Text fontSize={{ base: '12px', md: 'sm' }} color="whiteAlpha.800" fontWeight={500}>
-              {b.text}
-            </Text>
-          </Flex>
-        ))}
-      </VStack>
+      {!compact && (
+        <VStack spacing={2.5} w="full" maxW="320px">
+          {bullets.map((b, i) => (
+            <Flex
+              key={i}
+              align="center"
+              gap={3}
+              bg="rgba(255,255,255,0.08)"
+              p="10px 16px"
+              borderRadius="lg"
+              backdropFilter="blur(4px)"
+              w="full"
+            >
+              <RenderIcon icon={b.icon} />
+              <Text fontSize={{ base: '12px', md: '14px' }} color="rgba(255,255,255,0.8)" fontWeight={500}>
+                {b.text}
+              </Text>
+            </Flex>
+          ))}
+        </VStack>
+      )}
     </Flex>
   );
 }
 
 function AuthLayout({ children }) {
-  const [isMobile] = useMediaQuery('(max-width: 768px)');
+  const [isLg] = useMediaQuery('(min-width: 1024px)');
+  const [isMobile] = useMediaQuery('(max-width: 640px)');
 
   if (isMobile) {
     return (
-      <Flex minH="100vh" direction="column" bg="white">
+      <Flex minH="100vh" direction="column" bg="#fff">
         <Box bg={GRADIENT_BG}>
           <BrandContent compact />
         </Box>
-        <Flex flex={1} align="flex-start" justify="center" px={4} py={8}>
-          <Box w="full" maxW="400px">
+        <Flex flex={1} align="flex-start" justify="center" px={5} py={6}>
+          <Box w="full" maxW="420px">
+            {children}
+          </Box>
+        </Flex>
+      </Flex>
+    );
+  }
+
+  if (!isLg) {
+    return (
+      <Flex minH="100vh" direction="column" bg="#fff">
+        <Box bg={GRADIENT_BG}>
+          <BrandContent compact />
+        </Box>
+        <Flex flex={1} align="center" justify="center" px={6} py={8}>
+          <Box w="full" maxW="440px">
             {children}
           </Box>
         </Flex>
@@ -141,22 +159,21 @@ function AuthLayout({ children }) {
   return (
     <Flex minH="100vh">
       <PastelFadeIn duration={0.6}>
-        <Flex w="45%" bg={GRADIENT_BG} direction="column" align="center" justify="center">
+        <Flex w="480px" minW="420px" bg={GRADIENT_BG} direction="column" align="center" justify="center">
           <BrandContent />
         </Flex>
       </PastelFadeIn>
-
       <Flex
-        w="55%"
+        flex={1}
         bg="white"
         align="center"
         justify="center"
-        px={{ base: 8, lg: 12 }}
-        py={{ base: 8, lg: 12 }}
+        px={8}
+        py={10}
         overflowY="auto"
       >
         <PastelSlideIn direction="right" duration={0.5}>
-          <Box w="full" maxW="400px">
+          <Box w="full" maxW="420px">
             {children}
           </Box>
         </PastelSlideIn>

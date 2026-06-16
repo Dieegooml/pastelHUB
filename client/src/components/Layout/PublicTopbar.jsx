@@ -36,7 +36,6 @@ export default function PublicTopbar() {
 
   const handleLogout = async () => {
     await signOut(auth)
-    navigate('/login')
   }
 
   useEffect(() => {

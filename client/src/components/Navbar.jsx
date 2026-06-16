@@ -325,7 +325,7 @@ export default function Navbar() {
           {user?.email}
         </span>
 
-        <button onClick={() => { signOut(auth); navigate('/login'); }}
+        <button onClick={async () => { await signOut(auth); }}
           style={{
             padding: '6px 14px', borderRadius: '99px', border: 'none',
             fontSize: '12px', fontWeight: 500, fontFamily: font.body, cursor: 'pointer',

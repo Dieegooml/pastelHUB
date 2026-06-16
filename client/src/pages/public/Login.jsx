@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 import { auth, googleProvider, facebookProvider } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/apiService';
@@ -9,8 +9,9 @@ import AuthLayout from '../../components/AuthLayout';
 import { PastelPageTransition } from '../../components/UI';
 import {
   Box, Flex, Heading, Text, Input, Button, FormControl, FormLabel,
-  InputGroup, InputRightElement, Alert, AlertIcon, Divider,
+  InputGroup, InputRightElement,
 } from '@chakra-ui/react';
+import { font } from '../../styles/theme';
 
 const FIREBASE_ERRORS = {
   'auth/user-not-found': 'No existe una cuenta con este correo',
@@ -20,7 +21,7 @@ const FIREBASE_ERRORS = {
 };
 
 export default function Login() {
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -94,6 +95,7 @@ export default function Login() {
       navigate('/');
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
+        await signOut(auth).catch(() => {});
         setError('Error al iniciar sesión con Google');
       }
     } finally {
@@ -111,6 +113,7 @@ export default function Login() {
       navigate('/');
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
+        await signOut(auth).catch(() => {});
         setError('Error al iniciar sesión con Facebook');
       }
     } finally {
@@ -121,41 +124,65 @@ export default function Login() {
   return (
     <AuthLayout>
       <PastelPageTransition>
-      <Box
-        bg="white"
-        borderRadius="2xl"
-        boxShadow={{ base: 'none', md: '0 4px 24px rgba(0,0,0,0.06)' }}
-        p={{ base: 0, md: 8 }}
-      >
-      <Heading as="h1" fontFamily="heading" fontSize={{ base: '24px', md: '32px' }} fontWeight={700} color="brand.900" m={0}>
+      <Box w="full">
+      <Heading as="h1" fontFamily="heading" fontSize={{ base: '22px', md: '30px' }} fontWeight={700} color="#2D1F1F" m={0}>
         Bienvenido de nuevo
       </Heading>
-      <Text fontFamily="body" fontSize="14px" color="warmGray.500" mt={1} mb={6}>
+      <Text fontFamily="body" fontSize={{ base: '13px', md: '14px' }} color="#888" mt={1} mb={5}>
         Inicia sesión en tu cuenta
       </Text>
 
       {error && (
-        <Alert status="error" variant="left-accent" borderRadius="10px" mb={4} fontSize="14px">
-          <AlertIcon />
-          {error}
-        </Alert>
+        <Flex
+          bg="#FEF2F2"
+          color="#DC2626"
+          px={4}
+          py={3}
+          borderRadius="10px"
+          fontSize="14px"
+          fontFamily={font.body}
+          mb={4}
+          align="center"
+          gap={2}
+        >
+          <Box flexShrink={0} w="18px" h="18px" color="#DC2626">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          </Box>
+          <Text fontSize="14px" color="#DC2626">{error}</Text>
+        </Flex>
       )}
 
-      {resetMode ? (
+      {user ? (
+        <Box textAlign="center" py={4}>
+          <Text fontFamily={font.body} fontSize="14px" color="#555" mb={4}>
+            Ya tienes una sesión activa como <strong>{user.email}</strong>
+          </Text>
+          <Button
+            w="100%" h="48px" fontSize="15px" fontFamily={font.body}
+            fontWeight={600} bg="#DC2626" color="#fff" border="none"
+            borderRadius="99px" cursor="pointer"
+            _hover={{ bg: '#B91C1C' }}
+            onClick={async () => { await signOut(auth); }}
+          >
+            Cerrar sesión
+          </Button>
+        </Box>
+      ) : resetMode ? (
         <>
           {resetSent ? (
-            <Alert status="success" variant="left-accent" borderRadius="10px" mb={4} flexDir="column" alignItems="center" textAlign="center">
-              <AlertIcon />
-              <Text fontWeight={600} fontSize="14px">Correo enviado</Text>
-              <Text fontSize="13px">Revisa tu bandeja de entrada. Si no aparece, revisa la carpeta de spam.</Text>
-            </Alert>
+            <Flex direction="column" align="center" bg="#ECFDF5" color="#16A34A" px={4} py={4} borderRadius="10px" mb={4} textAlign="center" fontFamily={font.body}>
+              <Text fontWeight={600} fontSize="14px" color="#16A34A">Correo enviado</Text>
+              <Text fontSize="13px" color="#16A34A" mt={1}>Revisa tu bandeja de entrada. Si no aparece, revisa la carpeta de spam.</Text>
+            </Flex>
           ) : (
             <>
               <Text fontFamily="body" fontSize="14px" color="warmGray.500" mb={5}>
                 Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.
               </Text>
               <FormControl mb={5}>
-                <FormLabel fontFamily="body" fontSize="12px" fontWeight={500} color="warmGray.600" mb={1.5}>
+                <FormLabel fontFamily={font.body} fontSize="12px" fontWeight={500} color="#555" mb={1.5}>
                   Correo electrónico
                 </FormLabel>
                 <Input
@@ -166,15 +193,23 @@ export default function Login() {
                   isDisabled={loading}
                   h="48px"
                   fontSize="14px"
-                  focusBorderColor="accent.500"
-                  _placeholder={{ color: 'warmGray.300' }}
+                  fontFamily={font.body}
+                  focusBorderColor="#1D9E75"
+                  _placeholder={{ color: '#ccc' }}
                 />
               </FormControl>
               <Button
-                variant="primary"
                 w="100%"
                 h="50px"
                 fontSize="15px"
+                fontFamily={font.body}
+                fontWeight={600}
+                bg="#2D1F1F"
+                color="#fff"
+                border="none"
+                borderRadius="99px"
+                cursor="pointer"
+                _hover={{ bg: '#4A3A3A' }}
                 onClick={handleResetPassword}
                 isLoading={loading}
                 loadingText="Enviando..."
@@ -184,23 +219,14 @@ export default function Login() {
               </Button>
             </>
           )}
-          <Text textAlign="center" mt={4}>
-            <Box
-              as="span"
-              fontFamily="body"
-              fontSize="13px"
-              color="accent.500"
-              cursor="pointer"
-              onClick={() => { setResetMode(false); setResetSent(false); setError(''); setResetEmail(''); }}
-            >
-              Volver al inicio de sesión
-            </Box>
+          <Text textAlign="center" mt={4} fontFamily={font.body} fontSize="13px" color="#1D9E75" cursor="pointer" onClick={() => { setResetMode(false); setResetSent(false); setError(''); setResetEmail(''); }}>
+            Volver al inicio de sesión
           </Text>
         </>
       ) : (
         <>
-          <FormControl isInvalid={!!fieldErrors.email} mb={5}>
-            <FormLabel fontFamily="body" fontSize="12px" fontWeight={500} color="warmGray.600" mb={1.5}>
+          <FormControl isInvalid={!!fieldErrors.email} mb={4}>
+            <FormLabel fontFamily={font.body} fontSize="12px" fontWeight={500} color="#555" mb={1.5}>
               Correo electrónico
             </FormLabel>
             <Input
@@ -208,21 +234,24 @@ export default function Login() {
               placeholder="correo@ejemplo.com"
               value={email}
               maxLength={254}
+              h="48px"
+              fontSize="14px"
+              fontFamily={font.body}
               onChange={(e) => { setEmail(e.target.value.replace(/\s/g, '')); setFieldErrors((p) => ({ ...p, email: '' })); }}
               onFocus={() => setFocusField('email')}
               onBlur={() => setFocusField(null)}
               isDisabled={loading}
               isInvalid={!!fieldErrors.email}
-              focusBorderColor={fieldErrors.email ? 'red.500' : 'accent.500'}
-              _placeholder={{ color: 'warmGray.300' }}
+              focusBorderColor={fieldErrors.email ? '#EF4444' : '#1D9E75'}
+              _placeholder={{ color: '#ccc' }}
             />
             {fieldErrors.email && (
-              <Text fontSize="12px" color="red.500" mt={1}>{fieldErrors.email}</Text>
+              <Text fontSize="12px" color="#EF4444" mt={1} fontFamily={font.body}>{fieldErrors.email}</Text>
             )}
           </FormControl>
 
-          <FormControl isInvalid={!!fieldErrors.password} mb={5}>
-            <FormLabel fontFamily="body" fontSize="12px" fontWeight={500} color="warmGray.600" mb={1.5}>
+          <FormControl isInvalid={!!fieldErrors.password} mb={4}>
+            <FormLabel fontFamily={font.body} fontSize="12px" fontWeight={500} color="#555" mb={1.5}>
               Contraseña
             </FormLabel>
             <InputGroup>
@@ -231,18 +260,21 @@ export default function Login() {
                 placeholder="••••••••"
                 value={password}
                 maxLength={254}
+                h="48px"
+                fontSize="14px"
+                fontFamily={font.body}
                 onChange={(e) => { setPassword(e.target.value.replace(/\s/g, '')); setFieldErrors((p) => ({ ...p, password: '' })); }}
                 onFocus={() => setFocusField('password')}
                 onBlur={() => setFocusField(null)}
                 isDisabled={loading}
                 isInvalid={!!fieldErrors.password}
-                focusBorderColor={fieldErrors.password ? 'red.500' : 'accent.500'}
-                _placeholder={{ color: 'warmGray.300' }}
+                focusBorderColor={fieldErrors.password ? '#EF4444' : '#1D9E75'}
+                _placeholder={{ color: '#ccc' }}
                 pr="44px"
               />
-              <InputRightElement>
+              <InputRightElement h="48px">
                 <Button size="sm" variant="ghost" onClick={() => setShowPassword(!showPassword)} tabIndex={-1} lineHeight={1} aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
-                  <Box w="20px" h="20px" color="warmGray.400">
+                  <Box w="20px" h="20px" color="#999">
                     {showPassword ? (
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
@@ -260,30 +292,36 @@ export default function Login() {
               </InputRightElement>
             </InputGroup>
             {fieldErrors.password && (
-              <Text fontSize="12px" color="red.500" mt={1}>{fieldErrors.password}</Text>
+              <Text fontSize="12px" color="#EF4444" mt={1} fontFamily={font.body}>{fieldErrors.password}</Text>
             )}
           </FormControl>
 
           <Text
-            as="span"
             display="block"
             textAlign="right"
-            fontFamily="body"
+            fontFamily={font.body}
             fontSize="13px"
-            color="accent.500"
+            color="#1D9E75"
             cursor="pointer"
-            mt={-3}
-            mb={6}
+            mt={-2}
+            mb={5}
             onClick={() => { setResetMode(true); setResetEmail(email); setError(''); }}
           >
             ¿Olvidaste tu contraseña?
           </Text>
 
           <Button
-            variant="primary"
             w="100%"
-            h="50px"
+            h="48px"
             fontSize="15px"
+            fontFamily={font.body}
+            fontWeight={600}
+            bg="#2D1F1F"
+            color="#fff"
+            border="none"
+            borderRadius="99px"
+            cursor="pointer"
+            _hover={{ bg: '#4A3A3A' }}
             onClick={handleLogin}
             isLoading={loading}
             loadingText="Iniciando sesión..."
@@ -294,18 +332,32 @@ export default function Login() {
         </>
       )}
 
+      {!user && (
+        <>
       <Flex align="center" my={5}>
-        <Divider />
-        <Text px={4} fontFamily="body" fontSize="13px" color="warmGray.500" whiteSpace="nowrap">
+        <Box flex={1} h="1px" bg="#E8DDD5" />
+        <Text px={4} fontFamily={font.body} fontSize="13px" color="#888" whiteSpace="nowrap">
           o continúa con
         </Text>
-        <Divider />
+        <Box flex={1} h="1px" bg="#E8DDD5" />
       </Flex>
 
       <Button
-        variant="outline"
         w="100%"
-        h="50px"
+        h="48px"
+        fontSize="14px"
+        fontFamily={font.body}
+        fontWeight={500}
+        bg="#fff"
+        color="#333"
+        border="1.5px solid #E8DDD5"
+        borderRadius="99px"
+        cursor="pointer"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        gap="8px"
+        _hover={{ bg: '#f9f9f9' }}
         onClick={handleGoogle}
         isDisabled={loading}
         leftIcon={
@@ -321,9 +373,22 @@ export default function Login() {
       </Button>
 
       <Button
-        variant="outline"
         w="100%"
-        h="50px"
+        h="48px"
+        fontSize="14px"
+        fontFamily={font.body}
+        fontWeight={500}
+        bg="#fff"
+        color="#333"
+        border="1.5px solid #E8DDD5"
+        borderRadius="99px"
+        cursor="pointer"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        gap="8px"
+        mt={3}
+        _hover={{ bg: '#f9f9f9' }}
         onClick={handleFacebook}
         isDisabled={loading}
         leftIcon={
@@ -335,12 +400,14 @@ export default function Login() {
         Continuar con Facebook
       </Button>
 
-      <Text textAlign="center" fontFamily="body" fontSize="14px" color="warmGray.500" mt={6}>
+      <Text textAlign="center" fontFamily={font.body} fontSize="14px" color="#888" mt={6}>
         ¿No tienes cuenta?{' '}
-        <Box as={Link} to="/register" color="accent.500" fontWeight={600}>
+        <Box as={Link} to="/register" color="#1D9E75" fontWeight={600} display="inline">
           Regístrate aquí
         </Box>
       </Text>
+        </>
+      )}
     </Box>
     </PastelPageTransition>
     </AuthLayout>

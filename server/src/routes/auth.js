@@ -6,6 +6,18 @@ const { verifyToken, requireAdmin } = require('../middlewares/auth');
 const { validate } = require('../middlewares/validate');
 const { assignRoleSchema } = require('../validators/authValidator');
 
+async function setClaimsWithRetry(uid, roles, retries = 3, delay = 500) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await admin.auth().setCustomUserClaims(uid, { roles });
+      return;
+    } catch (e) {
+      if (i === retries - 1) throw e;
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+}
+
 // POST — sincronizar usuario tras login
 router.post('/sync', verifyToken, async (req, res) => {
   try {
@@ -39,7 +51,7 @@ router.post('/sync', verifyToken, async (req, res) => {
 
       // Solo sobrescribir claims si no había pre-existentes
       if (!hasPreExistingClaims) {
-        await admin.auth().setCustomUserClaims(uid, { roles });
+        await setClaimsWithRetry(uid, roles);
       }
 
       // Crear perfil customer solo si el rol lo incluye
@@ -86,7 +98,7 @@ router.post('/assign-role', verifyToken, requireAdmin, validate(assignRoleSchema
     const userDoc = await db.collection('users').doc(uid).get();
     if (!userDoc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    await admin.auth().setCustomUserClaims(uid, { roles });
+    await setClaimsWithRetry(uid, roles);
     await db.collection('users').doc(uid).update({ roles, updatedAt: new Date().toISOString() });
 
     res.json({ id: uid, roles });

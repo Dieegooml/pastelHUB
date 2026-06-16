@@ -19,7 +19,10 @@ if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   credential = admin.credential.cert(serviceAccount);
 }
 
-admin.initializeApp({ credential });
+admin.initializeApp({
+  credential,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'pastehub-2d2b2.appspot.com',
+});
 
 const db = admin.firestore();
 db.settings({
