@@ -332,10 +332,10 @@ export default function ProductDetail() {
                       <Flex justify="space-between" align="center">
                         <PastelPrice value={p.price || 0} size="xs" />
                         {p.stock !== undefined && p.stock <= 5 && p.stock > 0 && (
-                          <Text fontSize="10px" color="#f59e0b">{p.stock} uds</Text>
+                          <Text fontSize="10px" color="#b45309">{p.stock} uds</Text>
                         )}
                         {p.stock === 0 && (
-                          <Text fontSize="10px" color="#dc2626">Agotado</Text>
+                          <Text fontSize="10px" color="#b91c1c">Agotado</Text>
                         )}
                       </Flex>
                     </Box>

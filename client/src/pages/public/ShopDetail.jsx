@@ -233,7 +233,7 @@ export default function ShopDetail() {
                           </Text>
                         )}
                         {p.stock !== undefined && p.stock !== null && p.stock <= 5 && p.stock > 0 && (
-                          <Text fontSize="10px" color="#f59e0b" fontFamily="body" mb={1}>
+                          <Text fontSize="10px" color="#b45309" fontFamily="body" mb={1}>
                             Solo quedan {p.stock}
                           </Text>
                         )}

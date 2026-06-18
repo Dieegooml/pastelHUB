@@ -148,7 +148,7 @@ export default function OwnerTabPromotions({ selectedShop, setError, setSuccess 
                       <Text fontWeight={600} fontFamily="heading" color="brand.700">{p.name}</Text>
                       <Tag bg={p.type === 'discount' ? '#e3f2fd' : p.type === 'combo' ? '#fce4ec' : '#fff3e0'} color="warmGray.700" borderRadius="full" fontSize="xs">{PROMO_TYPE_LABELS[p.type] || p.type}</Tag>
                       {!p.is_active && <Tag bg="#fee2e2" color="#ef4444" borderRadius="full" fontSize="xs">Inactiva</Tag>}
-                      {expired && <Tag bg="#f3f4f6" color="#999" borderRadius="full" fontSize="xs">Vencida</Tag>}
+                      {expired && <Tag bg="#f3f4f6" color="#666" borderRadius="full" fontSize="xs">Vencida</Tag>}
                       {active && <Tag bg="#d1fae5" color="#1D9E75" borderRadius="full" fontSize="xs">Activa</Tag>}
                     </HStack>
                     <Text fontSize="sm" color="warmGray.500" mb={1}>{p.description}</Text>
