@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  Box, Flex, Heading, Text, Button, Card, Tabs, TabList, Tab, TabPanels, TabPanel,
-  useToast, Spinner, Alert, AlertIcon
+  Box, Flex, Heading, Text, Button, Tabs, TabList, Tab, TabPanels, TabPanel,
+  Spinner, Alert, AlertIcon
 } from '@chakra-ui/react';
 import { useAuth } from '../../context/AuthContext';
+import { useI18n } from '../../context/I18nContext';
 import { shopsService } from '../../services/shopsService';
 import OwnerTabInfo from './OwnerTabInfo';
 import OwnerTabProducts from './OwnerTabProducts';
@@ -11,16 +12,17 @@ import OwnerTabOrders from './OwnerTabOrders';
 import OwnerTabPromotions from './OwnerTabPromotions';
 import OwnerTabSummary from './OwnerTabSummary';
 import OwnerTabBoletas from './OwnerTabBoletas';
+import { PastelSkeletonCard } from '../../components/UI';
 
 const TABS = ['info', 'products', 'orders', 'promotions', 'summary', 'boletas'];
 const TAB_LABELS = { info: 'Información', products: 'Productos', orders: 'Órdenes', promotions: 'Promociones', summary: 'Resumen', boletas: 'Boletas' };
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
-  const toast = useToast();
+  const { t } = useI18n();
   const [shops, setShops] = useState([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const [tab, setTab] = useState('info');
+  const [tabIdx, setTabIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -47,7 +49,8 @@ export default function OwnerDashboard() {
   if (loading) {
     return (
       <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, md: 8 }}>
-        {[1, 2].map(i => <Box key={i} h="80px" bg="warmGray.100" borderRadius="xl" mb={4} />)}
+        <PastelSkeletonCard />
+        <PastelSkeletonCard />
       </Box>
     );
   }
@@ -72,6 +75,9 @@ export default function OwnerDashboard() {
       <Text fontSize="sm" color="warmGray.400" mb={6}>Administra tus pastelerías, productos y órdenes</Text>
       <Box h="3px" w="60px" bgGradient="linear(90deg, accent.500, brand.500)" borderRadius="full" mb={6} />
 
+      {error && <Alert status="error" mb={4} borderRadius="lg"><AlertIcon />{error}</Alert>}
+      {success && <Alert status="success" mb={4} borderRadius="lg"><AlertIcon />{success}</Alert>}
+
       {shops.length > 1 && (
         <Flex gap={2} flexWrap="wrap" mb={5}>
           {shops.map((s, i) => (
@@ -82,7 +88,7 @@ export default function OwnerDashboard() {
               color={selectedIdx === i ? 'white' : 'warmGray.600'}
               borderRadius="full"
               fontWeight={selectedIdx === i ? 600 : 500}
-              onClick={() => { setSelectedIdx(i); setTab('info'); }}
+              onClick={() => { setSelectedIdx(i); setTabIdx(0); }}
             >
               {s.shopName}
             </Button>
@@ -91,23 +97,25 @@ export default function OwnerDashboard() {
       )}
 
       {selectedShop && (
-        <>
-          <Tabs variant="brand-underline" index={TABS.indexOf(tab)} onChange={(i) => setTab(TABS[i])} mb={6}>
-            <TabList>
-              {TABS.map((t) => <Tab key={t}>{TAB_LABELS[t]}</Tab>)}
-            </TabList>
-          </Tabs>
-
-          {error && <Alert status="error" mb={4} borderRadius="lg">{error}</Alert>}
-          {success && <Alert status="success" mb={4} borderRadius="lg">{success}</Alert>}
-
-          {tab === 'info' && <OwnerTabInfo selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} onShopUpdate={refreshShops} />}
-          {tab === 'products' && <OwnerTabProducts selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
-          {tab === 'orders' && <OwnerTabOrders selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
-          {tab === 'promotions' && <OwnerTabPromotions selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
-          {tab === 'summary' && <OwnerTabSummary selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
-          {tab === 'boletas' && <OwnerTabBoletas selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} />}
-        </>
+        <Tabs
+          variant="brand-underline"
+          index={tabIdx}
+          onChange={setTabIdx}
+          mb={6}
+          isLazy
+        >
+          <TabList>
+            {TABS.map((t) => <Tab key={t} _focus={{ boxShadow: 'none' }}>{TAB_LABELS[t]}</Tab>)}
+          </TabList>
+          <TabPanels>
+            <TabPanel px={0}><OwnerTabInfo selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} onShopUpdate={refreshShops} /></TabPanel>
+            <TabPanel px={0}><OwnerTabProducts selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} /></TabPanel>
+            <TabPanel px={0}><OwnerTabOrders selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} /></TabPanel>
+            <TabPanel px={0}><OwnerTabPromotions selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} /></TabPanel>
+            <TabPanel px={0}><OwnerTabSummary selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} /></TabPanel>
+            <TabPanel px={0}><OwnerTabBoletas selectedShop={selectedShop} setError={setError} setSuccess={setSuccess} /></TabPanel>
+          </TabPanels>
+        </Tabs>
       )}
     </Box>
   );
