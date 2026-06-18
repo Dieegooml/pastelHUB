@@ -5,7 +5,7 @@ import Navbar from '../Navbar'
 export default function Layout({ children }) {
   return (
     <Box minH="100vh" display="flex" flexDirection="column">
-      <Navbar />
+      <Navbar variant="auth" />
       <Flex flex={1} position="relative">
         <Box
           as="main"

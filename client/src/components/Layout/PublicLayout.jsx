@@ -1,11 +1,11 @@
 import { Box, Flex } from '@chakra-ui/react'
 import PropTypes from 'prop-types'
-import PublicTopbar from './PublicTopbar'
+import Navbar from '../Navbar'
 
 export default function PublicLayout({ children }) {
   return (
     <Box minH="100vh" display="flex" flexDirection="column">
-      <PublicTopbar />
+      <Navbar variant="public" />
       <Flex flex={1} position="relative">
         <Box
           as="main"

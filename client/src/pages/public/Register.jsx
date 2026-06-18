@@ -9,7 +9,7 @@ import { PastelPageTransition } from '../../components/UI';
 import {
   Box, Flex, Heading, Text, Input, Button, FormControl, FormLabel,
   InputGroup, InputLeftElement, InputRightElement,
-  Alert, AlertIcon, Divider, Checkbox,
+  Alert, AlertIcon, Divider,
 } from '@chakra-ui/react';
 
 const FIREBASE_ERRORS = {
@@ -202,6 +202,42 @@ function PasswordStrengthBar({ password }) {
   );
 }
 
+function CustomCheckbox({ checked, onChange, disabled, children, error }) {
+  return (
+    <Flex as="label" align="center" gap={3} cursor={disabled ? 'not-allowed' : 'pointer'} opacity={disabled ? 0.6 : 1} userSelect="none">
+      <Box
+        as="button"
+        type="button"
+        onClick={disabled ? undefined : onChange}
+        w="20px"
+        h="20px"
+        borderRadius="md"
+        border="2px solid"
+        borderColor={error ? 'rose.400' : checked ? 'accent.500' : 'brand.300'}
+        bg={checked ? 'accent.500' : 'white'}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        transition="all 0.15s"
+        _hover={!disabled ? { borderColor: checked ? 'accent.600' : 'brand.400' } : undefined}
+        _focus={{ boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.25)', outline: 'none' }}
+        aria-checked={checked}
+        role="checkbox"
+        flexShrink={0}
+      >
+        {checked && (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        )}
+      </Box>
+      <Text fontFamily="body" fontSize="13px" color={error ? 'rose.500' : 'brand.800'}>
+        {children}
+      </Text>
+    </Flex>
+  );
+}
+
 export default function Register() {
   const { refreshUser } = useAuth();
   const [fullName, setFullName] = useState('');
@@ -301,7 +337,7 @@ export default function Register() {
           bg="white"
           borderRadius="2xl"
           boxShadow={{ base: 'none', md: '0 4px 24px rgba(0,0,0,0.06)' }}
-          p={{ base: 0, md: 8 }}
+          p={{ base: 0, md: 5 }}
         >
           <Heading as="h1" fontFamily="heading" fontSize={{ base: '24px', md: '32px' }} fontWeight={700} color="brand.900" m={0}>
             Crear una cuenta
@@ -336,6 +372,7 @@ export default function Register() {
                 placeholder="Juan Pérez"
                 value={fullName}
                 onChange={(e) => { setFullName(e.target.value); setFieldErrors((p) => ({ ...p, fullName: '' })); }}
+                onBlur={() => { if (fullName.length < 3) setFieldErrors((p) => ({ ...p, fullName: 'El nombre debe tener al menos 3 caracteres' })); else if (!NAME_REGEX.test(fullName)) setFieldErrors((p) => ({ ...p, fullName: 'El nombre solo puede contener letras y espacios' })); }}
                 isDisabled={loading}
                 isInvalid={!!fieldErrors.fullName}
                 h="48px"
@@ -364,6 +401,7 @@ export default function Register() {
                 placeholder="correo@ejemplo.com"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setFieldErrors((p) => ({ ...p, email: '' })); }}
+                onBlur={() => { if (!email.trim()) setFieldErrors((p) => ({ ...p, email: 'El correo es obligatorio' })); else if (/\s/.test(email)) setFieldErrors((p) => ({ ...p, email: 'El correo no debe contener espacios' })); else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) setFieldErrors((p) => ({ ...p, email: 'Ingresa un correo válido' })); }}
                 isDisabled={loading}
                 isInvalid={!!fieldErrors.email}
                 h="48px"
@@ -416,6 +454,7 @@ export default function Register() {
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setFieldErrors((p) => ({ ...p, password: '' })); }}
                 onFocus={() => { setShowChecklist(true); }}
+                onBlur={() => { if (!password.trim()) setFieldErrors((p) => ({ ...p, password: 'La contraseña es obligatoria' })); else if (/\s/.test(password)) setFieldErrors((p) => ({ ...p, password: 'La contraseña no debe contener espacios' })); else if (password.length < 8) setFieldErrors((p) => ({ ...p, password: 'La contraseña debe tener al menos 8 caracteres' })); else if (!/[A-Z]/.test(password)) setFieldErrors((p) => ({ ...p, password: 'Debe contener al menos una mayúscula' })); else if (!/[a-z]/.test(password)) setFieldErrors((p) => ({ ...p, password: 'Debe contener al menos una minúscula' })); else if (!/\d/.test(password)) setFieldErrors((p) => ({ ...p, password: 'Debe contener al menos un número' })); }}
                 onBlur={() => { if (allChecksMet) setShowChecklist(false); }}
                 isDisabled={loading}
                 isInvalid={!!fieldErrors.password}
@@ -465,6 +504,7 @@ export default function Register() {
                 placeholder="Repite tu contraseña"
                 value={confirmPassword}
                 onChange={(e) => { setConfirmPassword(e.target.value); setFieldErrors((p) => ({ ...p, confirmPassword: '' })); }}
+                onBlur={() => { if (confirmPassword !== password) setFieldErrors((p) => ({ ...p, confirmPassword: 'Las contraseñas no coinciden' })); }}
                 isDisabled={loading}
                 isInvalid={!!fieldErrors.confirmPassword}
                 h="48px"
@@ -494,19 +534,14 @@ export default function Register() {
           </FormControl>
 
           <FormControl isInvalid={!!fieldErrors.terms} mb={5}>
-            <Checkbox
-              isChecked={acceptTerms}
-              onChange={(e) => { setAcceptTerms(e.target.checked); setFieldErrors((p) => ({ ...p, terms: '' })); }}
-              isDisabled={loading}
-              colorScheme="accent"
-              size="md"
-              fontFamily="body"
-              fontSize="13px"
-              color="brand.900"
-              iconColor="white"
+            <CustomCheckbox
+              checked={acceptTerms}
+              onChange={() => { setAcceptTerms(!acceptTerms); setFieldErrors((p) => ({ ...p, terms: '' })); }}
+              disabled={loading}
+              error={!!fieldErrors.terms}
             >
               Acepto los términos y condiciones
-            </Checkbox>
+            </CustomCheckbox>
             {fieldErrors.terms && (
               <Text fontSize="12px" color="rose.500" mt={1}>{fieldErrors.terms}</Text>
             )}
@@ -522,6 +557,9 @@ export default function Register() {
             loadingText="Creando cuenta..."
             isDisabled={loading}
             spinnerPlacement="start"
+            _hover={loading ? {} : { bg: 'brand.800', transform: 'translateY(-1px)', shadow: 'md' }}
+            _focus={{ boxShadow: '0 0 0 3px rgba(45, 24, 16, 0.3)', outline: 'none' }}
+            _disabled={{ bg: 'brand.300', cursor: 'not-allowed', _hover: { transform: 'none', shadow: 'none' } }}
           >
             Crear cuenta
           </Button>
