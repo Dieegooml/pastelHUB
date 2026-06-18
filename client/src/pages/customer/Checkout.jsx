@@ -10,6 +10,7 @@ import { ordersService } from '../../services/ordersService';
 import PaymentGateway from '../../components/PaymentGateway';
 import {
   PastelPageHeader, PastelCard, PastelPrice, PastelDividerDeco, PastelPageTransition,
+  showError,
 } from '../../components/UI';
 
 async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -32,13 +33,16 @@ const arrowLeft = (
   </svg>
 );
 
+const ICONS = {
+  shop: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/></svg>,
+};
+
 export default function Checkout() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   const [step, setStep] = useState('form');
   const [orderIds, setOrderIds] = useState([]);
@@ -49,10 +53,6 @@ export default function Checkout() {
     address: '', city: '',
     paymentMethod: 'mercadopago',
     notes: '',
-    cardNumber: '4242 4242 4242 4242',
-    cardExpiry: '12/28',
-    cardCvv: '123',
-    cardholderName: '',
   });
 
   const update = (field, value) => setForm((p) => ({ ...p, [field]: value }));
@@ -64,10 +64,18 @@ export default function Checkout() {
     setItems(cart);
   }, [navigate]);
 
+  const shopIds = [...new Set(items.map(i => i.shopId).filter(Boolean))];
+
+  const shopBreakdown = shopIds.map(shopId => {
+    const shopItems = items.filter(i => i.shopId === shopId);
+    const shopTotal = shopItems.reduce((s, i) => s + (i.price || 0) * i.quantity, 0);
+    return { shopId, shopName: shopItems[0]?.shopName || 'Pastelería', items: shopItems, subtotal: shopTotal, deliveryFee: 5, total: shopTotal + 5 };
+  });
+
   const total = items.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
-  const deliveryFee = total > 0 ? 5 : 0;
+  const deliveryFee = total > 0 ? 5 * shopIds.length : 0;
   const grandTotal = total + deliveryFee;
-  const hasMultipleShops = [...new Set(items.map(i => i.shopId).filter(Boolean))].length > 1;
+  const hasMultipleShops = shopIds.length > 1;
 
   const handleCreateOrders = async () => {
     if (!form.customerName || !form.address || !form.city) {
@@ -77,8 +85,7 @@ export default function Checkout() {
     setLoading(true);
     setError('');
     try {
-      const shopIds = [...new Set(items.map((i) => i.shopId).filter(Boolean))];
-      if (shopIds.length === 0) { setError('Error con el carrito'); setLoading(false); return; }
+      if (shopIds.length === 0) { showError('Error con el carrito'); setLoading(false); return; }
 
       const ids = [];
       for (const shopId of shopIds) {
@@ -103,14 +110,20 @@ export default function Checkout() {
       if (form.paymentMethod === 'cash') {
         setStep('processing');
         await sleep(500);
-        setPagoResult({ success: true, method: 'cash', message: 'Pagarás en efectivo al recibir el pedido' });
+        setPagoResult({
+          success: true,
+          method: 'cash',
+          message: hasMultipleShops
+            ? `Se crearon ${ids.length} órdenes. Pagarás en efectivo al recibir cada pedido.`
+            : 'Pagarás en efectivo al recibir el pedido',
+        });
         setStep('done');
       } else {
         setStep('payment_gateway');
       }
     } catch (e) {
       console.error(e);
-      setError('Error al crear la orden. Intenta de nuevo.');
+      showError('Error al crear la orden. Intenta de nuevo.');
     } finally { setLoading(false); }
   };
 
@@ -120,7 +133,7 @@ export default function Checkout() {
   };
 
   const handlePaymentError = (msg) => {
-    setError(msg);
+    showError(msg);
     setStep('form');
   };
 
@@ -139,13 +152,22 @@ export default function Checkout() {
             {ok ? checkIcon : crossIcon}
           </Flex>
           <Heading as="h2" fontFamily="heading" fontSize="2xl" fontWeight={700} color={ok ? 'brand.700' : 'rose.500'} mb={2}>
-            {ok ? 'Pedido confirmado' : 'Pago rechazado'}
+            {ok ? (hasMultipleShops ? 'Órdenes confirmadas' : 'Pedido confirmado') : 'Pago rechazado'}
           </Heading>
           <Text fontFamily="body" fontSize="sm" color="warmGray.500" mb={1} lineHeight={1.6}>
             {pagoResult?.message || (ok
-              ? 'Tu orden está en proceso. Te notificaremos cuando esté lista.'
+              ? 'Tus órdenes están en proceso. Te notificaremos cuando estén listas.'
               : 'Hubo un problema con el pago. Intenta con otro método.')}
           </Text>
+          {orderIds.length > 1 && (
+            <VStack spacing={1} mt={3} mb={2}>
+              {orderIds.map((id, i) => (
+                <Text key={id} fontFamily="body" fontSize="xs" color="warmGray.400">
+                  Orden #{i + 1}: {id?.slice?.(0, 12) || id}
+                </Text>
+              ))}
+            </VStack>
+          )}
           {pagoResult?.transactionRef && (
             <Text fontFamily="body" fontSize="xs" color="warmGray.400" mt={2}>
               Ref: {pagoResult.transactionRef}
@@ -194,8 +216,8 @@ export default function Checkout() {
             fontSize="xs"
             p={0}
             mb={5}
-            onClick={() => { setStep('form'); setOrderIds([]); localStorage.setItem('cart', JSON.stringify(items)); }}
             leftIcon={arrowLeft}
+            onClick={() => { setStep('form'); setOrderIds([]); localStorage.setItem('cart', JSON.stringify(items)); }}
           >
             Volver
           </Button>
@@ -212,9 +234,18 @@ export default function Checkout() {
           </PastelCard>
 
           {hasMultipleShops && (
-            <Text fontSize="xs" color="warmGray.500" fontFamily="body" mt={3}>
-              El pago se procesa para la primera orden. Las demás quedan registradas con pago pendiente.
-            </Text>
+            <Box mt={3} mb={3}>
+              <Text fontSize="xs" fontWeight={600} color="warmGray.600" mb={2}>Desglose por pastelería:</Text>
+              {shopBreakdown.map((s) => (
+                <Flex key={s.shopId} justify="space-between" fontSize="xs" color="warmGray.500" mb={1}>
+                  <Text>{ICONS.shop} {s.shopName}</Text>
+                  <PastelPrice value={s.total} size="xs" />
+                </Flex>
+              ))}
+              <Text fontSize="xs" color="warmGray.400" mt={2} fontStyle="italic">
+                El pago se procesa para todas las órdenes. Cada pastelería recibirá su pago individualmente.
+              </Text>
+            </Box>
           )}
 
           <PaymentGateway
@@ -239,13 +270,6 @@ export default function Checkout() {
           <Alert status="error" variant="left-accent" borderRadius="lg" mb={4} fontSize="sm" fontFamily="body">
             <AlertIcon />
             {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert status="success" variant="left-accent" borderRadius="lg" mb={4} fontSize="sm" fontFamily="body">
-            <AlertIcon />
-            {success}
           </Alert>
         )}
 
@@ -294,36 +318,67 @@ export default function Checkout() {
           </Box>
 
           <Box>
-            <PastelCard title="Resumen del pedido" variant="elevated">
-              <VStack spacing={2.5} align="stretch">
-                {items.map((item) => (
-                  <Flex key={item.id} justify="space-between" fontSize="xs" fontFamily="body">
-                    <Text color="warmGray.800">
-                      <Box as="strong">{item.quantity}x</Box> {item.name}
-                    </Text>
-                    <PastelPrice value={(item.price || 0) * item.quantity} size="xs" />
+            {hasMultipleShops ? (
+              shopBreakdown.map((s) => (
+                <PastelCard key={s.shopId} title={s.shopName} variant="elevated" mb={4}>
+                  <VStack spacing={2.5} align="stretch">
+                    {s.items.map((item) => (
+                      <Flex key={item.id} justify="space-between" fontSize="xs" fontFamily="body">
+                        <Text color="warmGray.800">
+                          <Box as="strong">{item.quantity}x</Box> {item.name}
+                        </Text>
+                        <PastelPrice value={(item.price || 0) * item.quantity} size="xs" />
+                      </Flex>
+                    ))}
+                  </VStack>
+                  <Divider my={2} borderColor="warmGray.200" />
+                  <Flex justify="space-between" fontSize="xs" fontFamily="body" mb={1}>
+                    <Text color="warmGray.500">Subtotal</Text>
+                    <PastelPrice value={s.subtotal} size="xs" color="warmGray.500" />
                   </Flex>
-                ))}
-              </VStack>
-              <Divider my={3} borderColor="warmGray.200" />
-              <Flex justify="space-between" fontSize="xs" fontFamily="body" mb={1}>
-                <Text color="warmGray.500">Subtotal</Text>
-                <PastelPrice value={total} size="xs" color="warmGray.500" />
-              </Flex>
-              <Flex justify="space-between" fontSize="xs" fontFamily="body" mb={1}>
-                <Text color="warmGray.500">Delivery</Text>
-                <PastelPrice value={deliveryFee} size="xs" color="warmGray.500" />
-              </Flex>
-              <Flex justify="space-between" fontSize="lg" fontWeight={700} fontFamily="heading" color="brand.700" mt={2} pt={3} borderTop="1px" borderColor="warmGray.200">
-                <Text>Total</Text>
-                <PastelPrice value={grandTotal} size="md" color="brand.700" />
-              </Flex>
-            </PastelCard>
+                  <Flex justify="space-between" fontSize="xs" fontFamily="body" mb={1}>
+                    <Text color="warmGray.500">Delivery</Text>
+                    <PastelPrice value={s.deliveryFee} size="xs" color="warmGray.500" />
+                  </Flex>
+                  <Flex justify="space-between" fontSize="sm" fontWeight={600} fontFamily="heading" color="brand.700" mt={1} pt={2} borderTop="1px" borderColor="warmGray.200">
+                    <Text>Total {s.shopName}</Text>
+                    <PastelPrice value={s.total} size="sm" color="brand.700" />
+                  </Flex>
+                </PastelCard>
+              ))
+            ) : (
+              <PastelCard title="Resumen del pedido" variant="elevated">
+                <VStack spacing={2.5} align="stretch">
+                  {items.map((item) => (
+                    <Flex key={item.id} justify="space-between" fontSize="xs" fontFamily="body">
+                      <Text color="warmGray.800">
+                        <Box as="strong">{item.quantity}x</Box> {item.name}
+                      </Text>
+                      <PastelPrice value={(item.price || 0) * item.quantity} size="xs" />
+                    </Flex>
+                  ))}
+                </VStack>
+                <Divider my={3} borderColor="warmGray.200" />
+                <Flex justify="space-between" fontSize="xs" fontFamily="body" mb={1}>
+                  <Text color="warmGray.500">Subtotal</Text>
+                  <PastelPrice value={total} size="xs" color="warmGray.500" />
+                </Flex>
+                <Flex justify="space-between" fontSize="xs" fontFamily="body" mb={1}>
+                  <Text color="warmGray.500">Delivery</Text>
+                  <PastelPrice value={deliveryFee} size="xs" color="warmGray.500" />
+                </Flex>
+                <Flex justify="space-between" fontSize="lg" fontWeight={700} fontFamily="heading" color="brand.700" mt={2} pt={3} borderTop="1px" borderColor="warmGray.200">
+                  <Text>Total</Text>
+                  <PastelPrice value={grandTotal} size="md" color="brand.700" />
+                </Flex>
+              </PastelCard>
+            )}
 
             {form.paymentMethod === 'cash' && (
               <Alert status="warning" variant="left-accent" borderRadius="lg" mb={4} fontSize="xs" fontFamily="body">
                 <AlertIcon />
                 Pagarás en efectivo al recibir tu pedido. No es necesario procesar un pago ahora.
+                {hasMultipleShops && ' Se generará una orden por cada pastelería.'}
               </Alert>
             )}
 
@@ -341,6 +396,13 @@ export default function Checkout() {
               </Alert>
             )}
 
+            {hasMultipleShops && (
+              <Alert status="info" variant="left-accent" borderRadius="lg" mb={4} fontSize="xs" fontFamily="body">
+                <AlertIcon />
+                Tu pedido incluye productos de {shopIds.length} pastelerías. Se crearán {shopIds.length} órdenes separadas.
+              </Alert>
+            )}
+
             <Button
               variant="primary"
               w="full"
@@ -350,7 +412,7 @@ export default function Checkout() {
               isLoading={loading}
               loadingText="Creando orden..."
             >
-              Confirmar pedido — S/ {grandTotal.toFixed(2)}
+              {hasMultipleShops ? `Confirmar ${shopIds.length} órdenes` : 'Confirmar pedido'} — S/ {grandTotal.toFixed(2)}
             </Button>
           </Box>
         </Grid>
