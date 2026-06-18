@@ -100,6 +100,7 @@ export default function Cart() {
                     <HStack spacing={2}>
                       <Tooltip label="Disminuir cantidad">
                         <Button
+                          aria-label="Disminuir cantidad"
                           size="sm"
                           variant="outline"
                           borderColor="warmGray.300"
@@ -114,6 +115,7 @@ export default function Cart() {
                       <Text fontSize="sm" fontWeight={600} minW="24px" textAlign="center">{item.quantity}</Text>
                       <Tooltip label="Aumentar cantidad">
                         <Button
+                          aria-label="Aumentar cantidad"
                           size="sm"
                           variant="outline"
                           borderColor="warmGray.300"

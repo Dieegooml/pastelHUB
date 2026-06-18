@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { HStack, Button } from '@chakra-ui/react';
+import { VStack, Box, Text } from '@chakra-ui/react';
 
 const links = [
   { path: '/admin', label: 'Dashboard' },
@@ -26,28 +26,44 @@ export default function AdminNav() {
   };
 
   return (
-    <HStack spacing={1} flexWrap="wrap">
-      {links.map((link) => {
-        const active = isActive(link.path);
-        return (
-          <Button
-            key={link.path}
-            size="sm"
-            variant={active ? 'solid' : 'ghost'}
-            colorScheme={active ? 'brand' : undefined}
-            bg={active ? 'brand.500' : undefined}
-            color={active ? 'white' : 'warmGray.600'}
-            borderRadius="full"
-            fontWeight={active ? 600 : 500}
-            fontSize="xs"
-            whiteSpace="nowrap"
-            onClick={() => navigate(link.path)}
-            _hover={!active ? { color: 'brand.500' } : undefined}
-          >
-            {link.label}
-          </Button>
-        );
-      })}
-    </HStack>
+    <Box
+      as="nav"
+      bg="white"
+      borderRadius="xl"
+      border="1px solid"
+      borderColor="brand.100"
+      overflow="hidden"
+      w="full"
+    >
+      <VStack spacing={0} align="stretch">
+        {links.map((link) => {
+          const active = isActive(link.path);
+          return (
+            <Box
+              key={link.path}
+              as="button"
+              textAlign="left"
+              w="full"
+              onClick={() => navigate(link.path)}
+              onKeyDown={(e) => { if (e.key === 'Enter') navigate(link.path) }}
+              cursor="pointer"
+              borderLeft="3px solid"
+              borderLeftColor={active ? 'accent.500' : 'transparent'}
+              bg={active ? 'brand.50' : 'transparent'}
+              color={active ? 'brand.800' : 'warmGray.600'}
+              fontWeight={active ? 600 : 500}
+              fontSize="14px"
+              px={5}
+              py={2.5}
+              transition="all 0.15s"
+              _hover={!active ? { bg: 'warmGray.50', color: 'brand.600' } : undefined}
+              _focus={{ boxShadow: 'outline' }}
+            >
+              <Text>{link.label}</Text>
+            </Box>
+          );
+        })}
+      </VStack>
+    </Box>
   );
 }

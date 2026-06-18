@@ -61,11 +61,16 @@ export default function ModeratorDashboard() {
           {cards.map((card) => (
             <Card
               key={card.label}
+              as="button"
+              textAlign="left"
+              w="full"
               variant="interactive"
               p={5}
               cursor="pointer"
               onClick={() => navigate(card.path)}
+              onKeyDown={(e) => { if (e.key === 'Enter') navigate(card.path) }}
               _hover={{ transform: 'translateY(-2px)', shadow: 'md' }}
+              _focus={{ boxShadow: 'outline' }}
               transition="all 0.2s"
             >
               <Text fontSize="3xl" fontWeight={700} fontFamily="heading" color={card.color}>

@@ -79,7 +79,7 @@ export default function AdminDashboard() {
         <>
           <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={4} mb={8}>
             {cards.map((c) => (
-              <Box key={c.label} cursor="pointer" onClick={() => navigate(c.path)}>
+              <Box key={c.label} as="button" textAlign="left" cursor="pointer" onClick={() => navigate(c.path)} onKeyDown={(e) => { if (e.key === 'Enter') navigate(c.path) }}>
                 <PastelStatCard label={c.label} value={c.value} icon={c.icon} color={c.color} />
               </Box>
             ))}
@@ -93,6 +93,9 @@ export default function AdminDashboard() {
                 {recentOrders.map((o, i) => (
                   <Flex
                     key={o.id}
+                    as="button"
+                    textAlign="left"
+                    w="full"
                     justify="space-between"
                     align="center"
                     p={3}
@@ -101,6 +104,7 @@ export default function AdminDashboard() {
                     bg={i % 2 === 0 ? 'warmGray.50' : 'white'}
                     _hover={{ bg: 'warmGray.100' }}
                     onClick={() => navigate('/admin/orders')}
+                    onKeyDown={(e) => { if (e.key === 'Enter') navigate('/admin/orders') }}
                   >
                     <Box>
                       <Text fontSize="sm" fontFamily="mono" color="warmGray.500">
