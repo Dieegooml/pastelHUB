@@ -64,8 +64,8 @@ PastelHub es una plataforma web tipo Rappi, pero especializada exclusivamente en
 
 | Capa | Tecnología |
 |---|---|
-| **Frontend web** | React 19 + Vite 8 (JavaScript) |
-| **UI web** | Estilos inline con objeto JS (sin librerías externas) |
+| **Frontend web** | React 19 + Vite 8 + react-router-dom 6 (JavaScript) |
+| **UI web** | Chakra UI v2 + framer-motion + estilos inline con objetos JS |
 | **Backend** | Node.js + Express.js |
 | **Base de datos** | Firebase Firestore (NoSQL) |
 | **Autenticación** | Firebase Authentication + Custom Claims (roles) |
@@ -565,7 +565,7 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 | `npm run dev` | Servidor en modo desarrollo con hot reload |
 | `npm run start` | Servidor en producción |
 | `npm run start:load-test` | Servidor con bypass de Firebase Auth para load testing |
-| `npm run test` | Tests unitarios (Jest, 338 tests) + genera `test-report.html` |
+| `npm run test` | Tests unitarios (Jest, ~490 tests) + genera `test-report.html` |
 | `npm run test:coverage` | Tests unitarios con reporte de cobertura HTML |
 | `npm run load-test` | Prueba de carga: 100 VUs, bypass auth |
 | `npm run load-test:50` | Prueba de carga: 50 VUs, bypass auth |
@@ -584,6 +584,7 @@ export const API_BASE_URL = 'http://localhost:3001/api';
 |---|---|
 | `npm run dev` | Servidor de desarrollo (Vite, puerto 5173) |
 | `npm run build` | Build de producción |
+| `npm run test` | Tests unitarios (Vitest, ~380 tests) |
 | `npm install` | Instalar dependencias |
 | `firebase deploy --only hosting` | Desplegar a Firebase Hosting |
 
@@ -793,7 +794,7 @@ pastelhub/
 │   │   └── validators/            # Schemas Zod por recurso
 │   ├── tests/
 │   │   ├── setup.js               # Mock de firebase-admin + helpers
-│   │   ├── unit/                  # 13 archivos, 338 tests
+│   │   ├── unit/                  # ~30 archivos, ~490 tests
 │   │   │   ├── health.test.js
 │   │   │   ├── middleware.test.js
 │   │   │   ├── auth.test.js

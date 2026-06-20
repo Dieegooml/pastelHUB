@@ -4,7 +4,7 @@
 Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order from local bakeries; admins manage everything; owners manage their shops/products/orders.
 
 ## Tech Stack
-- **Frontend:** React 19 + Vite 8 + react-router-dom 7
+- **Frontend:** React 19 + Vite 8 + react-router-dom 6 + Chakra UI 2 + framer-motion 11
 - **Backend:** Node.js + Express 5 + Firebase Admin SDK
 - **Database:** Firestore (NoSQL)
 - **Auth:** Firebase Auth (email/password + Google) + Custom Claims for roles
@@ -68,7 +68,7 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
 
 ## Key Design Decisions
 1. **No `<form>` with onSubmit** — Use `onClick` on buttons instead
-2. **All styles inline** — JS objects, no external UI libraries (framer-motion removed, replaced with CSS)
+2. **Styles via Chakra UI + inline JS objects** — Chakra UI v2 for components/theme, framer-motion for animations, custom CSS keyframes
 3. **Firebase Admin mocked in tests** — No `serviceAccountKey.json` dependency; mock in `tests/setup.js`
 4. **Login/Register use modular Firebase API** — `signInWithEmailAndPassword`, `createUserWithEmailAndPassword` directly from `firebase/auth`
 5. **`app.listen()` separated from `app.js`** — `server.js` handles listening so `app.js` can be imported by supertest
@@ -189,8 +189,8 @@ Multi-tenant pastry shop marketplace ("Rappi for bakeries"). Customers order fro
 - Dashboard, Users, Shops, Products, Orders, Reviews, Customers, Reports, Notifications, Payments, Promotions, Invoices, Chat, AdminNav
 
 ## Test Infrastructure
-- **Server tests:** `npm test` — 17 suites, ~450+ tests (Jest 30 + Supertest)
-- **Client tests:** `npm test` (Vitest) — 13 suites, ~175 tests
+- **Server tests:** `npm test` — 30 suites, ~490+ tests (Jest 30 + Supertest)
+- **Client tests:** `npm test` (Vitest) — ~39 suites, ~380+ tests
 - **E2E tests:** `npm run test:e2e` (Playwright) — 7 spec files, 42 tests
 - **Load tests:** `npm run load-test:k6:*` (k6, 100-50000 VUs) / `npm run load-test` (Node.js)
 
