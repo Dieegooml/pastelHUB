@@ -98,12 +98,15 @@ async function handleWebhook(webhookData, headers, rawBody) {
     return simulateWebhook(webhookData);
   }
 
-  if (WEBHOOK_SECRET) {
-    const signatureValid = verifySignature(rawBody || webhookData, headers);
-    if (!signatureValid) {
-      logger.warn('Firma de webhook inválida');
-      return { valid: false, error: 'Firma inválida' };
-    }
+  if (!WEBHOOK_SECRET) {
+    logger.error('WEBHOOK SECRET NO CONFIGURADO — los webhooks son rechazados por seguridad');
+    return { valid: false, error: 'Webhook secret no configurado' };
+  }
+
+  const signatureValid = verifySignature(rawBody || webhookData, headers);
+  if (!signatureValid) {
+    logger.warn('Firma de webhook inválida');
+    return { valid: false, error: 'Firma inválida' };
   }
 
   const { action, data, type } = webhookData;
