@@ -62,7 +62,8 @@ router.put('/:id', verifyToken, requireSelfOrStaff(), validate(updateUserSchema)
     const doc = await col.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    const { full_name, phone, photo_url, roles: newRoles } = req.body;
+    const { name, full_name, phone, photo_url, roles: newRoles } = req.body;
+    const resolvedName = full_name || name;
 
     if (newRoles) {
       if (!userRoles.includes('admin') && !userRoles.includes('moderator')) {
@@ -77,12 +78,12 @@ router.put('/:id', verifyToken, requireSelfOrStaff(), validate(updateUserSchema)
       await admin.auth().setCustomUserClaims(req.params.id, { roles: newRoles });
     }
 
-    if (full_name !== undefined) {
-      await admin.auth().updateUser(req.params.id, { displayName: full_name });
+    if (resolvedName !== undefined) {
+      await admin.auth().updateUser(req.params.id, { displayName: resolvedName });
     }
 
     const updates = {
-      ...(full_name !== undefined && { full_name }),
+      ...(resolvedName !== undefined && { full_name: resolvedName }),
       ...(phone     !== undefined && { phone }),
       ...(photo_url !== undefined && { photo_url }),
       ...(newRoles  !== undefined && { roles: newRoles }),

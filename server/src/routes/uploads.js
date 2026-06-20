@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { admin, bucket } = require('../config/firebase');
+const { admin, bucket, db } = require('../config/firebase');
 const { verifyToken } = require('../middlewares/auth');
 const { ALLOWED_MIMES, MAX_IMAGE_SIZE, MIME_EXT } = require('../constants');
 
@@ -33,6 +33,17 @@ router.post('/shop-image', verifyToken, async (req, res) => {
     if (!image || !shop_id) {
       return res.status(400).json({ error: 'image y shop_id son requeridos' });
     }
+
+    const shopDoc = await db.collection('pastryShops').doc(shop_id).get();
+    if (!shopDoc.exists) {
+      return res.status(404).json({ error: 'Pastelería no encontrada' });
+    }
+    const ownerId = shopDoc.data().owner_id;
+    const userRoles = req.user?.roles || [];
+    if (req.user.uid !== ownerId && !userRoles.includes('admin')) {
+      return res.status(403).json({ error: 'No eres el dueño de esta pastelería' });
+    }
+
     const { mime, buffer, size } = extractBase64Data(image);
     if (size > MAX_IMAGE_SIZE) {
       return res.status(400).json({ error: 'La imagen no debe superar 5MB' });
@@ -52,6 +63,17 @@ router.post('/product-image', verifyToken, async (req, res) => {
     if (!image || !shop_id) {
       return res.status(400).json({ error: 'image y shop_id son requeridos' });
     }
+
+    const shopDoc = await db.collection('pastryShops').doc(shop_id).get();
+    if (!shopDoc.exists) {
+      return res.status(404).json({ error: 'Pastelería no encontrada' });
+    }
+    const ownerId = shopDoc.data().owner_id;
+    const userRoles = req.user?.roles || [];
+    if (req.user.uid !== ownerId && !userRoles.includes('admin')) {
+      return res.status(403).json({ error: 'No eres el dueño de esta pastelería' });
+    }
+
     const { mime, buffer, size } = extractBase64Data(image);
     if (size > MAX_IMAGE_SIZE) {
       return res.status(400).json({ error: 'La imagen no debe superar 5MB' });

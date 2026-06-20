@@ -342,22 +342,33 @@ async function restoreBackup(filename, options = {}) {
 
     let restored = 0;
 
-    for (let i = 0; i < mainDocs.length; i += BATCH_SIZE) {
+    let docsToRestore = mainDocs;
+    if (conflictStrategy === 'skip') {
+      const existingIds = new Set();
+      const colRef = db.collection(col.name);
+      for (let i = 0; i < mainDocs.length; i += 30) {
+        const chunk = mainDocs.slice(i, i + 30);
+        const results = await Promise.all(chunk.map(d => colRef.doc(d.id).get()));
+        results.forEach((snap, idx) => {
+          if (snap.exists) existingIds.add(chunk[idx].id);
+        });
+      }
+      docsToRestore = mainDocs.filter(d => !existingIds.has(d.id));
+      logger.info(`Skip strategy: ${mainDocs.length - docsToRestore.length} docs already exist, restoring ${docsToRestore.length}`);
+    }
+
+    for (let i = 0; i < docsToRestore.length; i += BATCH_SIZE) {
       const batch = db.batch();
-      const chunk = mainDocs.slice(i, i + BATCH_SIZE);
+      const chunk = docsToRestore.slice(i, i + BATCH_SIZE);
 
       for (const { id, data } of chunk) {
-        if (conflictStrategy === 'skip') {
-          batch.set(db.collection(col.name).doc(id), data, { merge: false });
-        } else {
-          batch.set(db.collection(col.name).doc(id), data, { merge: true });
-        }
+        batch.set(db.collection(col.name).doc(id), data, { merge: conflictStrategy !== 'skip' });
       }
 
       try {
         await batch.commit();
         restored += chunk.length;
-        logger.info(`Restored ${restored}/${mainDocs.length} docs in "${col.name}"`);
+        logger.info(`Restored ${restored}/${docsToRestore.length} docs in "${col.name}"`);
       } catch (e) {
         result.errors.push(`Error restoring "${col.name}" batch: ${e.message}`);
         logger.error('Batch restore error', { collection: col.name, error: e.message });
@@ -374,18 +385,28 @@ async function restoreBackup(filename, options = {}) {
         if (!Array.isArray(items) || items.length === 0) continue;
 
         const subName = key.replace(/^_/, '');
+        let subItems = items;
 
-        for (let i = 0; i < items.length; i += BATCH_SIZE) {
+        if (conflictStrategy === 'skip') {
+          const subColRef = docRef.collection(subName);
+          const existingIds = new Set();
+          for (let j = 0; j < items.length; j += 30) {
+            const chunk = items.slice(j, j + 30);
+            const results = await Promise.all(chunk.map(item => subColRef.doc(item.id).get()));
+            results.forEach((snap, idx) => {
+              if (snap.exists) existingIds.add(chunk[idx].id);
+            });
+          }
+          subItems = items.filter(item => !existingIds.has(item.id));
+        }
+
+        for (let i = 0; i < subItems.length; i += BATCH_SIZE) {
           const batch = db.batch();
-          const chunk = items.slice(i, i + BATCH_SIZE);
+          const chunk = subItems.slice(i, i + BATCH_SIZE);
 
           for (const item of chunk) {
             const { id, ...itemData } = item;
-            if (conflictStrategy === 'skip') {
-              batch.set(docRef.collection(subName).doc(id), itemData, { merge: false });
-            } else {
-              batch.set(docRef.collection(subName).doc(id), itemData, { merge: true });
-            }
+            batch.set(docRef.collection(subName).doc(id), itemData, { merge: true });
           }
 
           try {
