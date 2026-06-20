@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
+import { Box, Spinner } from '@chakra-ui/react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -10,38 +11,38 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Chatbot from './components/Chatbot';
 import Layout from './components/Layout/Layout';
 import websocketService from './services/websocketService';
-import Login from './pages/public/Login';
-import Register from './pages/public/Register';
-import NotFound from './pages/public/NotFound';
-import ShopsList from './pages/public/ShopsList';
-import ShopDetail from './pages/public/ShopDetail';
-import ProductDetail from './pages/public/ProductDetail';
-import Cart from './pages/customer/Cart';
-import Checkout from './pages/customer/Checkout';
-import MyOrders from './pages/customer/MyOrders';
-import OrderDetail from './pages/customer/OrderDetail';
-import Profile from './pages/customer/Profile';
-import NotificationsPage from './pages/customer/Notifications';
-import OwnerDashboard from './pages/owner/OwnerDashboard';
-import Support from './pages/customer/Support';
-import SupportNew from './pages/customer/SupportNew';
-import SupportDetail from './pages/customer/SupportDetail';
-import Invoices from './pages/customer/Invoices';
-import AdminInvoices from './pages/admin/Invoices';
-import Dashboard from './pages/admin/Dashboard';
-import Users from './pages/admin/Users';
-import Shops from './pages/admin/Shops';
-import Products from './pages/admin/Products';
-import Orders from './pages/admin/Orders';
-import Reviews from './pages/admin/Reviews';
-import Customers from './pages/admin/Customers';
-import Reports from './pages/admin/Reports';
-import Notifications from './pages/admin/Notifications';
-import Payments from './pages/admin/Payments';
-import Promotions from './pages/admin/Promotions';
-import ModeratorDashboard from './pages/moderator/ModeratorDashboard';
-import ModeratorUsers from './pages/moderator/ModeratorUsers';
-import AdminChat from './pages/admin/Chat';
+const Login = lazy(() => import('./pages/public/Login'));
+const Register = lazy(() => import('./pages/public/Register'));
+const NotFound = lazy(() => import('./pages/public/NotFound'));
+const ShopsList = lazy(() => import('./pages/public/ShopsList'));
+const ShopDetail = lazy(() => import('./pages/public/ShopDetail'));
+const ProductDetail = lazy(() => import('./pages/public/ProductDetail'));
+const Cart = lazy(() => import('./pages/customer/Cart'));
+const Checkout = lazy(() => import('./pages/customer/Checkout'));
+const MyOrders = lazy(() => import('./pages/customer/MyOrders'));
+const OrderDetail = lazy(() => import('./pages/customer/OrderDetail'));
+const Profile = lazy(() => import('./pages/customer/Profile'));
+const NotificationsPage = lazy(() => import('./pages/customer/Notifications'));
+const OwnerDashboard = lazy(() => import('./pages/owner/OwnerDashboard'));
+const Support = lazy(() => import('./pages/customer/Support'));
+const SupportNew = lazy(() => import('./pages/customer/SupportNew'));
+const SupportDetail = lazy(() => import('./pages/customer/SupportDetail'));
+const Invoices = lazy(() => import('./pages/customer/Invoices'));
+const AdminInvoices = lazy(() => import('./pages/admin/Invoices'));
+const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
+const Users = lazy(() => import('./pages/admin/Users'));
+const Shops = lazy(() => import('./pages/admin/Shops'));
+const Products = lazy(() => import('./pages/admin/Products'));
+const Orders = lazy(() => import('./pages/admin/Orders'));
+const Reviews = lazy(() => import('./pages/admin/Reviews'));
+const Customers = lazy(() => import('./pages/admin/Customers'));
+const Reports = lazy(() => import('./pages/admin/Reports'));
+const Notifications = lazy(() => import('./pages/admin/Notifications'));
+const Payments = lazy(() => import('./pages/admin/Payments'));
+const Promotions = lazy(() => import('./pages/admin/Promotions'));
+const ModeratorDashboard = lazy(() => import('./pages/moderator/ModeratorDashboard'));
+const ModeratorUsers = lazy(() => import('./pages/moderator/ModeratorUsers'));
+const AdminChat = lazy(() => import('./pages/admin/Chat'));
 import Footer from './components/Footer';
 import PastelToast from './components/UI/PastelToast';
 
@@ -92,6 +93,7 @@ function AppContent() {
       <WebSocketInit />
       <PastelToast />
       <AnimatePresence mode="wait">
+      <Suspense fallback={<Box p={8} textAlign="center"><Spinner size="xl" color="brand.500" /></Box>}>
       <Routes location={location} key={location.pathname}>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -126,6 +128,7 @@ function AppContent() {
         <Route path="/moderator/usuarios" element={<WrappedPage role={['moderator', 'admin']}><ModeratorUsers /></WrappedPage>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
       </AnimatePresence>
       <Footer />
       {!hideChat && <Chatbot />}

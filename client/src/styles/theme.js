@@ -1,3 +1,5 @@
+/** @deprecated Use chakraTheme theme tokens instead */
+// @deprecated Use chakraTheme.js instead
 export const colors = {
   primary: '#2D1F1F',
   accent: '#1D9E75',

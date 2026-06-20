@@ -96,6 +96,26 @@ const theme = extendTheme({
         '0%': { opacity: 0, transform: 'scale(0.95)' },
         '100%': { opacity: 1, transform: 'scale(1)' },
       },
+      '@keyframes fadeInLeft': {
+        '0%': { opacity: 0, transform: 'translateX(-20px)' },
+        '100%': { opacity: 1, transform: 'translateX(0)' },
+      },
+      '@keyframes fadeInRight': {
+        '0%': { opacity: 0, transform: 'translateX(20px)' },
+        '100%': { opacity: 1, transform: 'translateX(0)' },
+      },
+      '@keyframes chatbotPulse': {
+        '0%, 100%': { boxShadow: '0 4px 20px rgba(29,158,117,0.4)' },
+        '50%': { boxShadow: '0 4px 28px rgba(29,158,117,0.55)' },
+      },
+      '@keyframes chatPanelIn': {
+        '0%': { opacity: 0, transform: 'scale(0.9) translateY(12px)' },
+        '100%': { opacity: 1, transform: 'scale(1) translateY(0)' },
+      },
+      '@keyframes chatbotDot': {
+        '0%, 80%, 100%': { transform: 'scale(0.6)', opacity: 0.4 },
+        '40%': { transform: 'scale(1)', opacity: 1 },
+      },
     },
   },
   components: {
