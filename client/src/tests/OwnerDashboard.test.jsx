@@ -39,6 +39,10 @@ vi.mock('../pages/owner/OwnerTabBoletas', () => ({
   default: ({ selectedShop }) => <div data-testid="owner-tab-boletas">{selectedShop.shopName}</div>,
 }));
 
+vi.mock('../context/I18nContext', () => ({
+  useI18n: () => ({ t: (k) => k, lang: 'es', setLang: vi.fn() }),
+}));
+
 const mockShops = {
   data: [
     { id: 'shop1', shopName: 'Pastelería Delicias' },
@@ -68,7 +72,7 @@ describe('OwnerDashboard', () => {
   it('Muestra skeleton loading inicialmente', async () => {
     shopsModule.shopsService.getByOwner.mockReturnValue(new Promise(() => {}));
     renderOwnerDashboard();
-    expect(screen.getByTestId('navbar')).toBeInTheDocument();
+    expect(document.querySelectorAll('.pastel-skeleton').length).toBeGreaterThan(0);
     expect(screen.queryByText('No tienes pastelerías registradas')).not.toBeInTheDocument();
     expect(screen.queryByText('Panel de Dueño')).not.toBeInTheDocument();
   });

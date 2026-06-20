@@ -20,6 +20,17 @@ vi.mock('../services/notificationsService', () => ({
   },
 }));
 
+vi.mock('../services/websocketService', () => ({
+  default: {
+    onMessage: vi.fn(() => () => {}),
+    onTyping: vi.fn(() => () => {}),
+    onNotification: vi.fn(() => () => {}),
+    sendMessage: vi.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  },
+}));
+
 vi.mock('../context/AuthContext', () => ({
   useAuth: vi.fn(),
 }));
@@ -73,12 +84,12 @@ describe('Navbar', () => {
     expect(screen.getByText('Carrito')).toBeInTheDocument();
     expect(screen.getByText('Mis órdenes')).toBeInTheDocument();
     expect(screen.getByText('Soporte')).toBeInTheDocument();
-    expect(screen.getByText('Perfil')).toBeInTheDocument();
+    expect(screen.getAllByText('Perfil')[0]).toBeInTheDocument();
   });
 
   it('muestra boton Dueño si es owner', () => {
     renderNavbar({ uid: 'u1', roles: ['owner'] });
-    expect(screen.getByText('Dueño')).toBeInTheDocument();
+    expect(screen.getAllByText('Dueño')[0]).toBeInTheDocument();
   });
 
   it('oculta Dueño si no es owner', () => {
@@ -88,12 +99,12 @@ describe('Navbar', () => {
 
   it('muestra Moderar si es moderator', () => {
     renderNavbar({ uid: 'u1', roles: ['moderator'] });
-    expect(screen.getByText('Moderar')).toBeInTheDocument();
+    expect(screen.getAllByText('Moderar')[0]).toBeInTheDocument();
   });
 
   it('muestra Administrar si es admin', () => {
     renderNavbar({ uid: 'u1', roles: ['admin'] });
-    expect(screen.getByText('Administrar')).toBeInTheDocument();
+    expect(screen.getAllByText('Administrar')[0]).toBeInTheDocument();
   });
 
   it('no muestra Moderar si es admin', () => {

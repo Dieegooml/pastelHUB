@@ -51,7 +51,7 @@ describe('Chatbot', () => {
 
   it('Muestra botón flotante de chat inicialmente (no abierto)', () => {
     render(<Chatbot />);
-    const button = screen.getByLabelText('Chatbot');
+    const button = screen.getByLabelText('Abrir chat');
     expect(button).toBeInTheDocument();
     expect(button).toHaveTextContent('💬');
     expect(screen.queryByText('Asistente PastelHub')).not.toBeInTheDocument();
@@ -60,7 +60,7 @@ describe('Chatbot', () => {
   it('Abre chat al hacer click en el botón flotante', async () => {
     chatService.getSessions.mockResolvedValue([]);
     render(<Chatbot />);
-    fireEvent.click(screen.getByLabelText('Chatbot'));
+    fireEvent.click(screen.getByLabelText('Abrir chat'));
     await waitFor(() => {
       expect(screen.getByText('Asistente PastelHub')).toBeInTheDocument();
     });
@@ -70,7 +70,7 @@ describe('Chatbot', () => {
     chatService.getSessions.mockResolvedValue(mockSessions);
     chatService.getSession.mockResolvedValue({ messages: mockMessages });
     render(<Chatbot />);
-    fireEvent.click(screen.getByLabelText('Chatbot'));
+    fireEvent.click(screen.getByLabelText('Abrir chat'));
     await waitFor(() => {
       expect(chatService.getSessions).toHaveBeenCalledWith('active');
       expect(screen.getByText('Hola')).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('Chatbot', () => {
     chatService.getSessions.mockResolvedValue(mockSessions);
     chatService.getSession.mockResolvedValue({ messages: mockMessages });
     render(<Chatbot />);
-    fireEvent.click(screen.getByLabelText('Chatbot'));
+    fireEvent.click(screen.getByLabelText('Abrir chat'));
     await waitFor(() => {
       expect(screen.getByText('Hola')).toBeInTheDocument();
       expect(screen.getByText('¡Hola! ¿En qué puedo ayudarte?')).toBeInTheDocument();
@@ -96,7 +96,7 @@ describe('Chatbot', () => {
       aiMessage: { id: 'new-2', senderRole: 'assistant', message: 'Respuesta' },
     });
     render(<Chatbot />);
-    fireEvent.click(screen.getByLabelText('Chatbot'));
+    fireEvent.click(screen.getByLabelText('Abrir chat'));
     await waitFor(() => {
       expect(screen.getByPlaceholderText('Escribe un mensaje...')).toBeInTheDocument();
     });
@@ -112,11 +112,11 @@ describe('Chatbot', () => {
   it('Cierra chat al hacer click en cerrar', async () => {
     chatService.getSessions.mockResolvedValue([]);
     render(<Chatbot />);
-    fireEvent.click(screen.getByLabelText('Chatbot'));
+    fireEvent.click(screen.getByLabelText('Abrir chat'));
     await waitFor(() => {
       expect(screen.getByText('Asistente PastelHub')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByLabelText('Chatbot'));
+    fireEvent.click(screen.getByLabelText('Abrir chat'));
     expect(screen.queryByText('Asistente PastelHub')).not.toBeInTheDocument();
   });
 
@@ -124,7 +124,7 @@ describe('Chatbot', () => {
     chatService.getSessions.mockResolvedValue(mockSessions);
     chatService.getSession.mockResolvedValue({ messages: mockMessages });
     render(<Chatbot />);
-    fireEvent.click(screen.getByLabelText('Chatbot'));
+    fireEvent.click(screen.getByLabelText('Abrir chat'));
     await waitFor(() => {
       expect(screen.getByText('Hola')).toBeInTheDocument();
     });
@@ -142,7 +142,7 @@ describe('Chatbot', () => {
     chatService.getSessions.mockResolvedValue(mockSessions);
     chatService.getSession.mockResolvedValue({ messages: mockMessages });
     render(<Chatbot />);
-    fireEvent.click(screen.getByLabelText('Chatbot'));
+    fireEvent.click(screen.getByLabelText('Abrir chat'));
     await waitFor(() => {
       expect(screen.getByText('Asistente PastelHub')).toBeInTheDocument();
     });
@@ -156,7 +156,7 @@ describe('Chatbot', () => {
   it('Maneja error al cargar sesiones', async () => {
     chatService.getSessions.mockRejectedValue(new Error('Network error'));
     render(<Chatbot />);
-    fireEvent.click(screen.getByLabelText('Chatbot'));
+    fireEvent.click(screen.getByLabelText('Abrir chat'));
     await waitFor(() => {
       expect(screen.getByText('Asistente PastelHub')).toBeInTheDocument();
     });

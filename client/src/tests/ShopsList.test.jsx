@@ -44,7 +44,7 @@ describe('ShopsList', () => {
   it('muestra skeleton loading inicialmente', () => {
     shopsModule.shopsService.getAll.mockReturnValue(new Promise(() => {}));
     renderShopsList();
-    expect(screen.getByTestId('navbar')).toBeInTheDocument();
+    expect(document.querySelectorAll('.pastel-skeleton').length).toBeGreaterThan(0);
   });
 
   it('muestra error cuando falla la carga', async () => {
