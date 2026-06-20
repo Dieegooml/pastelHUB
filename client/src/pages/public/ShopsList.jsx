@@ -4,7 +4,7 @@ import { shopsService } from '../../services/shopsService';
 import { useDebounce } from '../../utils/useDebounce';
 import {
   PastelCard, PastelStatusBadge, PastelEmptyState, PastelErrorState,
-  PastelSkeletonCard, PastelSkeletonHero, PastelSkeletonShopCard, PastelHero, PastelRating, PastelTag, PastelInfoRow, PastelPageTransition,
+  PastelSkeletonCard, PastelSkeletonHero, PastelSkeletonShopCard, PastelSkeletonProductGrid, PastelHero, PastelRating, PastelTag, PastelInfoRow, PastelPageTransition,
 } from '../../components/UI';
 import {
   Box, Flex, Text, Heading, Input, SimpleGrid, IconButton,

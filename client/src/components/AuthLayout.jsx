@@ -165,7 +165,7 @@ function BrandContent({ compact }) {
         Descubre las mejores pastelerías artesanales
       </Text>
 
-      <Box w="50px" h="2px" bg="linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)" mb={6} />
+      <Box w="50px" h="2px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)' }} mb={6} />
 
       <VStack spacing={2.5} w="full" maxW="350px">
         {['shop', 'cake', 'star', 'truck', 'lock'].slice(0, compact ? 3 : 5).map((icon, i) => (

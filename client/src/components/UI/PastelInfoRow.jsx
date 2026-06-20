@@ -88,9 +88,9 @@ export default function PastelInfoRow({
             {label}
           </Text>
         )}
-        <Text fontSize="14px" fontWeight={500} color="brand.800" lineHeight={1.3}>
+        <Box as="span" fontSize="14px" fontWeight={500} color="brand.800" lineHeight={1.3} display="block">
           {children}
-        </Text>
+        </Box>
       </Box>
     </Flex>
   )

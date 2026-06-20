@@ -64,8 +64,10 @@ export default function PastelHero({
           position="absolute"
           inset={0}
           opacity={0.4}
-          backgroundImage={`url("data:image/svg+xml,${encodeURIComponent(dotPattern)}")`}
-          backgroundSize="20px 20px"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(dotPattern)}")`,
+            backgroundSize: '20px 20px',
+          }}
         />
       )}
       <DecorativeCircle size="400px" top="-120px" right="-80px" opacity={0.04} />
@@ -77,7 +79,7 @@ export default function PastelHero({
         left={0}
         right={0}
         h="1px"
-        bg="linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)' }}
       />
 
       <Box maxW="1100px" mx="auto" position="relative" zIndex={1}>
